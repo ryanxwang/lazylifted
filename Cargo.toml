@@ -1,0 +1,16 @@
+[package]
+name = "lazylifted"
+version = "0.1.0"
+authors = ["Ryan Wang <ryanxiaowang2001@gmail.com>"]
+edition = "2021"
+rust-version = "1.77.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+clap = { version = "4.5.4", features = ["derive"] }
+lazy_static = "1.4.0"
+nom = "7.1.3"
+nom-greedyerror = "0.5.0"
+nom_locate = "4.1.0"
+thiserror = "1.0.40"

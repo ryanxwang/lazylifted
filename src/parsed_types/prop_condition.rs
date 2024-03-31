@@ -1,0 +1,63 @@
+//! Contains propositional condition definitions via the [`PropCondition`] type.
+
+use crate::parsed_types::TermLiteral;
+
+/// A condition definition.
+#[derive(Debug, Clone, PartialEq)]
+pub enum PropCondition {
+    Literal(TermLiteral),
+    And(Vec<PropCondition>),
+    /// ## Requirements
+    /// Requires [Disjunctive Preconditions](crate::Requirement::DisjunctivePreconditions).
+    Or(Vec<PropCondition>),
+    /// ## Requirements
+    /// Requires [Disjunctive Preconditions](crate::Requirement::DisjunctivePreconditions).
+    Not(Box<PropCondition>),
+    /// ## Requirements
+    /// Requires [Disjunctive Preconditions](crate::Requirement::DisjunctivePreconditions).
+    Imply(Box<PropCondition>, Box<PropCondition>),
+}
+
+impl PropCondition {
+    #[inline(always)]
+    pub const fn new_literal(value: TermLiteral) -> Self {
+        Self::Literal(value)
+    }
+
+    #[inline(always)]
+    pub fn new_and<T: IntoIterator<Item = PropCondition>>(values: T) -> Self {
+        // TODO: Flatten `(and (and a b) (and x y))` into `(and a b c y)`.
+        Self::And(values.into_iter().collect())
+    }
+
+    #[inline(always)]
+    pub fn new_or<T: IntoIterator<Item = PropCondition>>(values: T) -> Self {
+        // TODO: Flatten `(or (or a b) (or x y))` into `(or a b c y)`.
+        Self::Or(values.into_iter().collect())
+    }
+
+    #[inline(always)]
+    pub fn new_not(value: PropCondition) -> Self {
+        Self::Not(Box::new(value))
+    }
+
+    #[inline(always)]
+    pub fn new_imply_tuple(tuple: (PropCondition, PropCondition)) -> Self {
+        Self::new_imply(tuple.0, tuple.1)
+    }
+
+    #[inline(always)]
+    pub fn new_imply(a: PropCondition, b: PropCondition) -> Self {
+        Self::Imply(Box::new(a), Box::new(b))
+    }
+
+    pub fn is_empty(&self) -> bool {
+        match self {
+            PropCondition::Literal(_) => false,
+            PropCondition::And(x) => x.iter().all(|y| y.is_empty()),
+            PropCondition::Or(x) => x.iter().all(|y| y.is_empty()),
+            PropCondition::Not(x) => x.is_empty(),
+            PropCondition::Imply(x, y) => x.is_empty() && y.is_empty(),
+        }
+    }
+}

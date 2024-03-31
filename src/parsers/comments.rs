@@ -1,0 +1,36 @@
+use crate::parsers::{ParseResult, Span};
+use nom::bytes::complete::is_not;
+use nom::character::complete::{char, multispace0};
+use nom::combinator::{opt, value};
+use nom::sequence::{pair, terminated, tuple};
+
+pub fn ignore_single_line_comment<'a, S: Into<Span<'a>>>(input: S) -> ParseResult<'a, ()> {
+    value(
+        (),
+        opt(terminated(
+            pair(char(';'), is_not("\r\n")),
+            tuple((multispace0, opt(ignore_single_line_comment))),
+        )),
+    )(input.into())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn comment_only() {
+        let input = "; comment";
+        let (remainder, comment) = ignore_single_line_comment(input).unwrap();
+        assert_eq!(comment, ());
+        assert!(remainder.is_empty());
+    }
+
+    #[test]
+    fn keeps_text() {
+        let input = "; comment\nnext line";
+        let (remainder, comment) = ignore_single_line_comment(input).unwrap();
+        assert_eq!(comment, ());
+        assert_eq!(remainder.fragment(), &"next line");
+    }
+}
