@@ -1,13 +1,8 @@
-use crate::search::action_schema::ActionSchema;
-use crate::search::goal::Goal;
-use crate::search::object::Object;
-use crate::search::states::DBState;
+use crate::search::{ActionSchema, DBState, Goal, Object, Predicate};
 use crate::{Domain, Name, Parser, Problem, Types};
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::PathBuf;
-
-use super::predicate::Predicate;
 
 #[derive(Debug)]
 pub struct Task {

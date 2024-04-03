@@ -4,7 +4,7 @@ use crate::{
 };
 use std::collections::HashMap;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct SchemaParameter {
     index: usize,
     type_index: usize,
@@ -33,7 +33,7 @@ impl SchemaParameter {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 /// If the argument is a constant, then the value is the index of the object in
 /// the task, otherwise the index is the index of the parameter in the action
 /// schema.
@@ -63,13 +63,27 @@ impl SchemaArgument {
             }
         }
     }
+
+    pub fn get_index(&self) -> usize {
+        match self {
+            Self::Constant(index) => *index,
+            Self::Free(index) => *index,
+        }
+    }
+
+    pub fn is_constant(&self) -> bool {
+        match self {
+            Self::Constant(_) => true,
+            Self::Free(_) => false,
+        }
+    }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SchemaAtom {
-    predicate_index: usize,
-    negated: bool,
-    arguments: Vec<SchemaArgument>,
+    pub predicate_index: usize,
+    pub negated: bool,
+    pub arguments: Vec<SchemaArgument>,
 }
 
 impl SchemaAtom {
@@ -98,14 +112,18 @@ impl SchemaAtom {
             arguments,
         }
     }
+
+    pub fn is_nullary(&self) -> bool {
+        self.arguments.is_empty()
+    }
 }
 
 #[derive(Debug)]
 pub struct ActionSchema {
     name: ActionName,
-    index: usize,
+    pub index: usize,
     parameters: Vec<SchemaParameter>,
-    preconditions: Vec<SchemaAtom>,
+    pub preconditions: Vec<SchemaAtom>,
     positive_nullary_preconditions: Vec<bool>,
     negative_nullary_preconditions: Vec<bool>,
     effects: Vec<SchemaAtom>,
@@ -213,5 +231,9 @@ impl ActionSchema {
             positive_nullary_effects,
             negative_nullary_effects,
         }
+    }
+
+    pub fn is_ground(&self) -> bool {
+        self.parameters.is_empty()
     }
 }
