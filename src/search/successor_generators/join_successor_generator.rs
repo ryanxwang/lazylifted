@@ -27,6 +27,9 @@ where
     }
 
     pub fn get_applicable_actions(&self, state: &DBState, action: &ActionSchema) -> Vec<Action> {
+        if is_trivially_inapplicable(action, state) {
+            return vec![];
+        }
         if action.is_ground() {
             if is_ground_action_applicable(action, state) {
                 return vec![Action {
@@ -113,6 +116,21 @@ fn is_ground_action_applicable(action: &ActionSchema, state: &DBState) -> bool {
     }
 
     true
+}
+
+fn is_trivially_inapplicable(action: &ActionSchema, state: &DBState) -> bool {
+    let positive_precond = &action.positive_nullary_preconditions;
+    let negative_precond = &action.negative_nullary_preconditions;
+    let nullary_atoms = &state.nullary_atoms;
+    for i in 0..positive_precond.len() {
+        if positive_precond[i] && !nullary_atoms[i] {
+            return true;
+        }
+        if negative_precond[i] && nullary_atoms[i] {
+            return true;
+        }
+    }
+    false
 }
 
 #[cfg(test)]
