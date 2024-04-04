@@ -32,6 +32,8 @@ this sort of also means we have to ground twice, once when approximating, and
 once in the end.
 
 The ultimate answer to this decision is probably to just implement the easiet
-option then profile the code to see if there is a need to improve on this.
+option then profile the code to see if there is a need to improve on this. Also
+worth noting that none of this discussion takes into account the option of
+batching multiple edges into one, i.e. ranking sets of objects.
 
 Currently going with: grounding before, it is the easiest thing to implement.
