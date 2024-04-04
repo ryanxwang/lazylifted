@@ -57,7 +57,7 @@ impl Name {
     ///
     /// ## Example
     /// ```
-    /// # use lazylifted::Name;
+    /// # use lazylifted::parsed_types::Name;
     /// assert_eq!(Name::new("name"), "name");
     /// ```
     #[inline(always)]

@@ -15,7 +15,7 @@ use nom::sequence::{preceded, tuple};
 /// ## Example
 /// ```
 /// # use lazylifted::parsers::{parse_problem, preamble::*};
-/// # use lazylifted::*;
+/// # use lazylifted::parsed_types::*;
 /// let input = r#"(define (problem get-paid)
 ///         (:domain briefcase-world)
 ///         (:init (place home) (place office)
@@ -78,7 +78,8 @@ impl crate::parsers::Parser for Problem {
     ///
     /// ## Example
     /// ```
-    /// # use lazylifted::{Name, Parser, Problem};
+    /// # use lazylifted::Parser;
+    /// # use lazylifted::parsed_types::*;
     /// let input = r#"(define (problem get-paid)
     ///         (:domain briefcase-world)
     ///         (:init (place home) (place office)

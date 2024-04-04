@@ -9,7 +9,7 @@ use nom::combinator::map;
 /// ## Example
 /// ```
 /// # use lazylifted::parsers::{parse_type_definitions, preamble::*};
-/// # use lazylifted::*;
+/// # use lazylifted::parsed_types::*;
 /// let input = "(:types location physob)";
 /// assert!(parse_type_definitions(input).is_value(
 ///     Types::new(TypedList::from_iter([

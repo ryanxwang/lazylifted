@@ -12,7 +12,7 @@ use nom::combinator::map;
 /// ## Example
 /// ```
 /// # use lazylifted::parsers::{parse_requirements, preamble::*};
-/// # use lazylifted::{Requirement, Requirements};
+/// # use lazylifted::parsed_types::{Requirement, Requirements};
 /// assert!(parse_requirements("(:requirements :adl)").is_value(Requirements::new([Requirement::Adl])));
 /// assert!(parse_requirements("(:requirements :strips :typing)").is_value(Requirements::new([Requirement::Strips, Requirement::Typing])));
 /// assert!(parse_requirements("(:requirements\n:strips   :typing  )").is_value(Requirements::new([Requirement::Strips, Requirement::Typing])));
@@ -32,7 +32,7 @@ pub fn parse_requirements<'a, T: Into<Span<'a>>>(input: T) -> ParseResult<'a, Re
 /// ## Example
 /// ```
 /// # use lazylifted::parsers::{parse_requirement_key, preamble::*};
-/// # use lazylifted::Requirement;
+/// # use lazylifted::parsed_types::Requirement;
 /// assert!(parse_requirement_key(":strips").is_value(Requirement::Strips));
 /// assert!(parse_requirement_key(":typing").is_value(Requirement::Typing));
 /// assert!(parse_requirement_key(":negative-preconditions").is_value(Requirement::NegativePreconditions));

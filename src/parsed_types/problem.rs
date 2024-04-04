@@ -9,7 +9,8 @@ use crate::parsed_types::{Name, NameLiteral, Objects, Requirements};
 ///
 /// ## Example
 /// ```
-/// # use lazylifted::{Name, Parser, Problem};
+/// # use lazylifted::Parser;
+/// # use lazylifted::parsed_types::*;
 /// let input = r#"(define (problem get-paid)
 ///         (:domain briefcase-world)
 ///         (:init (place home) (place office)

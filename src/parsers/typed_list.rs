@@ -15,7 +15,7 @@ use nom::sequence::{preceded, tuple};
 /// ```
 /// # use nom::character::complete::alpha1;
 /// # use lazylifted::parsers::{parse_name, typed_list, preamble::*};
-/// # use lazylifted::*;
+/// # use lazylifted::parsed_types::*;
 /// // Single implicitly typed element.
 /// assert!(typed_list(parse_name)(Span::new("abc")).is_value(TypedList::from_iter([
 ///     Name::new("abc").to_typed(Type::OBJECT)

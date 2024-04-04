@@ -9,7 +9,7 @@ use nom::combinator::map;
 /// ## Example
 /// ```
 /// # use lazylifted::parsers::{parse_objects_declaration, preamble::*};
-/// # use lazylifted::*;
+/// # use lazylifted::parsed_types::*;
 /// let input = "(:objects train1 train2)";
 /// assert!(parse_objects_declaration(input).is_value(
 ///     Objects::from_iter([

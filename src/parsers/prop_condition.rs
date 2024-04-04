@@ -13,7 +13,7 @@ use nom::sequence::{preceded, tuple};
 /// ## Examples
 /// ```
 /// # use lazylifted::parsers::{parse_prop_condition, preamble::*};
-/// # use lazylifted::*;
+/// # use lazylifted::parsed_types::*;
 /// // Atom
 /// assert!(parse_prop_condition("(on ?x b1)").is_value(
 ///    PropCondition::new_literal(

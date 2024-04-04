@@ -11,7 +11,7 @@ use nom::combinator::map;
 /// ## Example
 /// ```
 /// # use lazylifted::parsers::{literal, parse_name, preamble::*};
-/// # use lazylifted::*;
+/// # use lazylifted::parsed_types::*;
 /// assert!(literal(parse_name)(Span::new("(on b1 b2)")).is_value(
 ///     Literal::new(
 ///         Atom::new(

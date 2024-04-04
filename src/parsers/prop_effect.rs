@@ -10,7 +10,7 @@ use nom::combinator::map;
 /// ## Example
 /// ```
 /// # use lazylifted::parsers::{parse_prop_effect, preamble::*};
-/// # use lazylifted::*;
+/// # use lazylifted::parsed_types::*;
 /// assert!(parse_prop_effect("(on ?x b1)").is_value(
 ///     PropEffect::new_add(Atom::new(
 ///        PredicateName::from("on"),

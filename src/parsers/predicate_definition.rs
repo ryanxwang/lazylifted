@@ -11,7 +11,7 @@ use nom::sequence::tuple;
 /// ## Example
 /// ```
 /// # use lazylifted::parsers::{parse_predicate_definition, Span, UnwrapValue};
-/// # use lazylifted::*;
+/// # use lazylifted::parsed_types::*;
 /// assert!(parse_predicate_definition(Span::new("(at ?x - physob ?y - location)")).is_value(
 ///     PredicateDefinition::new(
 ///         PredicateName::from("at"),

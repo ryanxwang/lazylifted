@@ -10,7 +10,8 @@ use crate::parsed_types::{Name, Types};
 ///
 /// ## Example
 /// ```
-/// # use lazylifted::{Domain, Name, Parser};
+/// # use lazylifted::Parser;
+/// # use lazylifted::parsed_types::*;
 /// let input = r#"
 /// (define
 ///     (domain sokoban)

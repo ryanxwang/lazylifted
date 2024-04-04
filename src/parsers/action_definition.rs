@@ -15,7 +15,7 @@ use nom::sequence::{preceded, tuple};
 ///
 /// ## Example
 /// ```
-/// # use lazylifted::*;
+/// # use lazylifted::parsed_types::*;
 /// # use lazylifted::parsers::{parse_action_definition, preamble::*};
 /// let input = r#"(:action putdown
 ///                    :parameters  (?ob)

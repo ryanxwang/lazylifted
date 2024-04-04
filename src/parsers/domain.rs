@@ -15,7 +15,7 @@ use nom::sequence::{preceded, tuple};
 /// ## Example
 /// ```
 /// # use lazylifted::parsers::{parse_domain, preamble::*};
-/// # use lazylifted::*;
+/// # use lazylifted::parsed_types::*;
 /// let input = r#"
 /// (define
 ///     (domain sokoban)
@@ -96,7 +96,8 @@ impl crate::parsers::Parser for Domain {
     ///
     /// ## Example
     /// ```
-    /// # use lazylifted::{Domain, Name, Parser};
+    /// # use lazylifted::Parser;
+    /// # use lazylifted::parsed_types::*;
     /// let input = r#"
     /// (define
     ///     (domain sokoban)

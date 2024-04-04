@@ -9,7 +9,7 @@ use nom::combinator::map;
 /// ## Example
 /// ```
 /// # use lazylifted::parsers::{parse_constants, preamble::*};
-/// # use lazylifted::*;
+/// # use lazylifted::parsed_types::*;
 /// let input = "(:constants B P D - physob)";
 /// assert!(parse_constants(input).is_value(
 ///     Constants::new(TypedList::from_iter([

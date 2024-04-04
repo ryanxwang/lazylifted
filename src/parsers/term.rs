@@ -10,7 +10,7 @@ use nom::error_position;
 /// ## Example
 /// ```
 /// # use lazylifted::parsers::{parse_term, preamble::*};
-/// # use lazylifted::Term;
+/// # use lazylifted::parsed_types::Term;
 /// assert!(parse_term("abcde").is_value(Term::Name("abcde".into())));
 /// assert!(parse_term("?abcde").is_value(Term::Variable("abcde".into())));
 ///```
@@ -38,7 +38,8 @@ impl crate::parsers::Parser for Term {
     ///
     /// ## Example
     /// ```
-    /// # use lazylifted::{Term, Parser};
+    /// # use lazylifted::Parser;
+    /// # use lazylifted::parsed_types::Term;
     /// let (_, value) = Term::parse("some-name").unwrap();
     /// assert_eq!(value, Term::Name("some-name".into()));
     ///

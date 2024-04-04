@@ -11,7 +11,7 @@ use nom::error_position;
 /// ## Example
 /// ```
 /// # use lazylifted::parsers::{parse_type, preamble::*};
-/// # use lazylifted::Type;
+/// # use lazylifted::parsed_types::Type;
 /// assert!(parse_type(Span::new("object")).is_value(Type::Exactly("object".into())));
 /// assert!(parse_type(Span::new("(either object number)")).is_value(Type::from_iter(["object", "number"])));
 ///```

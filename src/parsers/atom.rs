@@ -12,7 +12,7 @@ use nom::sequence::tuple;
 /// ```
 /// # use nom::character::complete::alpha1;
 /// # use lazylifted::parsers::{atom, Span, parse_name, UnwrapValue};
-/// # use lazylifted::*;
+/// # use lazylifted::parsed_types::*;
 /// assert!(atom(parse_name)(Span::new("(move a b)")).is_value(
 ///     Atom::new(PredicateName::from("move"), vec!["a".into(), "b".into()])
 /// ));

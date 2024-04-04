@@ -5,7 +5,7 @@ use std::ops::Deref;
 ///
 /// ## Example
 /// ```
-/// # use lazylifted::{Name, TypedList, Typed, Type};
+/// # use lazylifted::parsed_types::{Name, TypedList, Typed, Type};
 /// let tl = TypedList::from_iter([
 ///     Typed::new(Name::from("location"), Type::OBJECT),
 ///     Typed::new(Name::from("physob"), Type::OBJECT),
