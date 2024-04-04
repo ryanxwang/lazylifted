@@ -11,7 +11,7 @@ use std::{
     fmt::{self, Display, Formatter},
 };
 
-use crate::{Literal, Name};
+use crate::parsed_types::{Literal, Name};
 
 /// A ground atom is a vector of object indices. It only makes sense in the
 /// context of a specific predicate, see [`Relation`].

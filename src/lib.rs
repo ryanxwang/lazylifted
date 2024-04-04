@@ -2,10 +2,9 @@
 #![allow(dead_code)]
 
 mod parsed_types;
-pub mod parsers;
+mod parsers;
 mod search;
 
-pub use parsed_types::*;
 pub use parsers::Parser;
 pub use search::Task;
 

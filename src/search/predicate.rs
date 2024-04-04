@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{Name, PredicateDefinition};
+use crate::parsed_types::{Name, PredicateDefinition};
 
 // TODO: Check for static predicates.
 #[derive(Debug)]

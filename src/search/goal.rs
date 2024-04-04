@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{Atom, Literal, Name, NameLiteral};
+use crate::parsed_types::{Atom, Literal, Name, NameLiteral};
 
 /// A single goal atom. The arguments are indices into the task's object list.
 #[derive(Debug)]

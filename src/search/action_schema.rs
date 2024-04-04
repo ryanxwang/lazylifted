@@ -1,4 +1,4 @@
-use crate::{
+use crate::parsed_types::{
     ActionDefinition, ActionName, Atom, Literal, Name, PropCondition, PropEffect, Term, Typed,
     Variable,
 };

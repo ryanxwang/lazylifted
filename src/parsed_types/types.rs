@@ -1,6 +1,6 @@
 //! Provides type definitions;
 
-use crate::{parsed_types::TypedNames, Name, Type, Typed};
+use crate::parsed_types::{Name, Type, Typed, TypedNames};
 use std::ops::Deref;
 
 /// A set of types.

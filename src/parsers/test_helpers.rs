@@ -1,7 +1,7 @@
 //! Contains helper traits for dealing with [`ParseResult`] values.
 
+use crate::parsed_types::Type;
 use crate::parsers::{ParseResult, Span};
-use crate::Type;
 
 /// A helper trait for dealing with [`ParseResult`] values.
 pub trait UnwrapValue<V> {

@@ -32,8 +32,8 @@ impl<'a, T> From<Atom<T>> for Literal<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::parsed_types::{Name, PredicateName, Term};
     use crate::parsers::{atom, parse_term, Span};
-    use crate::{Name, PredicateName, Term};
 
     #[test]
     fn positive_atom() {

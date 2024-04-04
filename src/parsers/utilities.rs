@@ -85,8 +85,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::parsed_types::Name;
     use crate::parsers::{parse_name, Match};
-    use crate::Name;
     use nom::multi::separated_list1;
 
     #[test]

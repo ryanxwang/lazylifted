@@ -1,4 +1,4 @@
-use crate::{Name, Typed};
+use crate::parsed_types::{Name, Typed};
 use std::collections::HashMap;
 
 #[derive(Debug)]
