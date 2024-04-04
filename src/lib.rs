@@ -2,7 +2,7 @@
 #![allow(dead_code)]
 
 mod parsed_types;
-mod parsers;
+pub mod parsers;
 mod search;
 
 pub use parsers::Parser;
