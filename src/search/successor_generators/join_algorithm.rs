@@ -20,7 +20,7 @@ pub trait JoinAlgorithm {
             Some(tables) => tables,
             None => return Table::EMPTY,
         };
-        assert_eq!(tables.len(), data.relevant_precondition_atoms.len());
+        debug_assert_eq!(tables.len(), data.relevant_precondition_atoms.len());
 
         let mut working_table = tables.pop_front().unwrap();
 
@@ -62,8 +62,8 @@ fn get_indices_and_constants_in_precondition(
     indices: &mut Vec<i32>,
     constants: &mut Vec<usize>,
 ) {
-    assert!(indices.is_empty());
-    assert!(constants.is_empty());
+    debug_assert!(indices.is_empty());
+    debug_assert!(constants.is_empty());
 
     for (i, arg) in atom.arguments.iter().enumerate() {
         match arg {
@@ -84,7 +84,7 @@ fn select_tuples(state: &DBState, atom: &SchemaAtom, constants: &[usize]) -> Vec
     for tuple in &state.relations[atom.predicate_index].tuples {
         let mut match_constants = true;
         for &constant in constants {
-            assert!(atom.arguments[constant].is_constant());
+            debug_assert!(atom.arguments[constant].is_constant());
             if tuple[constant] != atom.arguments[constant].get_index() {
                 match_constants = false;
                 break;

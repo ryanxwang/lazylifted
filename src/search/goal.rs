@@ -18,7 +18,7 @@ impl GoalAtom {
         predicate_table: &HashMap<Name, usize>,
         object_table: &HashMap<Name, usize>,
     ) -> Self {
-        assert!(!atom.values().is_empty());
+        debug_assert!(!atom.values().is_empty());
 
         let predicate_index = predicate_table
             .get(atom.predicate_name())

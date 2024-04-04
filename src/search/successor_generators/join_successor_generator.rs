@@ -102,7 +102,7 @@ fn is_ground_action_applicable(action: &ActionSchema, state: &DBState) -> bool {
             .arguments
             .iter()
             .map(|arg| {
-                assert!(arg.is_constant());
+                debug_assert!(arg.is_constant());
                 arg.get_index()
             })
             .collect();

@@ -121,7 +121,7 @@ impl SparseStatePacker {
                         .unwrap();
                     hash -= multiplier * index as u64;
                 }
-                assert!(hash == 0);
+                debug_assert_eq!(hash, 0);
                 tuples.insert(tuple);
             }
             relations.push(Relation {

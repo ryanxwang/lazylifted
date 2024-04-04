@@ -30,7 +30,7 @@ impl Task {
         let domain = Domain::from_str(domain_text).expect("Failed to parse domain file");
         let problem = Problem::from_str(problem_text).expect("Failed to parse problem file");
 
-        assert_eq!(
+        debug_assert_eq!(
             domain.name(),
             problem.domain(),
             "Problem domain does not match the domain."
