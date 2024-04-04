@@ -6,7 +6,10 @@
 //!
 //! The implementation is based on that of powerlifted.
 
-use std::collections::{BTreeSet, HashMap};
+use std::{
+    collections::{BTreeSet, HashMap},
+    fmt::{self, Display, Formatter},
+};
 
 use crate::{Literal, Name};
 
@@ -78,5 +81,22 @@ impl DBState {
         }
 
         return state;
+    }
+}
+
+impl Display for DBState {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        for (i, relation) in self.relations.iter().enumerate() {
+            for tuple in &relation.tuples {
+                write!(f, "({} {:?})", i, tuple)?;
+            }
+        }
+        for (i, &nullary) in self.nullary_atoms.iter().enumerate() {
+            if nullary {
+                write!(f, "({})", i)?;
+            }
+        }
+
+        Ok(())
     }
 }

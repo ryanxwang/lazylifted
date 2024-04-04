@@ -120,15 +120,15 @@ impl SchemaAtom {
 
 #[derive(Debug)]
 pub struct ActionSchema {
-    name: ActionName,
+    pub name: ActionName,
     pub index: usize,
-    parameters: Vec<SchemaParameter>,
+    pub parameters: Vec<SchemaParameter>,
     pub preconditions: Vec<SchemaAtom>,
     pub positive_nullary_preconditions: Vec<bool>,
     pub negative_nullary_preconditions: Vec<bool>,
-    effects: Vec<SchemaAtom>,
-    positive_nullary_effects: Vec<bool>,
-    negative_nullary_effects: Vec<bool>,
+    pub effects: Vec<SchemaAtom>,
+    pub positive_nullary_effects: Vec<bool>,
+    pub negative_nullary_effects: Vec<bool>,
 }
 
 impl ActionSchema {
