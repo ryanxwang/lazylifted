@@ -1,7 +1,9 @@
 use std::collections::{BTreeSet, HashMap};
 
-use crate::search::states::{DBState, GroundAtom, Relation};
-use crate::Task;
+use crate::search::{
+    states::{DBState, GroundAtom, Relation},
+    Task,
+};
 
 /// The [`SparsePackedState`] struct is used to store a state in a more compact
 /// representation. This is based on the powerlifted implementation, which is

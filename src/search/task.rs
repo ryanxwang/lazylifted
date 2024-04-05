@@ -1,6 +1,6 @@
 use crate::parsed_types::{Domain, Name, Problem, Types};
+use crate::parsers::Parser;
 use crate::search::{ActionSchema, DBState, Goal, Object, Predicate};
-use crate::Parser;
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::PathBuf;

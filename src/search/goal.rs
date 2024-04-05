@@ -1,13 +1,13 @@
-use std::collections::HashMap;
-
 use crate::parsed_types::{Atom, Literal, Name, NameLiteral};
+use crate::search::states::DBState;
+use std::collections::HashMap;
 
 /// A single goal atom. The arguments are indices into the task's object list.
 #[derive(Debug)]
 pub struct GoalAtom {
-    predicate_index: usize,
-    arguments: Vec<usize>,
-    negated: bool,
+    pub predicate_index: usize,
+    pub arguments: Vec<usize>,
+    pub negated: bool,
 }
 
 impl GoalAtom {
@@ -46,9 +46,9 @@ impl GoalAtom {
 /// The goal of a task.
 #[derive(Debug)]
 pub struct Goal {
-    atoms: Vec<GoalAtom>,
-    positive_nullary_goals: Vec<usize>,
-    negative_nullary_goals: Vec<usize>,
+    pub atoms: Vec<GoalAtom>,
+    pub positive_nullary_goals: Vec<usize>,
+    pub negative_nullary_goals: Vec<usize>,
 }
 
 impl Goal {
@@ -93,5 +93,32 @@ impl Goal {
             positive_nullary_goals,
             negative_nullary_goals,
         }
+    }
+
+    /// Returns true if the goal is satisfied by the given state.
+    pub fn is_satisfied(&self, state: &DBState) -> bool {
+        for &pred in &self.positive_nullary_goals {
+            if !state.nullary_atoms[pred] {
+                return false;
+            }
+        }
+
+        for &pred in &self.negative_nullary_goals {
+            if state.nullary_atoms[pred] {
+                return false;
+            }
+        }
+
+        for atom in &self.atoms {
+            let goal_predicate = atom.predicate_index;
+            let relations = &state.relations[goal_predicate];
+            debug_assert!(relations.predicate_symbol == goal_predicate);
+
+            if relations.tuples.contains(&atom.arguments) == atom.negated {
+                return false;
+            }
+        }
+
+        true
     }
 }

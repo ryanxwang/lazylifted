@@ -1,5 +1,7 @@
 use crate::search::states::GroundAtom;
-use crate::search::successor_generators::{JoinAlgorithm, PrecompiledActionData};
+use crate::search::successor_generators::{
+    JoinAlgorithm, PrecompiledActionData, SuccessorGenerator,
+};
 use crate::search::{Action, ActionSchema, DBState, SchemaAtom, Task};
 
 pub struct JoinSuccessorGenerator<T>
@@ -26,8 +28,13 @@ where
             action_data,
         }
     }
+}
 
-    pub fn get_applicable_actions(&self, state: &DBState, action: &ActionSchema) -> Vec<Action> {
+impl<T> SuccessorGenerator for JoinSuccessorGenerator<T>
+where
+    T: JoinAlgorithm,
+{
+    fn get_applicable_actions(&self, state: &DBState, action: &ActionSchema) -> Vec<Action> {
         if is_trivially_inapplicable(action, state) {
             return vec![];
         }
@@ -76,7 +83,7 @@ where
             .collect()
     }
 
-    pub fn generate_successor(
+    fn generate_successor(
         &self,
         state: &DBState,
         action_schema: &ActionSchema,

@@ -1,32 +1,32 @@
-use crate::{
-    search::successor_generators::{JoinSuccessorGenerator, NaiveJoinAlgorithm},
-    Task,
+use crate::search::{
+    successor_generators::{JoinSuccessorGenerator, NaiveJoinAlgorithm},
+    Action, ActionSchema, DBState, Task,
 };
+use clap;
 
-/// A successor generator is responsible for generating the successors of a
-/// given state.
-pub enum SuccessorGenerators {
-    Naive(JoinSuccessorGenerator<NaiveJoinAlgorithm>),
+pub trait SuccessorGenerator {
+    fn get_applicable_actions(&self, state: &DBState, action: &ActionSchema) -> Vec<Action>;
+
+    fn generate_successor(
+        &self,
+        state: &DBState,
+        action_schema: &ActionSchema,
+        action: &Action,
+    ) -> DBState;
 }
 
-impl SuccessorGenerators {
-    /// Create a new successor generator. Defaults to the naive implementation.
-    pub fn new(task: &Task) -> Self {
-        SuccessorGenerators::new_naive(task)
-    }
+#[derive(clap::ValueEnum, Debug, Clone, Copy)]
+#[clap(rename_all = "kebab-case")]
+pub enum SuccessorGeneratorName {
+    Naive,
+}
 
-    /// Create a successor generator from a name. This is useful for creating
-    /// successor generators from command line arguments.
-    pub fn from_name(name: &str) -> impl Fn(&Task) -> Self {
-        match name {
-            "naive" => SuccessorGenerators::new_naive,
-            _ => panic!("Unknown successor generator: {}", name),
+impl SuccessorGeneratorName {
+    pub fn create(&self, task: &Task) -> impl SuccessorGenerator {
+        match self {
+            SuccessorGeneratorName::Naive => {
+                JoinSuccessorGenerator::new(NaiveJoinAlgorithm::new(), task)
+            }
         }
-    }
-
-    /// Create a new naive successor generator. See
-    /// [`super::NaiveJoinAlgorithm`] for more.
-    pub fn new_naive(task: &Task) -> Self {
-        SuccessorGenerators::Naive(JoinSuccessorGenerator::new(NaiveJoinAlgorithm::new(), task))
     }
 }

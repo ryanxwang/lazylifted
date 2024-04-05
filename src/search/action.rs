@@ -1,5 +1,5 @@
 /// Action struct that represents an instantiated action schema.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Action {
     /// The action schema index.
     pub index: usize,
@@ -15,3 +15,8 @@ impl Action {
         }
     }
 }
+
+pub const NO_ACTION: Action = Action {
+    index: usize::MAX,
+    instantiation: vec![],
+};

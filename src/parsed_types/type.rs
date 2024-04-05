@@ -135,8 +135,7 @@ impl IntoIterator for Type {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parsers::Span;
-    use crate::Parser;
+    use crate::parsers::{Parser, Span};
 
     #[test]
     fn flatten_with_single_element_works() {
