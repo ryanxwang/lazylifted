@@ -99,4 +99,12 @@ impl SearchNode {
     pub fn get_f(&self) -> f64 {
         self.f
     }
+
+    pub fn get_parent_id(&self) -> StateId {
+        self.parent_id
+    }
+
+    pub fn get_action(&self) -> &Action {
+        &self.action
+    }
 }

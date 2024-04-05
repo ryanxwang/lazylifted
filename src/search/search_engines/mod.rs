@@ -8,4 +8,4 @@ use bfs::BFS;
 pub use search_engine::{SearchEngine, SearchEngineName, SearchResult};
 use search_node::{SearchNode, SearchNodeStatus};
 use search_space::{SearchSpace, StateId, NO_STATE};
-use search_statistics::SearchStatistics;
+pub use search_statistics::SearchStatistics;

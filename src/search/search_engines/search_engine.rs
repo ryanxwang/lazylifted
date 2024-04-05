@@ -1,10 +1,13 @@
-use crate::search::{search_engines::BFS, Heuristic, SuccessorGenerator, Task, Verbosity};
+use crate::search::{
+    search_engines::{SearchStatistics, BFS},
+    Action, Heuristic, SuccessorGenerator, Task,
+};
 use clap;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SearchResult {
     /// The search was successful
-    Success,
+    Success(Vec<Action>),
     /// The search was provably unsolvable
     ProvablyUnsolvable,
     /// The search was unsolvable, but the search engine is also incomplete
@@ -21,7 +24,7 @@ pub trait SearchEngine {
         task: &Task,
         generator: &impl SuccessorGenerator,
         heuristic: &impl Heuristic,
-    ) -> SearchResult;
+    ) -> (SearchResult, SearchStatistics);
 }
 
 #[derive(clap::ValueEnum, Debug, Clone, Copy)]
@@ -31,9 +34,9 @@ pub enum SearchEngineName {
 }
 
 impl SearchEngineName {
-    pub fn create(&self, verbosity: Verbosity) -> impl SearchEngine {
+    pub fn create(&self) -> impl SearchEngine {
         match self {
-            SearchEngineName::BFS => BFS::new(verbosity),
+            SearchEngineName::BFS => BFS::new(),
         }
     }
 }

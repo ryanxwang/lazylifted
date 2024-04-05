@@ -1,3 +1,5 @@
+use crate::search::Task;
+
 /// Action struct that represents an instantiated action schema.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Action {
@@ -13,6 +15,17 @@ impl Action {
             index,
             instantiation,
         }
+    }
+
+    pub fn to_string(&self, task: &Task) -> String {
+        let schema_name: &str = task.action_schemas[self.index].name.as_ref();
+        let objects: Vec<&str> = self
+            .instantiation
+            .iter()
+            .map(|&object_index| task.objects[object_index].name.as_ref())
+            .collect();
+
+        format!("({} {})", schema_name, objects.join(" "))
     }
 }
 

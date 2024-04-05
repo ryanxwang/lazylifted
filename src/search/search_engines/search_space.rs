@@ -60,7 +60,7 @@ impl SearchSpace {
         let state_hash = self.state_build_hasher.hash_one(&state);
         match self.registered_states.get(&state_hash) {
             Some(&state_id) => {
-                return self.get_node(state_id);
+                return self.get_node_mut(state_id);
             }
             None => {
                 self.states.push(state);
@@ -68,16 +68,31 @@ impl SearchSpace {
                 let state_id = new_node.get_state_id();
                 self.nodes.push(new_node);
                 self.registered_states.insert(state_hash, state_id);
-                return self.get_node(state_id);
+                return self.get_node_mut(state_id);
             }
         }
     }
 
-    pub fn get_root_node(&mut self) -> &mut SearchNode {
-        self.get_node(self.root_state_id)
+    pub fn extract_plan(&self, goal_node: &SearchNode) -> Vec<Action> {
+        let mut plan = vec![];
+        let mut current_node = goal_node;
+        while NO_STATE != current_node.get_parent_id() {
+            plan.push(current_node.get_action().clone());
+            current_node = self.get_node(current_node.get_parent_id());
+        }
+        plan.reverse();
+        plan
     }
 
-    pub fn get_node(&mut self, state_id: StateId) -> &mut SearchNode {
+    pub fn get_root_node_mut(&mut self) -> &mut SearchNode {
+        self.get_node_mut(self.root_state_id)
+    }
+
+    pub fn get_node(&self, state_id: StateId) -> &SearchNode {
+        self.nodes.get(state_id.0).expect("Invalid state id")
+    }
+
+    pub fn get_node_mut(&mut self, state_id: StateId) -> &mut SearchNode {
         self.nodes.get_mut(state_id.0).expect("Invalid state id")
     }
 

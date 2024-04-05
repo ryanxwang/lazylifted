@@ -1,8 +1,9 @@
 use crate::parsed_types::{Name, Typed};
 use std::collections::HashMap;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Object {
+    pub name: Name,
     pub index: usize,
     pub types: Vec<usize>,
 }
@@ -20,6 +21,10 @@ impl Object {
                     .clone()
             })
             .collect();
-        Self { index, types }
+        Self {
+            name: object.value().clone(),
+            index,
+            types,
+        }
     }
 }

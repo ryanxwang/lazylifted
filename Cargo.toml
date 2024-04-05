@@ -15,3 +15,5 @@ nom-greedyerror = "0.5.0"
 nom_locate = "4.1.0"
 segvec = "0.2.0"
 thiserror = "1.0.40"
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
