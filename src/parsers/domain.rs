@@ -96,7 +96,7 @@ impl crate::parsers::Parser for Domain {
     ///
     /// ## Example
     /// ```
-    /// # use lazylifted::Parser;
+    /// # use lazylifted::parsers::Parser;
     /// # use lazylifted::parsed_types::*;
     /// let input = r#"
     /// (define

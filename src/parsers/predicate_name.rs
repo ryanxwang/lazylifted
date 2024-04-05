@@ -31,7 +31,7 @@ impl crate::parsers::Parser for PredicateName {
     ///
     /// ## Example
     /// ```
-    /// # use lazylifted::Parser;
+    /// # use lazylifted::parsers::Parser;
     /// # use lazylifted::parsed_types::PredicateName;
     /// let (_, value) = PredicateName::parse("abcde").unwrap();
     /// assert_eq!(value, "abcde".into());

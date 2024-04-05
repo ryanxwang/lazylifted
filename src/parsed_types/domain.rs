@@ -10,7 +10,7 @@ use crate::parsed_types::{Name, Types};
 ///
 /// ## Example
 /// ```
-/// # use lazylifted::Parser;
+/// # use lazylifted::parsers::Parser;
 /// # use lazylifted::parsed_types::*;
 /// let input = r#"
 /// (define

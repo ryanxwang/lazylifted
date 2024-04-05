@@ -31,7 +31,7 @@ impl crate::parsers::Parser for ActionName {
     ///
     /// ## Example
     /// ```
-    /// # use lazylifted::Parser;
+    /// # use lazylifted::parsers::Parser;
     /// # use lazylifted::parsed_types::ActionName;
     /// let (_, action_name) = ActionName::parse("abcde").unwrap();
     /// assert_eq!(action_name, "abcde".into());

@@ -78,7 +78,7 @@ impl crate::parsers::Parser for Problem {
     ///
     /// ## Example
     /// ```
-    /// # use lazylifted::Parser;
+    /// # use lazylifted::parsers::Parser;
     /// # use lazylifted::parsed_types::*;
     /// let input = r#"(define (problem get-paid)
     ///         (:domain briefcase-world)

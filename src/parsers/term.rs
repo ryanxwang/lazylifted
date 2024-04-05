@@ -38,7 +38,7 @@ impl crate::parsers::Parser for Term {
     ///
     /// ## Example
     /// ```
-    /// # use lazylifted::Parser;
+    /// # use lazylifted::parsers::Parser;
     /// # use lazylifted::parsed_types::Term;
     /// let (_, value) = Term::parse("some-name").unwrap();
     /// assert_eq!(value, Term::Name("some-name".into()));

@@ -31,7 +31,7 @@ impl crate::parsers::Parser for Variable {
     ///
     /// ## Example
     /// ```
-    /// # use lazylifted::Parser;
+    /// # use lazylifted::parsers::Parser;
     /// # use lazylifted::parsed_types::Variable;
     /// let (_, value) = Variable::parse("?abcde").unwrap();
     /// assert_eq!(value, "abcde".into());
