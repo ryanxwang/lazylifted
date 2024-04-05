@@ -3,7 +3,7 @@ use crate::search::states::DBState;
 use std::collections::HashMap;
 
 /// A single goal atom. The arguments are indices into the task's object list.
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct GoalAtom {
     pub predicate_index: usize,
     pub arguments: Vec<usize>,
