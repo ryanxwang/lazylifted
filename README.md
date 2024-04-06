@@ -1,7 +1,7 @@
 # lazylifted
 
 
-![build](https://github.com/Thyroidr/lazylifted/actions/workflows/rust.yml/badge.svg)
+![build](https://github.com/Thyroidr/lazylifted/actions/workflows/build.yml/badge.svg)
 
 ## Installation
 
