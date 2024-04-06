@@ -16,6 +16,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+    - name: Install Python requirements
+      run: pip install -r requirements.txt
     - name: Build
       run: cargo build --verbose
     - name: Run tests
