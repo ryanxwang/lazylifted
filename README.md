@@ -1,5 +1,8 @@
 # lazylifted
 
+
+![build](https://github.com/Thyroidr/lazylifted/actions/workflows/rust.yml/badge.svg)
+
 ## Installation
 
 Lazylifted is written in rust, and can be built with any recent version of
