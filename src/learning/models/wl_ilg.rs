@@ -13,7 +13,7 @@ use pyo3::{
     Bound, Python,
 };
 use serde::{Deserialize, Serialize};
-use std::{path::PathBuf, time};
+use std::{io::Write, path::PathBuf, time};
 use tracing::info;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -25,7 +25,9 @@ pub struct WLILGConfig {
     pub validate: bool,
 }
 
+#[derive(Debug, Serialize)]
 pub struct WLILGModel<'py> {
+    #[serde(skip)]
     pub model: Regressor<'py>,
     /// The successor generator to use for generating successor states when
     /// training. It might appear weird we store the name of the successor
@@ -147,6 +149,15 @@ impl<'py> Train<'py> for WLILGModel<'py> {
     }
 
     fn save(&self, path: &PathBuf) {
-        todo!()
+        let pickle_path = path.with_extension("pkl");
+        self.model.pickle(&pickle_path);
+
+        let ron_path = path.with_extension("ron");
+        let data = ron::to_string(self).expect("Failed to serialise model data");
+
+        let mut file = std::fs::File::create(ron_path).expect("Failed to create model file");
+        file.write_all(data.as_bytes())
+            .expect("Failed to write model data");
+        info!(target : "progress", "saved model to {}.{{ron/pkl}}", path.display());
     }
 }

@@ -8,8 +8,9 @@
 #![warn(unused_crate_dependencies)]
 #![warn(unused_qualifications)]
 
-// Crate dependencies used in binary but not in library. Unfortunately cargo
-// does not yet allow specifying dependencies for binaries only.
+// Crate dependencies used in binary/test but not in library. Unfortunately
+// cargo does not yet allow specifying dependencies for binaries only.
+use assert_approx_eq as _;
 use tracing_subscriber as _;
 
 pub mod learning;

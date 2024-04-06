@@ -1,10 +1,11 @@
 use crate::learning::graphs::CGraph;
 use numpy::{PyArray2, PyArrayMethods};
 use pyo3::{Bound, Python};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tracing::info;
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 enum Mode {
     Train,
     Evaluate,
@@ -13,7 +14,7 @@ enum Mode {
 /// A neighbourhood of a node in a graph, useful for just the Weisfeiler-Lehman
 /// to hash down to a single value. Note that unlike the GOOSE implementation,
 /// this does not include the edge colours to the neighbours.
-#[derive(Debug, Clone, Hash, Eq, PartialEq)]
+#[derive(Debug, Clone, Hash, Eq, PartialEq, Serialize, Deserialize)]
 struct Neighbourhood {
     node_colour: i32,
     neighbour_colours: Vec<(i32, i32)>,
@@ -30,7 +31,7 @@ impl Neighbourhood {
 }
 
 /// A Weisfeiler-Lehman kernel.
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct WLKernel {
     /// The mode of the kernel. In training mode, the kernel will create new
     /// hashes for unseen subgraphs. In evaluation mode, the kernel will

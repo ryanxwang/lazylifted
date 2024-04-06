@@ -7,3 +7,10 @@ debug/
 
 # MSVC Windows builds of rustc generate these, which store debugging information
 *.pdb
+
+# Serialized formats
+*.ron
+*.pkl
+
+.DS_Store
+trained_models/

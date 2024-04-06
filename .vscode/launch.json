@@ -60,7 +60,7 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'trainer' for WL-ILG-GPR, Blockworld",
+            "name": "Debug executable 'trainer'",
             "cargo": {
                 "args": [
                     "build",
@@ -73,8 +73,10 @@
                 }
             },
             "args": [
+                "--data",
                 "${workspaceFolder}/experiments/ipc23-learning/blocksworld.toml",
-                "${workspaceFolder}/experiments/models/wl-ilg-gpr.toml"
+                "--model",
+                "${workspaceFolder}/experiments/models/wl-ilg-lr.toml"
             ],
             "cwd": "${workspaceFolder}"
         },

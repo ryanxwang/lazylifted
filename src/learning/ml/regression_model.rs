@@ -3,6 +3,7 @@ use numpy::{PyArray1, PyArray2};
 use pyo3::types::IntoPyDict;
 use pyo3::{prelude::*, types::PyFloat};
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 use std::time;
 use tracing::info;
 
@@ -79,10 +80,47 @@ impl<'py> Regressor<'py> {
             }
         }
     }
+    pub fn pickle(&self, pickle_path: &PathBuf) {
+        let py = self.model.py();
+        let pickle = py.import_bound("pickle").unwrap();
+        let pickle_path_str = pickle_path.to_str().unwrap();
+        let file = py
+            .import_bound("builtins")
+            .unwrap()
+            .getattr("open")
+            .unwrap()
+            .call1((pickle_path_str, "wb"))
+            .unwrap();
+        pickle
+            .getattr("dump")
+            .unwrap()
+            .call1((self.model.as_ref(), &file))
+            .unwrap();
+
+        file.getattr("close").unwrap().call0().unwrap();
+    }
+
+    pub fn unpickle(py: Python<'py>, pickle_path: &PathBuf) -> Self {
+        let pickle = py.import_bound("pickle").unwrap();
+        let file = py
+            .import_bound("builtins")
+            .unwrap()
+            .getattr("open")
+            .unwrap()
+            .call1((pickle_path.to_str().unwrap(), "rb"))
+            .unwrap();
+        let model = pickle.getattr("load").unwrap().call1((&file,)).unwrap();
+        file.getattr("close").unwrap().call0().unwrap();
+
+        Self { model }
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use assert_approx_eq::assert_approx_eq;
+    use numpy::PyArrayMethods;
+
     use super::*;
 
     #[test]
@@ -110,6 +148,9 @@ mod tests {
             let x = PyArray2::from_vec2_bound(py, &vec![vec![5.0, 6.0], vec![7.0, 8.0]]).unwrap();
             let y = regressor.predict(&x);
             assert_eq!(y.len().unwrap(), 2);
+            let y = y.to_vec().unwrap();
+            assert_approx_eq!(y[0], 3.0, 1e-5);
+            assert_approx_eq!(y[1], 4.0, 1e-5);
         });
     }
 }

@@ -11,10 +11,29 @@ use tracing::info;
 #[derive(Parser, Debug)]
 #[command(version)]
 struct Args {
-    #[arg(help = "The path to the data config file", id = "DATA")]
+    #[arg(
+        help = "The path to the data config file",
+        id = "DATA",
+        short = 'd',
+        long = "data"
+    )]
     data_config: PathBuf,
-    #[arg(help = "The path to the model config file", id = "MODEL")]
+    #[arg(
+        help = "The path to the model config file",
+        id = "MODEL",
+        short = 'm',
+        long = "model"
+    )]
     model_config: PathBuf,
+    #[arg(
+        help = "The path to save the trained model. Two files will be saved:
+        <save_path>.pkl and <save_path>.ron - one for Python and one for Rust",
+        id = "SAVE",
+        short = 's',
+        long = "save",
+        default_value = "trained"
+    )]
+    save_path: PathBuf,
 }
 
 #[derive(Deserialize, Debug)]
@@ -66,5 +85,6 @@ fn main() {
     Python::with_gil(|py| {
         let mut model = ModelConfig::load(py, &args.model_config);
         model.train(py, &training_data);
+        model.save(&args.save_path);
     });
 }
