@@ -3,6 +3,7 @@ use crate::search::{
     Action, ActionSchema, DBState, Task,
 };
 use clap;
+use serde::{Deserialize, Serialize};
 
 pub trait SuccessorGenerator {
     fn get_applicable_actions(&self, state: &DBState, action: &ActionSchema) -> Vec<Action>;
@@ -15,9 +16,10 @@ pub trait SuccessorGenerator {
     ) -> DBState;
 }
 
-#[derive(clap::ValueEnum, Debug, Clone, Copy)]
+#[derive(clap::ValueEnum, Debug, Clone, Copy, Deserialize, Serialize)]
 #[clap(rename_all = "kebab-case")]
 pub enum SuccessorGeneratorName {
+    #[serde(alias = "naive")]
     Naive,
 }
 

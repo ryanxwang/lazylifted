@@ -1,0 +1,5 @@
+[wl-ilg]
+model = "gpr"
+successor-generator = "naive"
+iters = 4
+validate = false

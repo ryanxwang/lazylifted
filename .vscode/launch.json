@@ -1,0 +1,101 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'lazylifted'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=lazylifted"
+                ],
+                "filter": {
+                    "name": "lazylifted",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'planner'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=planner",
+                    "--package=lazylifted"
+                ],
+                "filter": {
+                    "name": "planner",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'planner'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=planner",
+                    "--package=lazylifted"
+                ],
+                "filter": {
+                    "name": "planner",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'trainer' for WL-ILG-GPR, Blockworld",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=trainer",
+                    "--package=lazylifted"
+                ],
+                "filter": {
+                    "name": "trainer",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "${workspaceFolder}/experiments/ipc23-learning/blocksworld.toml",
+                "${workspaceFolder}/experiments/models/wl-ilg-gpr.toml"
+            ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'trainer'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=trainer",
+                    "--package=lazylifted"
+                ],
+                "filter": {
+                    "name": "trainer",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

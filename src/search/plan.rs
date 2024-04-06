@@ -5,6 +5,7 @@ use crate::parsed_types::{ActionName, Name};
 use crate::parsers::Parser;
 use crate::search::{Action, Task};
 use std::collections::HashMap;
+use std::path::PathBuf;
 
 #[derive(Debug)]
 pub struct Plan {
@@ -12,7 +13,7 @@ pub struct Plan {
 }
 
 impl Plan {
-    pub fn from_path(path: &str, task: &Task) -> Self {
+    pub fn from_path(path: &PathBuf, task: &Task) -> Self {
         let contents = std::fs::read_to_string(path).expect("Failed to read plan file");
         Self::from_text(&contents, task)
     }

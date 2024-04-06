@@ -1,5 +1,6 @@
 use tracing::info;
 
+#[derive(Debug)]
 pub struct SearchStatistics {
     /// Number of nodes expanded
     pub expanded_nodes: i32,

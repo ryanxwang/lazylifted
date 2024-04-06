@@ -2,6 +2,7 @@ use crate::learning::graphs::CGraph;
 use numpy::{PyArray2, PyArrayMethods};
 use pyo3::{Bound, Python};
 use std::collections::HashMap;
+use tracing::info;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 enum Mode {
@@ -15,11 +16,11 @@ enum Mode {
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 struct Neighbourhood {
     node_colour: i32,
-    neighbour_colours: Vec<i32>,
+    neighbour_colours: Vec<(i32, i32)>,
 }
 
 impl Neighbourhood {
-    fn new(node_colour: i32, mut neighbour_colours: Vec<i32>) -> Self {
+    fn new(node_colour: i32, mut neighbour_colours: Vec<(i32, i32)>) -> Self {
         neighbour_colours.sort();
         Self {
             node_colour,
@@ -94,7 +95,9 @@ impl WLKernel {
                 for node in graph.node_indices() {
                     let mut neighbour_colours = vec![];
                     for neighbour in graph.neighbors(node) {
-                        neighbour_colours.push(cur_colours[&neighbour]);
+                        let edge = graph.find_edge(node, neighbour).unwrap();
+                        neighbour_colours
+                            .push((cur_colours[&neighbour], *graph.edge_weight(edge).unwrap()));
                     }
                     let neighbourhood = Neighbourhood::new(cur_colours[&node], neighbour_colours);
                     let colour_hash = self.get_hash_value(neighbourhood);
@@ -163,6 +166,14 @@ impl WLKernel {
                 }
             },
         }
+    }
+
+    pub fn log(&self) {
+        info!(
+            target : "stats",
+            total_colours = self.hashes.len(),
+            colour_miss_rate = self.missed_colours as f64 / (self.hit_colours + self.missed_colours) as f64
+        );
     }
 }
 

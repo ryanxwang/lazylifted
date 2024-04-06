@@ -7,6 +7,7 @@ use std::vec;
 /// one or many values, such as [`ConditionalEffect`](crate::ConditionalEffect),
 /// [`DurationConstraint`](crate::DurationConstraint),
 /// [`Effect`](crate::Effects) and others.
+#[derive(Debug)]
 pub enum FlatteningIntoIterator<T> {
     /// The iterator is already empty (similar to [`std::iter::Empty`]).
     Never,

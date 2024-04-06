@@ -40,12 +40,16 @@ pub struct ILGCompiler {
 }
 
 impl ILGCompiler {
-    pub fn new() -> Self {
-        Self {
+    pub fn new(task: &Task) -> Self {
+        let mut compiler = Self {
             base_graph: None,
             object_index_to_node_index: HashMap::new(),
             goal_atom_to_node_index: HashMap::new(),
-        }
+        };
+
+        compiler.precompile(task);
+
+        compiler
     }
 
     fn get_object_colour(_object: &Object) -> i32 {
@@ -85,7 +89,7 @@ impl ILGCompiler {
 
     /// Precompile a base graph for a task. This base graph is cloned and then
     /// modified to produce the ILG for each state.
-    pub fn precompile(&mut self, task: &Task) {
+    fn precompile(&mut self, task: &Task) {
         let mut graph = CGraph::new_undirected();
 
         for object in &task.objects {
@@ -146,8 +150,7 @@ mod tests {
     #[test]
     fn blocksworld_precomilation() {
         let task = Task::from_text(BLOCKSWORLD_DOMAIN_TEXT, BLOCKSWORLD_PROBLEM13_TEXT);
-        let mut compiler = ILGCompiler::new();
-        compiler.precompile(&task);
+        let compiler = ILGCompiler::new(&task);
 
         let graph = compiler.base_graph.as_ref().unwrap();
         assert_eq!(graph.node_count(), 9);
@@ -173,8 +176,7 @@ mod tests {
     #[test]
     fn blocksworld_compilation() {
         let task = Task::from_text(BLOCKSWORLD_DOMAIN_TEXT, BLOCKSWORLD_PROBLEM13_TEXT);
-        let mut compiler = ILGCompiler::new();
-        compiler.precompile(&task);
+        let compiler = ILGCompiler::new(&task);
 
         let graph = compiler.compile(&task.initial_state);
 
@@ -204,13 +206,5 @@ mod tests {
                 ILGCompiler::get_object_colour(object)
             );
         }
-    }
-
-    #[test]
-    #[should_panic(expected = "Must precompile before compiling")]
-    fn compiler_requires_precompilation() {
-        let compiler = ILGCompiler::new();
-        let state = DBState::new(0);
-        let _ = compiler.compile(&state);
     }
 }

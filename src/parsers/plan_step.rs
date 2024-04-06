@@ -21,9 +21,7 @@ use nom::{combinator::map, sequence::tuple};
 ///        Name::new("b2"),
 ///    ]
 /// )));
-pub fn parse_plan_step<'a, T: Into<Span<'a>>>(
-    input: T,
-) -> ParseResult<'a, crate::parsed_types::PlanStep> {
+pub fn parse_plan_step<'a, T: Into<Span<'a>>>(input: T) -> ParseResult<'a, PlanStep> {
     map(
         parens(tuple((
             parse_action_name,

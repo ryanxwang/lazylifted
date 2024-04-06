@@ -1,11 +1,16 @@
 //! Wrapper around some sklearn regression models
 use numpy::{PyArray1, PyArray2};
-use pyo3::prelude::*;
 use pyo3::types::IntoPyDict;
+use pyo3::{prelude::*, types::PyFloat};
+use serde::{Deserialize, Serialize};
+use std::time;
+use tracing::info;
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Deserialize, Serialize)]
 pub enum RegressorName {
+    #[serde(alias = "linear-regression")]
     LinearRegressor,
+    #[serde(alias = "gpr")]
     GaussianProcessRegressor,
 }
 
@@ -22,7 +27,12 @@ impl<'py> Regressor<'py> {
     }
 
     pub fn fit(&self, x: &Bound<'py, PyArray2<f64>>, y: &Bound<'py, PyArray1<f64>>) {
+        let start_time = time::Instant::now();
         self.model.getattr("fit").unwrap().call1((x, y)).unwrap();
+        info!(
+            target : "timing",
+            fitting_time = start_time.elapsed().as_secs_f64()
+        );
     }
 
     pub fn predict(&self, x: &Bound<'py, PyArray2<f64>>) -> Bound<'py, PyArray1<f64>> {
@@ -57,6 +67,10 @@ impl<'py> Regressor<'py> {
                     .call0()
                     .unwrap();
                 let kwargs = [("kernel", dot_product)].into_py_dict_bound(py);
+                kwargs
+                    .set_item("alpha", PyFloat::new_bound(py, 1e-7))
+                    .unwrap();
+
                 gaussian_process
                     .getattr("GaussianProcessRegressor")
                     .unwrap()
