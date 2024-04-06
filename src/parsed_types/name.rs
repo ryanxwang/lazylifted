@@ -168,6 +168,12 @@ impl ToTyped<Name> for Name {
     }
 }
 
+impl Display for Name {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 impl NameVariant {
     /// Gets the length of the name, in chars.
     fn len(&self) -> usize {

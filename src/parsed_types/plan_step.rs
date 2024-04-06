@@ -4,17 +4,20 @@ use super::{ActionName, Name};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PlanStep {
-    name: ActionName,
+    action_name: ActionName,
     parameters: Vec<Name>,
 }
 
 impl PlanStep {
-    pub const fn new(name: ActionName, parameters: Vec<Name>) -> Self {
-        Self { name, parameters }
+    pub const fn new(action_name: ActionName, parameters: Vec<Name>) -> Self {
+        Self {
+            action_name: action_name,
+            parameters,
+        }
     }
 
-    pub const fn name(&self) -> &ActionName {
-        &self.name
+    pub const fn action_name(&self) -> &ActionName {
+        &self.action_name
     }
 
     pub const fn parameters(&self) -> &Vec<Name> {

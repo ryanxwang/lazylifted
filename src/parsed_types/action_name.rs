@@ -1,7 +1,7 @@
 //! Contains action symbols via the [`ActionSymbol`] type.
 
 use crate::parsed_types::Name;
-use std::ops::Deref;
+use std::{fmt::Display, ops::Deref};
 
 /// An action name.
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Default)]
@@ -54,5 +54,11 @@ impl Deref for ActionName {
     #[inline(always)]
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl Display for ActionName {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
