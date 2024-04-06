@@ -116,6 +116,9 @@ impl WLKernel {
         histograms
     }
 
+    /// Convert the computed histograms to a feature matrix X as a 2D numpy
+    /// array. The rows of the array correspond to the histograms of the graphs
+    /// and the columns correspond to the counts in the histogram.
     pub fn compute_x<'py>(
         &self,
         py: Python<'py>,
