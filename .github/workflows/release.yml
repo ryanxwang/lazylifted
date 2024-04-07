@@ -5,8 +5,6 @@ on:
     branches: [ "main" ]
     tags:
       - "v*.*.*"
-  pull_request:
-    branches: [ "main" ]
 
 env:
   CARGO_TERM_COLOR: always
@@ -17,7 +15,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
+    - name: Install Python requirements
+      run: pip install -r requirements.txt
     - name: Release build
       run: cargo build --verbose --release
     - name: Run tests
