@@ -23,15 +23,14 @@ jobs:
       run: pip install -r requirements.txt
     - name: Release build
       run: cargo build --verbose --bins --release
-    - name: Show targets
-      run: ls target/release
     - name: Release
       uses: softprops/action-gh-release@v2
       if: startswith(github.ref, 'refs/tags/')
       with:
         fail_on_unmatched_files: true
         draft: true
-        files:
-          target/release/*
+        files: |
+          target/release/planner
+          target/release/trainer
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
