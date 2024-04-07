@@ -28,7 +28,7 @@ jobs:
       if: startswith(github.ref, 'refs/tags/')
       with:
         fail_on_unmatched_files: true
-        draft: true
+        prerelease: true
         files: |
           target/release/planner
           target/release/trainer
