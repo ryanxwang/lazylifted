@@ -19,7 +19,11 @@ jobs:
     - name: Install Python requirements
       run: pip install -r requirements.txt
     - name: Release build
-      run: cargo build --verbose --bins --release -Z unstable-options --out-dir /tmp/artifacts
+      run: cargo build --verbose --bins --release
+    - name: Show CWD
+      run: pwd
+    - name: Show targets
+      run: ls target
     - name: Release
       uses: softprops/action-gh-release@v2
       if: startswith(github.ref, 'refs/tags/')
@@ -27,4 +31,4 @@ jobs:
         fail_on_unmatched_files: true
         draft: true
         files:
-          /tmp/artifacts/*
+          target/*
