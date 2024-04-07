@@ -6,6 +6,9 @@ on:
     tags:
       - "v*.*.*"
 
+permissions:
+  contents: write
+
 env:
   CARGO_TERM_COLOR: always
 
@@ -20,10 +23,8 @@ jobs:
       run: pip install -r requirements.txt
     - name: Release build
       run: cargo build --verbose --bins --release
-    - name: Show CWD
-      run: pwd
     - name: Show targets
-      run: ls target
+      run: ls target/release
     - name: Release
       uses: softprops/action-gh-release@v2
       if: startswith(github.ref, 'refs/tags/')
@@ -31,4 +32,6 @@ jobs:
         fail_on_unmatched_files: true
         draft: true
         files:
-          target/*
+          target/release/*
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
