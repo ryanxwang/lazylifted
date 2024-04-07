@@ -1,6 +1,6 @@
 #!/bin/bash
 
-python_path=$(which python)
+python_path=$(which python3)
 library_path=$(dirname $python_path)/../lib
 library_path=$(realpath $library_path)
 
