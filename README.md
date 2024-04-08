@@ -2,13 +2,13 @@
 
 ![build](https://github.com/Thyroidr/lazylifted/actions/workflows/build.yml/badge.svg)
 
-Lazylifted is a domain-independent lifted PDDL planner using utilising graph representations of PDDL structures.
+Lazylifted is a domain-independent lifted PDDL planner utilising graph representations of PDDL structures.
 
 - The parser based on [pddl-rs](https://github.com/sunsided/pddl-rs)
 - The successor generation algorithm and planner is based on [powerlifted](https://github.com/abcorrea/powerlifted)
 - The graph representations and learning component is based on [GOOSE](https://github.com/DillonZChen/goose)
 
-(See references for more detail)
+(See [references](#references) for more detail)
 
 ## Installation
 
