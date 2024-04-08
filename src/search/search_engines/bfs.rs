@@ -34,7 +34,6 @@ impl SearchEngine for BFS {
         queue.push_back(root_node.get_state_id());
 
         if task.goal.is_satisfied(&task.initial_state) {
-            statistics.finalise_search();
             return (SearchResult::Success(vec![]), statistics);
         }
 

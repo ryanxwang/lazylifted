@@ -40,7 +40,6 @@ impl SearchEngine for GBFS {
         priority_queue.push(root_node.get_state_id(), Reverse(root_node.get_h()));
 
         if task.goal.is_satisfied(&task.initial_state) {
-            statistics.finalise_search();
             return (SearchResult::Success(vec![]), statistics);
         }
 
@@ -58,7 +57,6 @@ impl SearchEngine for GBFS {
 
             let state = packer.unpack(search_space.get_state(sid));
             if task.goal.is_satisfied(&state) {
-                statistics.finalise_search();
                 // We get the node again so that the borrow checker knows it is
                 // immutable
                 let goal_node = search_space.get_node(state_id);
