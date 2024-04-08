@@ -131,9 +131,9 @@ impl<'py> Train<'py> for WLILGModel<'py> {
     fn train(&mut self, py: Python<'py>, training_data: &[TrainingInstance]) {
         assert_eq!(self.state, WLILGState::New);
         if self.validate {
-            info!(target : "progress", "splitting training data into training and validation sets");
+            info!("splitting training data into training and validation sets");
         } else {
-            info!(target : "progress", "training on full dataset");
+            info!("training on full dataset");
         }
         let (train_instances, val_instances) = match self.validate {
             true => training_data.split_at((training_data.len() as f64 * 0.8) as usize),
@@ -147,41 +147,44 @@ impl<'py> Train<'py> for WLILGModel<'py> {
             as f64
             / train_graphs.len() as f64;
         let (val_graphs, val_labels) = self.prepare_data(val_instances);
-        info!(target : "progress", "compiled states into graphs");
-        info!(target : "stats", train_graphs = train_graphs.len(), mean_train_graph_size = mean_train_graph_size, val_graphs = val_graphs.len());
+        info!("compiled states into graphs");
+        info!(
+            train_graphs = train_graphs.len(),
+            mean_train_graph_size = mean_train_graph_size,
+            val_graphs = val_graphs.len()
+        );
 
         let train_histograms = self.wl.compute_histograms(&train_graphs);
         let val_histograms = self.wl.compute_histograms(&val_graphs);
-        info!(target : "progress", "computed WL histograms");
+        info!("computed WL histograms");
         self.wl.log();
 
         let train_x = self.wl.compute_x(py, &train_histograms);
         let val_x = self.wl.compute_x(py, &val_histograms);
-        info!(target : "progress", "computed WL features");
+        info!("computed WL features");
 
         let train_y = PyArray1::from_vec_bound(py, train_labels);
         let val_y = PyArray1::from_vec_bound(py, val_labels);
-        info!(target : "progress", "converted labels to numpy arrays");
+        info!("converted labels to numpy arrays");
         info!(
-            target : "stats",
             train_x_shape = format!("{:?}", train_x.shape()),
             train_y_shape = format!("{:?}", train_y.shape()),
             val_x_shape = format!("{:?}", val_x.shape()),
             val_y_shape = format!("{:?}", val_y.shape())
         );
 
-        info!(target : "progress", "fitting model on training data");
+        info!("fitting model on training data");
         self.model.fit(&train_x, &train_y);
 
         let train_score_start = time::Instant::now();
         let train_score = self.score(py, train_x, train_y);
-        info!(target : "timing", train_score_time = train_score_start.elapsed().as_secs_f64());
-        info!(target : "stats", train_score = train_score);
+        info!(train_score_time = train_score_start.elapsed().as_secs_f64());
+        info!(train_score = train_score);
         if self.validate {
             let val_score_start = time::Instant::now();
             let val_score = self.score(py, val_x, val_y);
-            info!(target : "timing", val_score_time = val_score_start.elapsed().as_secs_f64());
-            info!(target : "stats", val_score = val_score);
+            info!(val_score_time = val_score_start.elapsed().as_secs_f64());
+            info!(val_score = val_score);
         }
 
         self.state = WLILGState::Trained;
@@ -203,7 +206,7 @@ impl<'py> Train<'py> for WLILGModel<'py> {
         let mut file = std::fs::File::create(ron_path).expect("Failed to create model file");
         file.write_all(data.as_bytes())
             .expect("Failed to write model data");
-        info!(target : "progress", "saved model to {}.{{ron/pkl}}", path.display());
+        info!("saved model to {}.{{ron/pkl}}", path.display());
     }
 }
 

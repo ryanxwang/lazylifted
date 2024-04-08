@@ -171,9 +171,9 @@ impl WLKernel {
 
     pub fn log(&self) {
         info!(
-            target : "stats",
             total_colours = self.hashes.len(),
-            colour_miss_rate = self.missed_colours as f64 / (self.hit_colours + self.missed_colours) as f64
+            colour_miss_rate =
+                self.missed_colours as f64 / (self.hit_colours + self.missed_colours) as f64
         );
     }
 }

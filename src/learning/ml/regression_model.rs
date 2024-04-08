@@ -30,10 +30,7 @@ impl<'py> Regressor<'py> {
     pub fn fit(&self, x: &Bound<'py, PyArray2<f64>>, y: &Bound<'py, PyArray1<f64>>) {
         let start_time = time::Instant::now();
         self.model.getattr("fit").unwrap().call1((x, y)).unwrap();
-        info!(
-            target : "timing",
-            fitting_time = start_time.elapsed().as_secs_f64()
-        );
+        info!(fitting_time = start_time.elapsed().as_secs_f64());
     }
 
     pub fn predict(&self, x: &Bound<'py, PyArray2<f64>>) -> Bound<'py, PyArray1<f64>> {

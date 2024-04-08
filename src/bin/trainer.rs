@@ -63,7 +63,7 @@ fn load_data(data_config: &DataConfig) -> Vec<TrainingInstance> {
 
         instances.push(TrainingInstance::new(plan, task));
     }
-    info!(target : "progress", "loaded and parsed {} training instances", instances.len());
+    info!("loaded and parsed {} training instances", instances.len());
     instances
 }
 
@@ -72,7 +72,7 @@ fn main() {
     tracing_subscriber::fmt()
         .with_ansi(true)
         .with_line_number(true)
-        .pretty()
+        .compact()
         .init();
 
     let data_config: DataConfig = toml::from_str(
