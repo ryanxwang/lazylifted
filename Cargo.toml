@@ -17,6 +17,7 @@ nom-greedyerror = "0.5.0"
 nom_locate = "4.1.0"
 numpy = "0.21.0"
 petgraph = "0.6.4"
+priority-queue = "2.0.2"
 pyo3 = { version = "0.21.1", features = ["auto-initialize", "serde"] }
 ron = "0.8.1"
 segvec = "0.2.0"

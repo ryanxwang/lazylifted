@@ -6,5 +6,6 @@ mod semi_join;
 mod table;
 mod utils;
 
-pub use hash_join::hash_join;
-pub use table::Table;
+pub(crate) use hash_join::hash_join;
+pub(crate) use semi_join::semi_join;
+pub(crate) use table::Table;

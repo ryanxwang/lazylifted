@@ -81,9 +81,9 @@ impl SchemaArgument {
 
 #[derive(Debug, Clone)]
 pub struct SchemaAtom {
-    pub predicate_index: usize,
-    pub negated: bool,
-    pub arguments: Vec<SchemaArgument>,
+    predicate_index: usize,
+    negated: bool,
+    arguments: Vec<SchemaArgument>,
 }
 
 impl SchemaAtom {
@@ -116,6 +116,22 @@ impl SchemaAtom {
     pub fn is_nullary(&self) -> bool {
         self.arguments.is_empty()
     }
+
+    pub fn predicate_index(&self) -> usize {
+        self.predicate_index
+    }
+
+    pub fn is_negated(&self) -> bool {
+        self.negated
+    }
+
+    pub fn arguments(&self) -> &[SchemaArgument] {
+        &self.arguments
+    }
+
+    pub fn argument(&self, index: usize) -> &SchemaArgument {
+        &self.arguments[index]
+    }
 }
 
 #[derive(Debug)]
@@ -123,7 +139,7 @@ pub struct ActionSchema {
     pub name: ActionName,
     pub index: usize,
     pub parameters: Vec<SchemaParameter>,
-    pub preconditions: Vec<SchemaAtom>,
+    preconditions: Vec<SchemaAtom>,
     pub positive_nullary_preconditions: Vec<bool>,
     pub negative_nullary_preconditions: Vec<bool>,
     pub effects: Vec<SchemaAtom>,
@@ -235,5 +251,9 @@ impl ActionSchema {
 
     pub fn is_ground(&self) -> bool {
         self.parameters.is_empty()
+    }
+
+    pub fn preconditions(&self) -> &[SchemaAtom] {
+        &self.preconditions
     }
 }
