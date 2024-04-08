@@ -1,10 +1,11 @@
 use clap::Parser;
 use lazylifted::search::{
     heuristics::HeuristicName,
-    search_engines::{SearchEngine, SearchEngineName, SearchResult},
+    search_engines::{SearchEngineName, SearchResult},
     successor_generators::SuccessorGeneratorName,
     Task, Verbosity,
 };
+use pyo3::Python;
 use std::path::PathBuf;
 
 #[derive(Parser)]
@@ -41,6 +42,16 @@ struct Args {
     )]
     heuristic_name: HeuristicName,
     #[arg(
+        help = "The saved model (as a path) to use for the heuristic \
+        evaluator, only needed for heuristics that require training. If this \
+        parameter is provided. It is assumed that the Python GIL is required \
+        when planning.",
+        short = 'm',
+        long = "model",
+        id = "MODEL"
+    )]
+    saved_model: Option<PathBuf>,
+    #[arg(
         value_enum,
         help = "The verbosity level",
         short = 'v',
@@ -63,12 +74,21 @@ fn main() {
         .init();
 
     let task = Task::from_path(&args.domain, &args.problem);
+    match &args.saved_model {
+        // Assume GIL is required when a model is provided
+        Some(_) => Python::with_gil(|_| plan(args, &task)),
+        None => plan(args, &task),
+    };
+}
+
+fn plan(args: Args, task: &Task) {
     let successor_generator = args.successor_generator_name.create(&task);
-    let heuristic = args.heuristic_name.create();
+    let heuristic = args.heuristic_name.create(&args.saved_model);
     let mut search_engine = args.search_engine_name.create();
 
-    let (search_result, _statistics) = search_engine.search(&task, successor_generator, &heuristic);
-    match search_result {
+    let (result, mut statistics) = search_engine.search(&task, successor_generator, heuristic);
+    statistics.finalise_search();
+    match result {
         SearchResult::Success(plan) => {
             println!("Plan found:");
             for action in &plan {
@@ -77,7 +97,7 @@ fn main() {
             println!("Plan length: {}", plan.len());
         }
         _ => {
-            println!("No plan found: {:?}", search_result);
+            println!("No plan found: {:?}", result);
         }
     }
 }

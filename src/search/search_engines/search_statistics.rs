@@ -3,17 +3,17 @@ use tracing::info;
 #[derive(Debug)]
 pub struct SearchStatistics {
     /// Number of nodes expanded
-    pub expanded_nodes: i32,
+    expanded_nodes: i32,
     /// Number of nodes evaluated
-    pub evaluated_nodes: i32,
+    evaluated_nodes: i32,
     /// Number of unique nodes generated
-    pub generated_nodes: i32,
+    generated_nodes: i32,
     /// Number of reopened nodes
-    pub reopened_nodes: i32,
+    reopened_nodes: i32,
     /// Number of applicable actions generated
-    pub generated_actions: i32,
+    generated_actions: i32,
     /// Time when the search started
-    pub search_start_time: std::time::Instant,
+    search_start_time: std::time::Instant,
     /// Time when the last log was printed, used for periodic logging
     last_log_time: std::time::Instant,
 }
@@ -65,12 +65,18 @@ impl SearchStatistics {
 
     pub fn log(&mut self) {
         self.last_log_time = std::time::Instant::now();
-        info!(name: "search statistics", expanded_nodes = self.expanded_nodes, evaluated_nodes = self.evaluated_nodes, generated_nodes = self.generated_nodes, reopened_nodes = self.reopened_nodes, generated_actions = self.generated_actions);
+        info!(
+            expanded_nodes = self.expanded_nodes,
+            evaluated_nodes = self.evaluated_nodes,
+            generated_nodes = self.generated_nodes,
+            reopened_nodes = self.reopened_nodes,
+            generated_actions = self.generated_actions
+        );
     }
 
     pub fn finalise_search(&mut self) {
         info!("finalising search");
         self.log();
-        info!(name: "search duration", duration = self.search_start_time.elapsed().as_secs_f64());
+        info!(search_duration = self.search_start_time.elapsed().as_secs_f64());
     }
 }

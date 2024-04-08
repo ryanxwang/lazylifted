@@ -1,6 +1,9 @@
-use crate::search::{heuristics::Heuristic, DBState, GoalAtom, Task};
+use crate::search::{
+    heuristics::{Heuristic, HeuristicValue},
+    DBState, GoalAtom, Task,
+};
 
-pub struct GoalCounting;
+pub struct GoalCounting {}
 
 impl GoalCounting {
     pub fn new() -> Self {
@@ -9,7 +12,7 @@ impl GoalCounting {
 }
 
 impl Heuristic for GoalCounting {
-    fn evaluate(&mut self, state: &DBState, task: &Task) -> f64 {
+    fn evaluate(&mut self, state: &DBState, task: &Task) -> HeuristicValue {
         let mut unsatisfied_goal_count = 0;
         for goal_atom in &task.goal.atoms {
             if !is_goal_atom_satisfied(goal_atom, state) {
@@ -26,7 +29,7 @@ impl Heuristic for GoalCounting {
                 unsatisfied_goal_count += 1;
             }
         }
-        unsatisfied_goal_count as f64
+        unsatisfied_goal_count.into()
     }
 }
 
@@ -45,7 +48,7 @@ mod tests {
     #[test]
     fn goal_counting() {
         let task = Task::from_text(BLOCKSWORLD_DOMAIN_TEXT, BLOCKSWORLD_PROBLEM13_TEXT);
-        let mut heuristic = GoalCounting {};
+        let mut heuristic = GoalCounting::new();
         let state = task.initial_state.clone();
         assert_eq!(heuristic.evaluate(&state, &task), 4.0);
     }

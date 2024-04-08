@@ -82,9 +82,14 @@ fn main() {
     .expect("Unable to parse data config, is it valid?");
     let training_data = load_data(&data_config);
 
-    Python::with_gil(|py| {
-        let mut model = ModelConfig::load(py, &args.model_config);
-        model.train(py, &training_data);
+    Python::with_gil(|_| {
+        // It is hacky that we don't actually use the GIL token. This is because
+        // everything that needs it actually just unsafely assumes it is
+        // acquired. This is so that we don't have to pass the Python token
+        // around everywhere. The catch is that we need to make sure everything
+        // is actually wrapped in a `Python::with_gil` block.
+        let mut model = ModelConfig::load(&args.model_config);
+        model.train(&training_data);
         model.save(&args.save_path);
     });
 }

@@ -15,7 +15,7 @@ mod verbosity;
 pub use action::Action;
 pub use action_schema::{ActionSchema, SchemaArgument, SchemaAtom};
 pub use goal::{Goal, GoalAtom};
-pub use heuristics::Heuristic;
+pub use heuristics::{Heuristic, HeuristicValue};
 pub use object::Object;
 pub use plan::Plan;
 pub use predicate::Predicate;

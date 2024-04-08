@@ -6,7 +6,7 @@ use std::{
     sync::atomic::AtomicUsize,
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct StateId(usize);
 
 impl StateId {

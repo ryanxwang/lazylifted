@@ -49,8 +49,8 @@ pub struct WLILGConfig {
 }
 
 #[derive(Debug)]
-pub struct WLILGModel<'py> {
-    model: Regressor<'py>,
+pub struct WLILGModel {
+    model: Regressor<'static>,
     /// The successor generator to use for generating successor states when
     /// training. It might appear weird we store the name of the successor
     /// generator instead of the generator itself, but this is because 1)
@@ -70,8 +70,8 @@ struct SerialisableWLILGModel {
     validate: bool,
 }
 
-impl<'py> WLILGModel<'py> {
-    pub fn new(py: Python<'py>, config: WLILGConfig) -> Self {
+impl WLILGModel {
+    pub fn new(py: Python<'static>, config: WLILGConfig) -> Self {
         Self {
             model: Regressor::new(py, config.model),
             wl: WLKernel::new(config.iters),
@@ -109,9 +109,9 @@ impl<'py> WLILGModel<'py> {
 
     fn score(
         &self,
-        py: Python<'py>,
-        x: Bound<'py, PyArray2<f64>>,
-        expected_y: Bound<'py, PyArray1<f64>>,
+        py: Python<'static>,
+        x: Bound<'static, PyArray2<f64>>,
+        expected_y: Bound<'static, PyArray1<f64>>,
     ) -> f64 {
         let predicted_y = self.model.predict(&x);
         let mean_squared_error = PyModule::import_bound(py, "sklearn.metrics")
@@ -122,13 +122,14 @@ impl<'py> WLILGModel<'py> {
         mse.extract().unwrap()
     }
 
-    fn py(&self) -> Python<'py> {
+    fn py(&self) -> Python<'static> {
         self.model.py()
     }
 }
 
-impl<'py> Train<'py> for WLILGModel<'py> {
-    fn train(&mut self, py: Python<'py>, training_data: &[TrainingInstance]) {
+impl Train for WLILGModel {
+    fn train(&mut self, training_data: &[TrainingInstance]) {
+        let py = self.py();
         assert_eq!(self.state, WLILGState::New);
         if self.validate {
             info!("splitting training data into training and validation sets");
@@ -210,19 +211,20 @@ impl<'py> Train<'py> for WLILGModel<'py> {
     }
 }
 
-pub struct EvaluatingWLILGModel<'py, 'a> {
-    model: WLILGModel<'py>,
-    task: &'a Task,
-}
-
-impl<'py> Evaluate<'py> for WLILGModel<'py> {
+impl Evaluate for WLILGModel {
     type EvaluatedType = DBState;
 
     fn set_evaluating_task(&mut self, task: &Task) {
-        self.state = WLILGState::Evaluating(ILGCompiler::new(&task));
+        match &self.state {
+            WLILGState::New => {
+                panic!("Model not trained yet, cannot set evaluating task");
+            }
+            WLILGState::Trained => self.state = WLILGState::Evaluating(ILGCompiler::new(task)),
+            WLILGState::Evaluating(_) => {}
+        }
     }
 
-    fn evaluate(&mut self, states: &[DBState]) -> Vec<f64> {
+    fn evaluate(&mut self, states: &[&DBState]) -> Vec<f64> {
         let compiler = match &self.state {
             WLILGState::Evaluating(compiler) => compiler,
             _ => panic!("Model not ready for evaluation"),
@@ -234,7 +236,7 @@ impl<'py> Evaluate<'py> for WLILGModel<'py> {
         y.extract().unwrap()
     }
 
-    fn load(py: Python<'py>, path: &PathBuf) -> Self {
+    fn load(py: Python<'static>, path: &PathBuf) -> Self {
         let pickle_path = path.with_extension("pkl");
         let model = Regressor::unpickle(py, &pickle_path);
 

@@ -1,5 +1,5 @@
 use crate::search::{
-    search_engines::{SearchStatistics, BFS},
+    search_engines::{SearchStatistics, BFS, GBFS},
     Action, Heuristic, SuccessorGenerator, Task,
 };
 use clap;
@@ -23,20 +23,24 @@ pub trait SearchEngine {
         &mut self,
         task: &Task,
         generator: Box<dyn SuccessorGenerator>,
-        heuristic: &impl Heuristic,
+        heuristic: Box<dyn Heuristic>,
     ) -> (SearchResult, SearchStatistics);
 }
 
 #[derive(clap::ValueEnum, Debug, Clone, Copy)]
 #[clap(rename_all = "kebab-case")]
 pub enum SearchEngineName {
+    #[clap(help = "Breadth-first search")]
     BFS,
+    #[clap(help = "Greedy best-first search")]
+    GBFS,
 }
 
 impl SearchEngineName {
-    pub fn create(&self) -> impl SearchEngine {
+    pub fn create(&self) -> Box<dyn SearchEngine> {
         match self {
-            SearchEngineName::BFS => BFS::new(),
+            SearchEngineName::BFS => Box::new(BFS::new()),
+            SearchEngineName::GBFS => Box::new(GBFS::new()),
         }
     }
 }

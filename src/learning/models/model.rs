@@ -6,14 +6,16 @@ use pyo3::Python;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-pub trait Evaluate<'py> {
+pub trait Evaluate {
     type EvaluatedType;
 
+    /// Set the task that is currently being evaluated. After the first call to
+    /// this method, further calls should be ignored.
     fn set_evaluating_task(&mut self, task: &Task);
 
-    fn evaluate(&mut self, ts: &[Self::EvaluatedType]) -> Vec<f64>;
+    fn evaluate(&mut self, ts: &[&Self::EvaluatedType]) -> Vec<f64>;
 
-    fn load(py: Python<'py>, path: &PathBuf) -> Self;
+    fn load(py: Python<'static>, path: &PathBuf) -> Self;
 }
 
 /// A training instance is a pair of a plan and a task.
@@ -29,8 +31,8 @@ impl TrainingInstance {
     }
 }
 
-pub trait Train<'py> {
-    fn train(&mut self, py: Python<'py>, training_data: &[TrainingInstance]);
+pub trait Train {
+    fn train(&mut self, training_data: &[TrainingInstance]);
 
     // Save taking ownership of self is purely a skill issue, see
     // [`WLILGModel::save`] for an example of why.
@@ -44,7 +46,8 @@ pub enum ModelConfig {
 }
 
 impl ModelConfig {
-    pub fn load<'py>(py: Python<'py>, path: &PathBuf) -> impl Train<'py> {
+    pub fn load(path: &PathBuf) -> impl Train {
+        let py = unsafe { Python::assume_gil_acquired() };
         let config: ModelConfig = toml::from_str(
             &std::fs::read_to_string(path)
                 .expect("Failed to read model config, does the file exist?"),
