@@ -22,7 +22,7 @@ pub trait SearchEngine {
     fn search(
         &mut self,
         task: &Task,
-        generator: &impl SuccessorGenerator,
+        generator: Box<dyn SuccessorGenerator>,
         heuristic: &impl Heuristic,
     ) -> (SearchResult, SearchStatistics);
 }

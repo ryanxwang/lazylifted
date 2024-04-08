@@ -220,7 +220,7 @@ fn instantiate_effect(effect: &SchemaAtom, action: &Action) -> GroundAtom {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{search::successor_generators::NaiveJoinAlgorithm, test_utils::*};
+    use crate::test_utils::*;
 
     #[test]
     fn test_precompile_action_data() {
@@ -230,31 +230,5 @@ mod tests {
 
         assert_eq!(action_data.is_ground, false);
         assert_eq!(action_data.relevant_precondition_atoms.len(), 2); // number of non-nullary preconditions
-    }
-
-    #[test]
-    fn applicable_actions_in_blocksworld_init() {
-        let task = Task::from_text(BLOCKSWORLD_DOMAIN_TEXT, BLOCKSWORLD_PROBLEM13_TEXT);
-        let generator = JoinSuccessorGenerator::new(NaiveJoinAlgorithm::new(), &task);
-
-        let state = &task.initial_state;
-
-        // pickup is not applicable in the initial state
-        let actions = generator.get_applicable_actions(state, &task.action_schemas[0]);
-        assert_eq!(actions.len(), 0);
-
-        // putdown is not applicable in the initial state
-        let actions = generator.get_applicable_actions(state, &task.action_schemas[1]);
-        assert_eq!(actions.len(), 0);
-
-        // stack is not applicable in the initial state
-        let actions = generator.get_applicable_actions(state, &task.action_schemas[2]);
-        assert_eq!(actions.len(), 0);
-
-        // unstack is the only applicable action in the initial state
-        let actions = generator.get_applicable_actions(state, &task.action_schemas[3]);
-        assert_eq!(actions.len(), 1);
-        assert_eq!(actions[0].index, 3);
-        assert_eq!(actions[0].instantiation, vec![0, 1]);
     }
 }

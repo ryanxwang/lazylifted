@@ -19,7 +19,7 @@ impl SearchEngine for BFS {
     fn search(
         &mut self,
         task: &Task,
-        generator: &impl SuccessorGenerator,
+        generator: Box<dyn SuccessorGenerator>,
         _heuristic: &impl Heuristic,
     ) -> (SearchResult, SearchStatistics) {
         let mut statistics = SearchStatistics::new();

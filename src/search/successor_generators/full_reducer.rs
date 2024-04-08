@@ -135,9 +135,6 @@ impl JoinAlgorithm for FullReducer {
             panic!("Ground action schemas should not be instantiated")
         }
 
-        // We do mutate [`tables`], but through unsafe code so the borrow
-        // checker doesn't know about it.
-        #[allow(unused_mut)]
         let mut tables: Vec<Table> = match self.parse_precond_into_join_program(data, state) {
             Some(tables) => tables,
             None => return Table::EMPTY,

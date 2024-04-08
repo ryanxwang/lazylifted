@@ -5,10 +5,7 @@ use crate::{
         models::{Evaluate, Train, TrainingInstance},
         WLKernel,
     },
-    search::{
-        successor_generators::{SuccessorGenerator, SuccessorGeneratorName},
-        DBState, Task,
-    },
+    search::{successor_generators::SuccessorGeneratorName, DBState, Task},
 };
 use numpy::{PyArray1, PyArray2, PyUntypedArrayMethods};
 use pyo3::{

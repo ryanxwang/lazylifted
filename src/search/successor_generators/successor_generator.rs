@@ -1,5 +1,5 @@
 use crate::search::{
-    successor_generators::{JoinSuccessorGenerator, NaiveJoinAlgorithm},
+    successor_generators::{FullReducer, JoinSuccessorGenerator, NaiveJoinAlgorithm},
     Action, ActionSchema, DBState, Task,
 };
 use clap;
@@ -21,13 +21,18 @@ pub trait SuccessorGenerator {
 pub enum SuccessorGeneratorName {
     #[serde(alias = "naive")]
     Naive,
+    #[serde(alias = "full-reducer")]
+    FullReducer,
 }
 
 impl SuccessorGeneratorName {
-    pub fn create(&self, task: &Task) -> impl SuccessorGenerator {
+    pub fn create(&self, task: &Task) -> Box<dyn SuccessorGenerator> {
         match self {
             SuccessorGeneratorName::Naive => {
-                JoinSuccessorGenerator::new(NaiveJoinAlgorithm::new(), task)
+                Box::new(JoinSuccessorGenerator::new(NaiveJoinAlgorithm::new(), task))
+            }
+            SuccessorGeneratorName::FullReducer => {
+                Box::new(JoinSuccessorGenerator::new(FullReducer::new(task), task))
             }
         }
     }

@@ -29,7 +29,7 @@ struct Args {
         short = 'g',
         long = "generator",
         id = "GENERATOR",
-        default_value_t = SuccessorGeneratorName::Naive
+        default_value_t = SuccessorGeneratorName::FullReducer
     )]
     successor_generator_name: SuccessorGeneratorName,
     #[arg(
@@ -67,8 +67,7 @@ fn main() {
     let heuristic = args.heuristic_name.create();
     let mut search_engine = args.search_engine_name.create();
 
-    let (search_result, _statistics) =
-        search_engine.search(&task, &successor_generator, &heuristic);
+    let (search_result, _statistics) = search_engine.search(&task, successor_generator, &heuristic);
     match search_result {
         SearchResult::Success(plan) => {
             println!("Plan found:");
