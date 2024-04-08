@@ -22,7 +22,7 @@ book](https://doc.rust-lang.org/cargo/reference/environment-variables.html#dynam
 Running the following command should set this up for you on Unix systems.
 
 ```bash
-source ./setup_dynamic_library.sh
+source ./scripts/setup_dynamic_library.sh
 ```
 
 When developping in VS Code, it is useful to add the following to
