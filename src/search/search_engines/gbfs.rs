@@ -4,7 +4,9 @@ use ordered_float::OrderedFloat;
 use priority_queue::PriorityQueue;
 
 use crate::search::{
-    search_engines::{SearchEngine, SearchNodeStatus, SearchResult, SearchSpace, SearchStatistics},
+    search_engines::{
+        SearchEngine, SearchNodeStatus, SearchResult, SearchSpace, SearchStatistics, StateId,
+    },
     states::SparseStatePacker,
     Heuristic, SuccessorGenerator, Task,
 };
@@ -66,29 +68,57 @@ impl SearchEngine for GBFS {
                 );
             }
 
+            let mut successors = Vec::new();
+            let mut actions = Vec::new();
             for action_schema in &task.action_schemas {
-                let actions = generator.get_applicable_actions(&state, action_schema);
-                statistics.increment_generated_actions(actions.len());
-
-                for action in actions {
+                let applicable_actions = generator.get_applicable_actions(&state, action_schema);
+                statistics.increment_generated_actions(applicable_actions.len());
+                for action in applicable_actions {
                     let successor = generator.generate_successor(&state, action_schema, &action);
+                    successors.push(successor);
+                    actions.push(action);
+                }
+            }
+            statistics.increment_generated_actions(actions.len());
+            let child_node_ids: Vec<StateId> = actions
+                .into_iter()
+                .zip(successors.iter())
+                .map(|(action, successor)| {
                     let child_node =
                         search_space.insert_or_get_node(packer.pack(&successor), action, state_id);
-                    let new_g = g_value + 1.;
-                    if child_node.get_status() == SearchNodeStatus::New {
-                        let new_h = heuristic.evaluate(&successor, task);
-                        child_node.open(new_g, new_h);
-                        statistics.increment_evaluated_nodes();
-                        priority_queue.push(child_node.get_state_id(), Reverse(new_h));
-                    } else {
-                        if new_g < child_node.get_g() {
-                            // Reopen, but avoid evaluating the state again
-                            child_node.open(new_g, child_node.get_h());
-                            statistics.increment_reopened_nodes();
-                            priority_queue
-                                .push(child_node.get_state_id(), Reverse(child_node.get_h()));
-                        }
-                    }
+                    child_node.get_state_id()
+                })
+                .collect();
+
+            let mut states_to_evaluate = vec![];
+            let mut new_nodes = vec![];
+            let mut possibly_reopened_nodes = vec![];
+            for (successor, child_node_id) in successors.into_iter().zip(child_node_ids.into_iter())
+            {
+                let child_node = search_space.get_node_mut(child_node_id);
+                if child_node.get_status() == SearchNodeStatus::New {
+                    states_to_evaluate.push(successor);
+                    new_nodes.push(child_node.get_state_id());
+                } else {
+                    possibly_reopened_nodes.push(child_node.get_state_id());
+                }
+            }
+            statistics.increment_generated_nodes(new_nodes.len());
+            let h_values = heuristic.evaluate_batch(&states_to_evaluate, task);
+
+            for (child_node_id, h_value) in new_nodes.into_iter().zip(h_values.into_iter()) {
+                let child_node = search_space.get_node_mut(child_node_id);
+                child_node.open(g_value + 1., h_value);
+                statistics.increment_evaluated_nodes();
+                priority_queue.push(child_node_id, Reverse(h_value));
+            }
+
+            for child_node_id in possibly_reopened_nodes.into_iter() {
+                let child_node = search_space.get_node_mut(child_node_id);
+                if g_value + 1. < child_node.get_g() {
+                    child_node.open(g_value + 1., child_node.get_h());
+                    statistics.increment_reopened_nodes();
+                    priority_queue.push(child_node_id, Reverse(child_node.get_h()));
                 }
             }
         }

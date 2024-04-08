@@ -42,8 +42,8 @@ impl SearchStatistics {
         self.log_if_needed();
     }
 
-    pub fn increment_generated_nodes(&mut self) {
-        self.generated_nodes += 1;
+    pub fn increment_generated_nodes(&mut self, num_nodes: usize) {
+        self.generated_nodes += num_nodes as i32;
         self.log_if_needed();
     }
 
