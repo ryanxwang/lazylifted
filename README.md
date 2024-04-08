@@ -1,7 +1,14 @@
-# lazylifted
-
+# Lazylifted
 
 ![build](https://github.com/Thyroidr/lazylifted/actions/workflows/build.yml/badge.svg)
+
+Lazylifted is a domain-independent lifted PDDL planner using utilising graph representations of PDDL structures.
+
+- The parser based on [pddl-rs](https://github.com/sunsided/pddl-rs)
+- The successor generation algorithm and planner is based on [powerlifted](https://github.com/abcorrea/powerlifted)
+- The graph representations and learning component is based on [GOOSE](https://github.com/DillonZChen/goose)
+
+(See references for more detail)
 
 ## Installation
 
@@ -31,3 +38,22 @@ library).
     "RUSTFLAGS": "-C link-args=-Wl,-rpath,/opt/homebrew/anaconda3/lib"
 },
 ```
+
+## Usage
+
+See usage with:
+
+```bash
+./trainer --help
+```
+
+and
+
+```bash
+./planner --help
+```
+
+## References
+
+- Corrêa, A. B.; Pommerening, F.; Helmert, M.; and Francès, G. 2020. Lifted Successor Generation using Query Optimization Techniques. In Proc. ICAPS 2020, pp. 80-89. [[pdf]](https://ai.dmi.unibas.ch/papers/correa-et-al-icaps2020.pdf)
+- Chen, D. Z.; Trevizan, F. W.; and Thiébaux, S. 2024. Return to Tradition: Learning Reliable Heuristics with Classical Machine Learning. In Proc. ICAPS 2024. [[pdl]](https://openreview.net/pdf?id=zVO8ZRIg7Q)
