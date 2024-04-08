@@ -6,14 +6,14 @@ use pyo3::Python;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-pub trait Evaluate<T> {
-    fn evaluate(&self, t: &T) -> f64;
+pub trait Evaluate<'py> {
+    type EvaluatedType;
 
-    fn evaluate_batch(&self, ts: &[T]) -> Vec<f64> {
-        ts.iter().map(|t| self.evaluate(t)).collect()
-    }
+    fn set_evaluating_task(&mut self, task: &Task);
 
-    fn load(path: &PathBuf) -> Self;
+    fn evaluate(&mut self, ts: &[Self::EvaluatedType]) -> Vec<f64>;
+
+    fn load(py: Python<'py>, path: &PathBuf) -> Self;
 }
 
 /// A training instance is a pair of a plan and a task.
@@ -32,7 +32,9 @@ impl TrainingInstance {
 pub trait Train<'py> {
     fn train(&mut self, py: Python<'py>, training_data: &[TrainingInstance]);
 
-    fn save(&self, path: &PathBuf);
+    // Save taking ownership of self is purely a skill issue, see
+    // [`WLILGModel::save`] for an example of why.
+    fn save(self, path: &PathBuf);
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

@@ -114,6 +114,10 @@ impl<'py> Regressor<'py> {
 
         Self { model }
     }
+
+    pub fn py(&self) -> Python<'py> {
+        self.model.py()
+    }
 }
 
 #[cfg(test)]

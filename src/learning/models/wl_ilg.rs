@@ -2,10 +2,13 @@ use crate::{
     learning::{
         graphs::{CGraph, ILGCompiler},
         ml::{Regressor, RegressorName},
-        models::{Train, TrainingInstance},
+        models::{Evaluate, Train, TrainingInstance},
         WLKernel,
     },
-    search::successor_generators::{SuccessorGenerator, SuccessorGeneratorName},
+    search::{
+        successor_generators::{SuccessorGenerator, SuccessorGeneratorName},
+        DBState, Task,
+    },
 };
 use numpy::{PyArray1, PyArray2, PyUntypedArrayMethods};
 use pyo3::{
@@ -16,6 +19,29 @@ use serde::{Deserialize, Serialize};
 use std::{io::Write, path::PathBuf, time};
 use tracing::info;
 
+#[derive(Debug, Clone)]
+enum WLILGState {
+    /// The model has been created but not trained.
+    New,
+    /// Trained but not ready for evaluating.
+    Trained,
+    /// Ready for evaluating.
+    Evaluating(ILGCompiler),
+}
+
+impl PartialEq for WLILGState {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (WLILGState::New, WLILGState::New) => true,
+            (WLILGState::Trained, WLILGState::Trained) => true,
+            (WLILGState::Evaluating(_), WLILGState::Evaluating(_)) => true,
+            _ => false,
+        }
+    }
+}
+
+/// Configuration for the WL-ILG model. This is the format used by the trainer
+/// to create the model.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct WLILGConfig {
     pub model: RegressorName,
@@ -25,18 +51,26 @@ pub struct WLILGConfig {
     pub validate: bool,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug)]
 pub struct WLILGModel<'py> {
-    #[serde(skip)]
-    pub model: Regressor<'py>,
+    model: Regressor<'py>,
     /// The successor generator to use for generating successor states when
     /// training. It might appear weird we store the name of the successor
     /// generator instead of the generator itself, but this is because 1)
     /// it is only used in training, and 2) each task requires its own successor
     /// generator, so we can't store a single instance of the generator.
-    pub successor_generator_name: SuccessorGeneratorName,
-    pub wl: WLKernel,
-    pub validate: bool,
+    successor_generator_name: SuccessorGeneratorName,
+    wl: WLKernel,
+    validate: bool,
+    state: WLILGState,
+}
+
+/// Dummy struct to allow serialising/deserialising the model to disk.
+#[derive(Debug, Serialize, Deserialize)]
+struct SerialisableWLILGModel {
+    successor_generator_name: SuccessorGeneratorName,
+    wl: WLKernel,
+    validate: bool,
 }
 
 impl<'py> WLILGModel<'py> {
@@ -46,6 +80,7 @@ impl<'py> WLILGModel<'py> {
             wl: WLKernel::new(config.iters),
             successor_generator_name: config.successor_generator,
             validate: config.validate,
+            state: WLILGState::New,
         }
     }
 
@@ -89,10 +124,15 @@ impl<'py> WLILGModel<'py> {
         let mse = mean_squared_error.call1((expected_y, predicted_y)).unwrap();
         mse.extract().unwrap()
     }
+
+    fn py(&self) -> Python<'py> {
+        self.model.py()
+    }
 }
 
 impl<'py> Train<'py> for WLILGModel<'py> {
     fn train(&mut self, py: Python<'py>, training_data: &[TrainingInstance]) {
+        assert_eq!(self.state, WLILGState::New);
         if self.validate {
             info!(target : "progress", "splitting training data into training and validation sets");
         } else {
@@ -146,18 +186,68 @@ impl<'py> Train<'py> for WLILGModel<'py> {
             info!(target : "timing", val_score_time = val_score_start.elapsed().as_secs_f64());
             info!(target : "stats", val_score = val_score);
         }
+
+        self.state = WLILGState::Trained;
     }
 
-    fn save(&self, path: &PathBuf) {
+    fn save(self, path: &PathBuf) {
+        assert_eq!(self.state, WLILGState::Trained);
         let pickle_path = path.with_extension("pkl");
         self.model.pickle(&pickle_path);
 
         let ron_path = path.with_extension("ron");
-        let data = ron::to_string(self).expect("Failed to serialise model data");
+        let serialisable = SerialisableWLILGModel {
+            successor_generator_name: self.successor_generator_name,
+            wl: self.wl,
+            validate: self.validate,
+        };
+        let data = ron::to_string(&serialisable).expect("Failed to serialise model data");
 
         let mut file = std::fs::File::create(ron_path).expect("Failed to create model file");
         file.write_all(data.as_bytes())
             .expect("Failed to write model data");
         info!(target : "progress", "saved model to {}.{{ron/pkl}}", path.display());
+    }
+}
+
+pub struct EvaluatingWLILGModel<'py, 'a> {
+    model: WLILGModel<'py>,
+    task: &'a Task,
+}
+
+impl<'py> Evaluate<'py> for WLILGModel<'py> {
+    type EvaluatedType = DBState;
+
+    fn set_evaluating_task(&mut self, task: &Task) {
+        self.state = WLILGState::Evaluating(ILGCompiler::new(&task));
+    }
+
+    fn evaluate(&mut self, states: &[DBState]) -> Vec<f64> {
+        let compiler = match &self.state {
+            WLILGState::Evaluating(compiler) => compiler,
+            _ => panic!("Model not ready for evaluation"),
+        };
+        let graphs: Vec<CGraph> = states.iter().map(|s| compiler.compile(s)).collect();
+        let histograms = self.wl.compute_histograms(&graphs);
+        let x = self.wl.compute_x(self.py(), &histograms);
+        let y = self.model.predict(&x);
+        y.extract().unwrap()
+    }
+
+    fn load(py: Python<'py>, path: &PathBuf) -> Self {
+        let pickle_path = path.with_extension("pkl");
+        let model = Regressor::unpickle(py, &pickle_path);
+
+        let ron_path = path.with_extension("ron");
+        let data = std::fs::read_to_string(ron_path).expect("Failed to read model data");
+        let serialisable: SerialisableWLILGModel =
+            ron::from_str(&data).expect("Failed to deserialise model data");
+        Self {
+            model,
+            successor_generator_name: serialisable.successor_generator_name,
+            wl: serialisable.wl,
+            validate: serialisable.validate,
+            state: WLILGState::Trained,
+        }
     }
 }

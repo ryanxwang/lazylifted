@@ -33,6 +33,7 @@ enum AtomNodeType {
 const NUM_ATOM_NODE_TYPES: i32 = 3;
 
 /// A compiler to convert states to ILGs.
+#[derive(Debug, Clone)]
 pub struct ILGCompiler {
     base_graph: Option<CGraph>,
     object_index_to_node_index: HashMap<usize, NodeID>,
