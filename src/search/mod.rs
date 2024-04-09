@@ -13,7 +13,7 @@ mod task;
 mod verbosity;
 
 pub use action::Action;
-pub use action_schema::{ActionSchema, SchemaArgument, SchemaAtom};
+pub use action_schema::{ActionSchema, SchemaArgument, SchemaAtom, SchemaParameter};
 pub use goal::{Goal, GoalAtom};
 pub use heuristics::{Heuristic, HeuristicValue};
 pub use object::Object;

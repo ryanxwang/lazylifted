@@ -31,9 +31,17 @@ impl SchemaParameter {
                 .clone(),
         }
     }
+
+    pub fn index(&self) -> usize {
+        self.index
+    }
+
+    pub fn type_index(&self) -> usize {
+        self.type_index
+    }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 /// If the argument is a constant, then the value is the index of the object in
 /// the task, otherwise the index is the index of the parameter in the action
 /// schema.
@@ -134,17 +142,17 @@ impl SchemaAtom {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ActionSchema {
     pub name: ActionName,
     pub index: usize,
-    pub parameters: Vec<SchemaParameter>,
+    parameters: Vec<SchemaParameter>,
     preconditions: Vec<SchemaAtom>,
-    pub positive_nullary_preconditions: Vec<bool>,
-    pub negative_nullary_preconditions: Vec<bool>,
-    pub effects: Vec<SchemaAtom>,
-    pub positive_nullary_effects: Vec<bool>,
-    pub negative_nullary_effects: Vec<bool>,
+    positive_nullary_preconditions: Vec<bool>,
+    negative_nullary_preconditions: Vec<bool>,
+    effects: Vec<SchemaAtom>,
+    positive_nullary_effects: Vec<bool>,
+    negative_nullary_effects: Vec<bool>,
 }
 
 impl ActionSchema {
@@ -253,7 +261,47 @@ impl ActionSchema {
         self.parameters.is_empty()
     }
 
+    pub fn parameters(&self) -> &[SchemaParameter] {
+        &self.parameters
+    }
+
     pub fn preconditions(&self) -> &[SchemaAtom] {
         &self.preconditions
+    }
+
+    pub fn positive_nullary_preconditions(&self) -> &[bool] {
+        &self.positive_nullary_preconditions
+    }
+
+    pub fn negative_nullary_preconditions(&self) -> &[bool] {
+        &self.negative_nullary_preconditions
+    }
+
+    pub fn positive_nullary_precondition(&self, index: usize) -> bool {
+        self.positive_nullary_preconditions[index]
+    }
+
+    pub fn negative_nullary_precondition(&self, index: usize) -> bool {
+        self.negative_nullary_preconditions[index]
+    }
+
+    pub fn effects(&self) -> &[SchemaAtom] {
+        &self.effects
+    }
+
+    pub fn positive_nullary_effects(&self) -> &[bool] {
+        &self.positive_nullary_effects
+    }
+
+    pub fn negative_nullary_effects(&self) -> &[bool] {
+        &self.negative_nullary_effects
+    }
+
+    pub fn positive_nullary_effect(&self, index: usize) -> bool {
+        self.positive_nullary_effects[index]
+    }
+
+    pub fn negative_nullary_effect(&self, index: usize) -> bool {
+        self.negative_nullary_effects[index]
     }
 }

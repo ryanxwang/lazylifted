@@ -90,23 +90,23 @@ where
         action: &Action,
     ) -> DBState {
         let mut new_state = state.clone();
-        for i in 0..action_schema.positive_nullary_effects.len() {
-            if action_schema.positive_nullary_effects[i] {
+        for i in 0..action_schema.positive_nullary_effects().len() {
+            if action_schema.positive_nullary_effect(i) {
                 new_state.nullary_atoms[i] = true;
             }
-            if action_schema.negative_nullary_effects[i] {
+            if action_schema.negative_nullary_effect(i) {
                 new_state.nullary_atoms[i] = false;
             }
         }
 
         debug_assert!(action_schema
-            .effects
+            .effects()
             .iter()
             .all(|effect| effect.predicate_index()
                 == new_state.relations[effect.predicate_index()].predicate_symbol));
 
         if action_schema.is_ground() {
-            for effect in &action_schema.effects {
+            for effect in action_schema.effects() {
                 let atom = effect
                     .arguments()
                     .iter()
@@ -127,7 +127,7 @@ where
                 }
             }
         } else {
-            for effect in &action_schema.effects {
+            for effect in action_schema.effects() {
                 let atom = instantiate_effect(effect, action);
                 if effect.is_negated() {
                     new_state.relations[effect.predicate_index()]
@@ -189,8 +189,8 @@ fn is_ground_action_applicable(action: &ActionSchema, state: &DBState) -> bool {
 }
 
 fn is_trivially_inapplicable(action: &ActionSchema, state: &DBState) -> bool {
-    let positive_precond = &action.positive_nullary_preconditions;
-    let negative_precond = &action.negative_nullary_preconditions;
+    let positive_precond = action.positive_nullary_preconditions();
+    let negative_precond = action.negative_nullary_preconditions();
     let nullary_atoms = &state.nullary_atoms;
     for i in 0..positive_precond.len() {
         if positive_precond[i] && !nullary_atoms[i] {
