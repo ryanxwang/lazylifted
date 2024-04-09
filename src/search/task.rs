@@ -50,12 +50,15 @@ impl Task {
             .enumerate()
             .map(|(index, typed)| (typed.value().clone(), index))
             .collect();
-        let object_table: HashMap<Name, usize> = problem
+        let mut object_table: HashMap<Name, usize> = problem
             .objects()
             .iter()
             .enumerate()
             .map(|(index, object)| (object.value().clone(), index))
             .collect();
+        domain.constants().iter().for_each(|constant| {
+            object_table.insert(constant.value().clone(), object_table.len());
+        });
 
         // Build the various components
         let mut predicates = vec![];
@@ -77,12 +80,23 @@ impl Task {
             })
             .collect();
 
-        let objects = problem
+        let mut objects: Vec<Object> = problem
             .objects()
             .iter()
             .enumerate()
             .map(|(index, object)| Object::new(index, object, &type_table))
             .collect();
+        domain
+            .constants()
+            .iter()
+            .enumerate()
+            .for_each(|(index, constant)| {
+                objects.push(Object::new(
+                    index + problem.objects().len(),
+                    constant,
+                    &type_table,
+                ));
+            });
 
         let goal = Goal::new(problem.goals(), &predicate_table, &object_table);
 

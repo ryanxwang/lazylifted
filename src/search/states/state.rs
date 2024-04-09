@@ -74,7 +74,15 @@ impl DBState {
             } else {
                 let mut args = Vec::with_capacity(atom.values().len());
                 for arg in atom.values() {
-                    args.push(*object_table.get(arg).unwrap());
+                    args.push(
+                        *object_table.get(arg).expect(
+                            format!(
+                                "Object {} not found in object table {:?}",
+                                arg, object_table
+                            )
+                            .as_str(),
+                        ),
+                    );
                 }
                 state.insert_tuple_in_relation(args, predicate_symbol);
             }
