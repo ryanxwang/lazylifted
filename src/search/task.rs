@@ -1,4 +1,4 @@
-use crate::parsed_types::{Domain, Name, Problem, Types};
+use crate::parsed_types::{Domain, Name, Problem, Requirement, Types};
 use crate::parsers::Parser;
 use crate::search::{ActionSchema, DBState, Goal, Object, Predicate};
 use std::collections::{HashMap, HashSet};
@@ -30,6 +30,14 @@ impl Task {
     pub fn from_text(domain_text: &str, problem_text: &str) -> Self {
         let domain = Domain::from_str(domain_text).expect("Failed to parse domain file");
         let problem = Problem::from_str(problem_text).expect("Failed to parse problem file");
+
+        if domain
+            .requirements()
+            .to_effective()
+            .contains(&Requirement::NegativePreconditions)
+        {
+            panic!("Negative preconditions are not supported");
+        }
 
         debug_assert_eq!(
             domain.name(),

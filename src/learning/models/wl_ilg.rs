@@ -109,12 +109,11 @@ impl WLILGModel {
 
     fn score(
         &self,
-        py: Python<'static>,
         x: Bound<'static, PyArray2<f64>>,
         expected_y: Bound<'static, PyArray1<f64>>,
     ) -> f64 {
         let predicted_y = self.model.predict(&x);
-        let mean_squared_error = PyModule::import_bound(py, "sklearn.metrics")
+        let mean_squared_error = PyModule::import_bound(self.py(), "sklearn.metrics")
             .unwrap()
             .getattr("mean_squared_error")
             .unwrap();
@@ -178,12 +177,12 @@ impl Train for WLILGModel {
         self.model.fit(&train_x, &train_y);
 
         let train_score_start = time::Instant::now();
-        let train_score = self.score(py, train_x, train_y);
+        let train_score = self.score(train_x, train_y);
         info!(train_score_time = train_score_start.elapsed().as_secs_f64());
         info!(train_score = train_score);
         if self.validate {
             let val_score_start = time::Instant::now();
-            let val_score = self.score(py, val_x, val_y);
+            let val_score = self.score(val_x, val_y);
             info!(val_score_time = val_score_start.elapsed().as_secs_f64());
             info!(val_score = val_score);
         }

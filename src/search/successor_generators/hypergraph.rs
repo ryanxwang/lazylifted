@@ -38,6 +38,9 @@ impl Hypergraph {
             if precond.is_nullary() || precond.is_negated() {
                 continue;
             }
+            if precond.is_negated() {
+                panic!("Negated preconditions are not supported");
+            }
 
             let mut free_variables = HashSet::new();
             for arg in precond.arguments() {
