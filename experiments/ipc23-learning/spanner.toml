@@ -1,0 +1,3 @@
+domain_pddl = "benchmarks/ipc23-learning/spanner/domain.pddl"
+problems_dir = "benchmarks/ipc23-learning/spanner/training/easy"
+plans_dir = "benchmarks/ipc23-learning/spanner/training_plans"

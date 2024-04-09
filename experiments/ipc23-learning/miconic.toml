@@ -1,0 +1,3 @@
+domain_pddl = "benchmarks/ipc23-learning/miconic/domain.pddl"
+problems_dir = "benchmarks/ipc23-learning/miconic/training/easy"
+plans_dir = "benchmarks/ipc23-learning/miconic/training_plans"
