@@ -201,10 +201,10 @@ impl Train for WLILGModel {
             wl: self.wl.clone(),
             validate: self.validate,
         };
-        let data = ron::to_string(&serialisable).expect("Failed to serialise model data");
+        let serialised = ron::to_string(&serialisable).expect("Failed to serialise model data");
 
         let mut file = std::fs::File::create(ron_path).expect("Failed to create model file");
-        file.write_all(data.as_bytes())
+        file.write_all(serialised.as_bytes())
             .expect("Failed to write model data");
         info!("saved model to {}.{{ron/pkl}}", path.display());
     }

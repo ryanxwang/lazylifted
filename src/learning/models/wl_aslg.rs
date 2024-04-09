@@ -1,10 +1,3 @@
-use std::collections::HashMap;
-
-use numpy::{PyArray1, PyArrayMethods, PyUntypedArrayMethods};
-use pyo3::Python;
-use serde::{Deserialize, Serialize};
-use tracing::info;
-
 use crate::{
     learning::{
         graphs::{ASLGCompiler, CGraph},
@@ -14,6 +7,12 @@ use crate::{
     },
     search::successor_generators::SuccessorGeneratorName,
 };
+use numpy::{PyArray1, PyArrayMethods, PyUntypedArrayMethods};
+use pyo3::Python;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::io::Write;
+use tracing::info;
 
 #[derive(Debug, Clone)]
 enum WLASLGState {
@@ -273,7 +272,22 @@ impl Train for WLASLGModel {
         self.state = WLASLGState::Trained;
     }
 
-    fn save(&self, _path: &std::path::PathBuf) {
-        todo!("Implement saving")
+    fn save(&self, path: &std::path::PathBuf) {
+        assert_eq!(self.state, WLASLGState::Trained);
+        let pickle_path = path.with_extension("pkl");
+        self.model.pickle(&pickle_path);
+
+        let ron_path = path.with_extension("ron");
+        let serialisable = SerialisableWLASLGModel {
+            successor_generator_name: self.successor_generator_name,
+            wl: self.wl.clone(),
+            validate: self.validate,
+        };
+        let serialised = ron::ser::to_string(&serialisable).expect("Failed to serialise model");
+
+        let mut file = std::fs::File::create(ron_path).expect("Failed to create model file");
+        file.write_all(serialised.as_bytes())
+            .expect("Failed to write model data");
+        info!("saved model to {}.{{ron/pkl}}", path.display());
     }
 }
