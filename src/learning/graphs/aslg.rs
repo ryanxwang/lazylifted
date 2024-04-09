@@ -9,7 +9,7 @@ use crate::{
     search::{ActionSchema, DBState, Object, Predicate, SchemaArgument, SchemaParameter, Task},
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ASLGCompiler {
     /// A precompiled graph for the task.
     base_graph: Option<CGraph>,

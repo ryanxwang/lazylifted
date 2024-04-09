@@ -1,4 +1,5 @@
 //! Wrapper around some sklearn regression models
+use crate::learning::ml::py_utils;
 use numpy::{PyArray1, PyArray2};
 use pyo3::{prelude::*, types::IntoPyDict};
 use serde::{Deserialize, Serialize};
@@ -75,37 +76,11 @@ impl<'py> Regressor<'py> {
         }
     }
     pub fn pickle(&self, pickle_path: &PathBuf) {
-        let py = self.model.py();
-        let pickle = py.import_bound("pickle").unwrap();
-        let pickle_path_str = pickle_path.to_str().unwrap();
-        let file = py
-            .import_bound("builtins")
-            .unwrap()
-            .getattr("open")
-            .unwrap()
-            .call1((pickle_path_str, "wb"))
-            .unwrap();
-        pickle
-            .getattr("dump")
-            .unwrap()
-            .call1((self.model.as_ref(), &file))
-            .unwrap();
-
-        file.getattr("close").unwrap().call0().unwrap();
+        py_utils::pickle(self.py(), &self.model, pickle_path);
     }
 
     pub fn unpickle(py: Python<'py>, pickle_path: &PathBuf) -> Self {
-        let pickle = py.import_bound("pickle").unwrap();
-        let file = py
-            .import_bound("builtins")
-            .unwrap()
-            .getattr("open")
-            .unwrap()
-            .call1((pickle_path.to_str().unwrap(), "rb"))
-            .unwrap();
-        let model = pickle.getattr("load").unwrap().call1((&file,)).unwrap();
-        file.getattr("close").unwrap().call0().unwrap();
-
+        let model = py_utils::unpickle(py, pickle_path);
         Self { model }
     }
 
@@ -116,12 +91,13 @@ impl<'py> Regressor<'py> {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use assert_approx_eq::assert_approx_eq;
     use numpy::PyArrayMethods;
-
-    use super::*;
+    use serial_test::serial;
 
     #[test]
+    #[serial]
     fn test_imports() {
         Python::with_gil(|py| {
             let _ = Regressor::new(py, RegressorName::GaussianProcessRegressor);

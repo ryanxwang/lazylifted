@@ -1,7 +1,10 @@
 //! Wrapper around various Python learning-to-rank models
+use crate::learning::ml::py_utils;
 use numpy::{PyArray1, PyArray2, PyArrayMethods};
 use pyo3::{prelude::*, types::PyDict};
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
+use tracing::info;
 
 #[derive(Debug, Clone, Eq, PartialEq, Deserialize, Serialize)]
 pub enum RankerName {
@@ -31,6 +34,7 @@ impl<'py> Ranker<'py> {
         y: &Bound<'py, PyArray1<f64>>,
         group: &Vec<usize>,
     ) {
+        let start_time = std::time::Instant::now();
         let py = self.model.py();
         match self.name {
             RankerName::RankSVM => {
@@ -46,6 +50,7 @@ impl<'py> Ranker<'py> {
                     .unwrap();
             }
         }
+        info!(fitting_time = start_time.elapsed().as_secs_f64());
     }
 
     pub fn predict(&self, x: &Bound<'py, PyArray2<f64>>) -> Bound<'py, PyArray1<f64>> {
@@ -92,6 +97,22 @@ impl<'py> Ranker<'py> {
             }
         }
     }
+
+    pub fn pickle(&self, pickle_path: &PathBuf) {
+        py_utils::pickle(self.py(), &self.model, pickle_path);
+    }
+
+    pub fn unpickle(py: Python<'py>, pickle_path: &PathBuf) -> Self {
+        let model = py_utils::unpickle(py, pickle_path);
+        Self {
+            name: RankerName::LambdaMart,
+            model,
+        }
+    }
+
+    pub fn py(&self) -> Python<'py> {
+        self.model.py()
+    }
 }
 
 #[cfg(test)]
@@ -99,8 +120,10 @@ mod tests {
     use super::*;
     use assert_approx_eq::assert_approx_eq;
     use numpy::PyArrayMethods;
+    use serial_test::serial;
 
     #[test]
+    #[serial]
     fn test_imports() {
         Python::with_gil(|py| {
             let _ = Ranker::new(py, RankerName::RankSVM);

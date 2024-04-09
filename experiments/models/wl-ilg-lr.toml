@@ -1,5 +1,5 @@
 [wl-ilg]
 model = "linear-regression"
-successor-generator = "naive"
+successor-generator = "full-reducer"
 iters = 4
 validate = false

@@ -31,7 +31,7 @@ impl Neighbourhood {
 }
 
 /// A Weisfeiler-Lehman kernel.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct WLKernel {
     /// The mode of the kernel. In training mode, the kernel will create new
     /// hashes for unseen subgraphs. In evaluation mode, the kernel will

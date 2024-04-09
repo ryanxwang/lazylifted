@@ -305,3 +305,9 @@ impl ActionSchema {
         self.negative_nullary_effects[index]
     }
 }
+
+impl PartialEq for ActionSchema {
+    fn eq(&self, other: &Self) -> bool {
+        self.index == other.index
+    }
+}

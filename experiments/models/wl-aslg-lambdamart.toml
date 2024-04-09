@@ -1,5 +1,5 @@
-[wl-ilg]
-model = "gpr"
+[wl-aslg]
+model = "lambdamart"
 successor-generator = "full-reducer"
 iters = 4
-validate = false
+validate = true

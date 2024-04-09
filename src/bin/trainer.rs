@@ -1,6 +1,6 @@
 use clap::Parser;
 use lazylifted::{
-    learning::models::{ModelConfig, Train, TrainingInstance},
+    learning::models::{ModelConfig, TrainingInstance},
     search::{Plan, Task},
 };
 use pyo3::Python;

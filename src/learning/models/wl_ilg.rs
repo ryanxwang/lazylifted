@@ -191,7 +191,7 @@ impl Train for WLILGModel {
         self.state = WLILGState::Trained;
     }
 
-    fn save(self, path: &PathBuf) {
+    fn save(&self, path: &PathBuf) {
         assert_eq!(self.state, WLILGState::Trained);
         let pickle_path = path.with_extension("pkl");
         self.model.pickle(&pickle_path);
@@ -199,7 +199,7 @@ impl Train for WLILGModel {
         let ron_path = path.with_extension("ron");
         let serialisable = SerialisableWLILGModel {
             successor_generator_name: self.successor_generator_name,
-            wl: self.wl,
+            wl: self.wl.clone(),
             validate: self.validate,
         };
         let data = ron::to_string(&serialisable).expect("Failed to serialise model data");

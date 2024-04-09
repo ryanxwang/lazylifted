@@ -1,6 +1,9 @@
 //! This module contains traits and structs for training and evaluating models.
 
-use crate::learning::models::wl_ilg::{WLILGConfig, WLILGModel};
+use crate::learning::models::{
+    wl_aslg::{WLASLGConfig, WLASLGModel},
+    wl_ilg::{WLILGConfig, WLILGModel},
+};
 use crate::search::{Plan, Task};
 use pyo3::Python;
 use serde::{Deserialize, Serialize};
@@ -34,19 +37,19 @@ impl TrainingInstance {
 pub trait Train {
     fn train(&mut self, training_data: &[TrainingInstance]);
 
-    // Save taking ownership of self is purely a skill issue, see
-    // [`WLILGModel::save`] for an example of why.
-    fn save(self, path: &PathBuf);
+    fn save(&self, path: &PathBuf);
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub enum ModelConfig {
     #[serde(alias = "wl-ilg")]
     WLILG(WLILGConfig),
+    #[serde(alias = "wl-aslg")]
+    WLASLG(WLASLGConfig),
 }
 
 impl ModelConfig {
-    pub fn load(path: &PathBuf) -> impl Train {
+    pub fn load(path: &PathBuf) -> Box<dyn Train> {
         let py = unsafe { Python::assume_gil_acquired() };
         let config: ModelConfig = toml::from_str(
             &std::fs::read_to_string(path)
@@ -55,7 +58,8 @@ impl ModelConfig {
         .expect("Failed to parse model config, is it valid?");
 
         match config {
-            ModelConfig::WLILG(config) => WLILGModel::new(py, config),
+            ModelConfig::WLILG(config) => Box::new(WLILGModel::new(py, config)),
+            ModelConfig::WLASLG(config) => Box::new(WLASLGModel::new(py, config)),
         }
     }
 }
