@@ -14,3 +14,5 @@ debug/
 
 .DS_Store
 trained_models/
+*.err
+*.out

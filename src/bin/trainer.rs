@@ -34,6 +34,8 @@ struct Args {
         default_value = "trained"
     )]
     save_path: PathBuf,
+    #[arg(help = "Whether to use coloured output", short = 'c', long = "colour")]
+    colour: bool,
 }
 
 #[derive(Deserialize, Debug)]
@@ -70,8 +72,9 @@ fn load_data(data_config: &DataConfig) -> Vec<TrainingInstance> {
 fn main() {
     let args = Args::parse();
     tracing_subscriber::fmt()
-        .with_ansi(true)
+        .with_ansi(args.colour)
         .with_line_number(true)
+        .with_writer(std::io::stderr)
         .compact()
         .init();
 

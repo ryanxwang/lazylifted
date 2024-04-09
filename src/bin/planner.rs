@@ -60,6 +60,8 @@ struct Args {
         default_value_t = Verbosity::Normal
     )]
     verbosity: Verbosity,
+    #[arg(help = "Whether to use coloured output", short = 'c', long = "colour")]
+    colour: bool,
 }
 
 fn main() {
@@ -68,8 +70,9 @@ fn main() {
     let level: tracing::Level = args.verbosity.into();
     tracing_subscriber::fmt()
         .with_max_level(level)
-        .with_ansi(true)
+        .with_ansi(args.colour)
         .with_line_number(true)
+        .with_writer(std::io::stderr)
         .compact()
         .init();
 
