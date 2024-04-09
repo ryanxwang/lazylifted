@@ -1,7 +1,7 @@
 //! Provides parsers for atoms.
 
 use crate::parsed_types::Atom;
-use crate::parsers::{leading_whitespace, parens, space_separated_list0};
+use crate::parsers::{parens, space_separated_list0, surrounding_whitespace};
 use crate::parsers::{parse_predicate_name, ParseResult, Span};
 use nom::combinator::map;
 use nom::sequence::tuple;
@@ -24,7 +24,7 @@ where
     map(
         parens(tuple((
             parse_predicate_name,
-            leading_whitespace(space_separated_list0(inner)),
+            surrounding_whitespace(space_separated_list0(inner)),
         ))),
         |tuple| Atom::new(tuple.0, tuple.1),
     )
