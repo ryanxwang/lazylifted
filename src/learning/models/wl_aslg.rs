@@ -1,4 +1,6 @@
-use numpy::{PyArray1, PyUntypedArrayMethods};
+use std::collections::HashMap;
+
+use numpy::{PyArray1, PyArrayMethods, PyUntypedArrayMethods};
 use pyo3::Python;
 use serde::{Deserialize, Serialize};
 use tracing::info;
@@ -96,7 +98,16 @@ impl WLASLGModel {
                 let next_state =
                     successor_generator.generate_successor(&cur_state, chosen_schema, action);
 
+                let mut applicable_schemas_count = 0;
                 for schema in &task.action_schemas {
+                    if successor_generator
+                        .get_applicable_actions(&cur_state, schema)
+                        .is_empty()
+                    {
+                        continue;
+                    }
+                    applicable_schemas_count += 1;
+
                     graphs.push(compiler.compile(&cur_state, schema));
                     if schema == chosen_schema {
                         ranks.push(1.0);
@@ -104,13 +115,82 @@ impl WLASLGModel {
                         ranks.push(0.0);
                     }
                 }
-                groups.push(task.action_schemas.len());
+                groups.push(applicable_schemas_count);
 
                 cur_state = next_state;
             }
         }
 
         (graphs, ranks, groups)
+    }
+
+    fn score(
+        &self,
+        histograms: &Vec<HashMap<i32, usize>>,
+        ranks: &Vec<f64>,
+        group: &Vec<usize>,
+    ) -> f64 {
+        let mut start = 0;
+        let mut correct_count = 0;
+        for &group_size in group {
+            let histogram = &histograms[start..start + group_size];
+            let rank = &ranks[start..start + group_size];
+            start += group_size;
+
+            let x = self.wl.compute_x(self.py(), histogram);
+            let expected = rank
+                .iter()
+                .enumerate()
+                .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
+                .unwrap()
+                .0;
+            let predicted_y = self.model.predict(&x);
+            let predicted = predicted_y
+                .to_vec()
+                .unwrap()
+                .iter()
+                .enumerate()
+                .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
+                .unwrap()
+                .0;
+
+            if expected == predicted {
+                correct_count += 1;
+            }
+        }
+
+        correct_count as f64 / group.len() as f64
+    }
+
+    /// Compute what a baseline model would score for the given training data.
+    /// Here baseline means "randomly picking an applicable action schema for
+    /// each state"
+    fn compute_baseline_score(&self, training_data: &[TrainingInstance]) -> f64 {
+        let mut baseline = 0.;
+        let mut total = 0.;
+        for instance in training_data {
+            let task = &instance.task;
+            let successor_generator = self.successor_generator_name.create(task);
+            let mut cur_state = task.initial_state.clone();
+            for action in instance.plan.steps() {
+                let num_applicable_schemas = task
+                    .action_schemas
+                    .iter()
+                    .filter(|&schema| {
+                        successor_generator
+                            .get_applicable_actions(&cur_state, schema)
+                            .len()
+                            > 0
+                    })
+                    .count();
+                baseline += 1. / num_applicable_schemas as f64;
+                total += 1.;
+                let action_schema = &task.action_schemas[action.index];
+                cur_state =
+                    successor_generator.generate_successor(&cur_state, action_schema, action);
+            }
+        }
+        baseline / total
     }
 
     fn py(&self) -> Python<'static> {
@@ -154,8 +234,8 @@ impl Train for WLASLGModel {
         let val_x = self.wl.compute_x(self.py(), &val_histograms);
         info!("computed WL features");
 
-        let train_y = PyArray1::from_vec_bound(self.py(), train_ranks);
-        let val_y = PyArray1::from_vec_bound(self.py(), val_ranks);
+        let train_y = PyArray1::from_vec_bound(self.py(), train_ranks.clone());
+        let val_y = PyArray1::from_vec_bound(self.py(), val_ranks.clone());
         info!("converted labels to numpy arrays");
         info!(
             train_x_shape = format!("{:?}", train_x.shape()),
@@ -168,7 +248,29 @@ impl Train for WLASLGModel {
         info!("fitted model on training data");
         self.model.fit(&train_x, &train_y, &train_groups);
 
-        todo!("train")
+        let train_score_start = std::time::Instant::now();
+        let train_score = self.score(&train_histograms, &train_ranks, &train_groups);
+        info!(train_score_time = train_score_start.elapsed().as_secs_f64());
+        let train_baseline = self.compute_baseline_score(train_instances);
+        info!(
+            train_score = train_score,
+            train_baseline = train_baseline,
+            train_improvement = train_score - train_baseline
+        );
+
+        if self.validate {
+            let val_score_start = std::time::Instant::now();
+            let val_score = self.score(&val_histograms, &val_ranks, &val_groups);
+            info!(val_score_time = val_score_start.elapsed().as_secs_f64());
+            let val_baseline = self.compute_baseline_score(val_instances);
+            info!(
+                val_score = val_score,
+                val_baseline = val_baseline,
+                val_improvement = val_score - val_baseline
+            );
+        }
+
+        self.state = WLASLGState::Trained;
     }
 
     fn save(&self, _path: &std::path::PathBuf) {
