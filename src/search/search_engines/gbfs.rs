@@ -2,6 +2,7 @@
 
 use ordered_float::OrderedFloat;
 use priority_queue::PriorityQueue;
+use tracing::info;
 
 use crate::search::{
     search_engines::{
@@ -34,18 +35,17 @@ impl SearchEngine for GBFS {
         let mut priority_queue = PriorityQueue::new();
         let mut search_space = SearchSpace::new(packer.pack(&task.initial_state));
         let root_node = search_space.get_root_node_mut();
-
         let heuristic = heuristic.as_mut();
-        root_node.open(
-            OrderedFloat(0.),
-            heuristic.evaluate(&task.initial_state, task),
-        );
+        let mut heuristic_layer = heuristic.evaluate(&task.initial_state, task);
+
+        root_node.open(OrderedFloat(0.), heuristic_layer);
         priority_queue.push(root_node.get_state_id(), Reverse(root_node.get_h()));
 
         if task.goal.is_satisfied(&task.initial_state) {
             return (SearchResult::Success(vec![]), statistics);
         }
 
+        info!(initial_heuristic_value = heuristic_layer.into_inner());
         while !priority_queue.is_empty() {
             let sid = priority_queue.pop().unwrap().0;
             let node = search_space.get_node_mut(sid);
@@ -56,6 +56,7 @@ impl SearchEngine for GBFS {
             node.close();
             let state_id = node.get_state_id();
             let g_value = node.get_g();
+            let h_value = node.get_h();
             statistics.increment_expanded_nodes();
 
             let state = packer.unpack(search_space.get_state(sid));
@@ -67,6 +68,12 @@ impl SearchEngine for GBFS {
                     SearchResult::Success(search_space.extract_plan(&goal_node)),
                     statistics,
                 );
+            }
+
+            if h_value < heuristic_layer {
+                heuristic_layer = h_value;
+                info!("New best heuristic value: {}", h_value.into_inner());
+                statistics.log();
             }
 
             let mut successors = Vec::new();

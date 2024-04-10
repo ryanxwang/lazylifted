@@ -24,7 +24,7 @@ impl AlternatingPriorityQueue {
         Self {
             frontier_preferred: PriorityQueue::new(),
             frontier_regular: PriorityQueue::new(),
-            priority: 1000,
+            priority: 30,
         }
     }
 
@@ -46,8 +46,8 @@ impl AlternatingPriorityQueue {
         self.frontier_regular.push(sid, Reverse(h_value));
     }
 
-    fn boost_priority(&mut self, inc: usize) {
-        self.priority += inc;
+    fn reset_priority(&mut self, priority: usize) {
+        self.priority = priority;
     }
 }
 
@@ -112,7 +112,7 @@ impl SearchEngine for AlternatingGBFS {
 
             if h_value < heuristic_layer {
                 heuristic_layer = h_value;
-                frontier.boost_priority(1000);
+                frontier.reset_priority(30);
                 info!("New best heuristic value: {}", h_value.into_inner());
                 statistics.log();
             }
