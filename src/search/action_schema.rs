@@ -2,6 +2,7 @@ use crate::parsed_types::{
     ActionDefinition, ActionName, Atom, Literal, Name, PropCondition, PropEffect, Term, Typed,
     Variable,
 };
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Copy)]
@@ -41,7 +42,7 @@ impl SchemaParameter {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 /// If the argument is a constant, then the value is the index of the object in
 /// the task, otherwise the index is the index of the parameter in the action
 /// schema.

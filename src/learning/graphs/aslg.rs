@@ -1,6 +1,8 @@
 //! The Action Schema Learning Graph
 use std::collections::HashMap;
 
+use serde::{Deserialize, Serialize};
+
 use crate::{
     learning::graphs::{
         utils::{atoms_of_goal, atoms_of_state, Atom, SchemaPred},
@@ -9,7 +11,7 @@ use crate::{
     search::{ActionSchema, DBState, Object, Predicate, SchemaArgument, SchemaParameter, Task},
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ASLGCompiler {
     /// A precompiled graph for the task.
     base_graph: Option<CGraph>,
@@ -249,7 +251,7 @@ impl ASLGCompiler {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Copy)]
+#[derive(Debug, Clone, PartialEq, Eq, Copy, Serialize, Deserialize)]
 #[repr(i32)]
 enum AtomNodeType {
     /// The node is a goal node but not in the current state.
@@ -261,7 +263,7 @@ enum AtomNodeType {
 }
 const NUM_ATOM_NODE_TYPES: i32 = 3;
 
-#[derive(Debug, Clone, PartialEq, Eq, Copy)]
+#[derive(Debug, Clone, PartialEq, Eq, Copy, Serialize, Deserialize)]
 #[repr(i32)]
 enum SchemaPredNodeType {
     // This schema predicate is in the add list.

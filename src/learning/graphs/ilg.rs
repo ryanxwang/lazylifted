@@ -17,6 +17,7 @@ use crate::{
     },
     search::DBState,
 };
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Colours of atom nodes in the ILG.
@@ -33,7 +34,7 @@ enum AtomNodeType {
 const NUM_ATOM_NODE_TYPES: i32 = 3;
 
 /// A compiler to convert states to ILGs.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ILGCompiler {
     base_graph: Option<CGraph>,
     object_index_to_node_index: HashMap<usize, NodeID>,

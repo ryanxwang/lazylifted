@@ -1,9 +1,14 @@
 #!/bin/bash
+if [ $# -eq 0 ]; then
+    echo "Usage: $0 <model>"
+    exit 1
+fi
+
 model_dir=experiments/models
 data_dir=experiments/ipc23-learning
 log_dir=training_logs
 
-model=wl-aslg-lambdamart
+model=$1
 domains=("blocksworld" "floortile" "miconic" "rovers" "sokoban" "spanner" "transport")
 
 # https://stackoverflow.com/questions/1885525/how-do-i-prompt-a-user-for-confirmation-in-bash-script

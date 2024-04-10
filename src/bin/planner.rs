@@ -1,6 +1,7 @@
 use clap::Parser;
 use lazylifted::search::{
     heuristics::HeuristicName,
+    preferred_operator::PreferredOperatorName,
     search_engines::{SearchEngineName, SearchResult},
     successor_generators::SuccessorGeneratorName,
     Task, Verbosity,
@@ -43,14 +44,22 @@ struct Args {
     heuristic_name: HeuristicName,
     #[arg(
         help = "The saved model (as a path) to use for the heuristic \
-        evaluator, only needed for heuristics that require training. If this \
-        parameter is provided. It is assumed that the Python GIL is required \
-        when planning.",
+        evaluator, only needed for heuristics that require training.",
         short = 'm',
         long = "model",
         id = "MODEL"
     )]
     saved_model: Option<PathBuf>,
+    #[arg(
+        help = "The saved model (as a path) to use for the preferred operator \
+        provider. Only meaning if the search engine uses it. Will use the
+        WL-ALSG ranker to compute preferred operators so the model should be \
+        for WL-ALSG.",
+        short = 'p',
+        long = "preferred",
+        id = "PREFERRED"
+    )]
+    preferred_operator_model: Option<PathBuf>,
     #[arg(
         value_enum,
         help = "The verbosity level",
@@ -77,19 +86,21 @@ fn main() {
         .init();
 
     let task = Task::from_path(&args.domain, &args.problem);
-    match &args.saved_model {
-        // Assume GIL is required when a model is provided
-        Some(_) => Python::with_gil(|_| plan(args, &task)),
-        None => plan(args, &task),
-    };
+
+    // Assume GIL is required
+    Python::with_gil(|_| plan(args, &task));
 }
 
 fn plan(args: Args, task: &Task) {
     let successor_generator = args.successor_generator_name.create(&task);
     let heuristic = args.heuristic_name.create(&args.saved_model);
     let mut search_engine = args.search_engine_name.create();
+    let preferred_operator = args
+        .preferred_operator_model
+        .map(|model| PreferredOperatorName::WLASLG.create(&model));
 
-    let (result, mut statistics) = search_engine.search(&task, successor_generator, heuristic);
+    let (result, mut statistics) =
+        search_engine.search(&task, successor_generator, heuristic, preferred_operator);
     statistics.finalise_search();
     match result {
         SearchResult::Success(plan) => {

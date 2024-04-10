@@ -10,13 +10,15 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 pub trait Evaluate {
-    type EvaluatedType;
+    type EvaluatedType<'a>;
 
     /// Set the task that is currently being evaluated. After the first call to
     /// this method, further calls should be ignored.
     fn set_evaluating_task(&mut self, task: &Task);
 
-    fn evaluate(&mut self, ts: &[&Self::EvaluatedType]) -> Vec<f64>;
+    fn evaluate<'a>(&mut self, t: &Self::EvaluatedType<'a>) -> f64;
+
+    fn evaluate_batch<'a>(&mut self, ts: &[Self::EvaluatedType<'a>]) -> Vec<f64>;
 
     fn load(py: Python<'static>, path: &PathBuf) -> Self;
 }

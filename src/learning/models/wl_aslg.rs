@@ -2,19 +2,19 @@ use crate::{
     learning::{
         graphs::{ASLGCompiler, CGraph},
         ml::{Ranker, RankerName},
-        models::{Train, TrainingInstance},
+        models::{Evaluate, Train, TrainingInstance},
         WLKernel,
     },
-    search::successor_generators::SuccessorGeneratorName,
+    search::{successor_generators::SuccessorGeneratorName, ActionSchema, DBState, Task},
 };
 use numpy::{PyArray1, PyArrayMethods, PyUntypedArrayMethods};
-use pyo3::Python;
+use pyo3::{prelude::*, Python};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io::Write;
 use tracing::info;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 enum WLASLGState {
     // The model has been created but not trained
     New,
@@ -61,6 +61,7 @@ struct SerialisableWLASLGModel {
     successor_generator_name: SuccessorGeneratorName,
     wl: WLKernel,
     validate: bool,
+    state: WLASLGState,
 }
 
 impl WLASLGModel {
@@ -282,6 +283,7 @@ impl Train for WLASLGModel {
             successor_generator_name: self.successor_generator_name,
             wl: self.wl.clone(),
             validate: self.validate,
+            state: self.state.clone(),
         };
         let serialised = ron::ser::to_string(&serialisable).expect("Failed to serialise model");
 
@@ -289,5 +291,66 @@ impl Train for WLASLGModel {
         file.write_all(serialised.as_bytes())
             .expect("Failed to write model data");
         info!("saved model to {}.{{ron/pkl}}", path.display());
+    }
+}
+
+impl Evaluate for WLASLGModel {
+    type EvaluatedType<'a> = (&'a DBState, &'a ActionSchema);
+
+    fn set_evaluating_task(&mut self, task: &Task) {
+        match &self.state {
+            WLASLGState::New => {
+                panic!("Model not trained yet, cannot set evaluating task");
+            }
+            WLASLGState::Trained => {
+                self.state = WLASLGState::Evaluating(ASLGCompiler::new(task));
+            }
+            WLASLGState::Evaluating(_) => {}
+        }
+    }
+
+    fn evaluate<'a>(&mut self, &(state, action_schema): &Self::EvaluatedType<'a>) -> f64 {
+        let compiler = match &self.state {
+            WLASLGState::Evaluating(compiler) => compiler,
+            _ => panic!("Model not ready for evaluation"),
+        };
+        let graph = compiler.compile(state, action_schema);
+        let histograms = self.wl.compute_histograms(&[graph]);
+        let x = self.wl.compute_x(self.py(), &histograms);
+        let y: Vec<f64> = self.model.predict(&x).extract().unwrap();
+        y[0]
+    }
+
+    fn evaluate_batch<'a>(&mut self, targets: &[Self::EvaluatedType<'a>]) -> Vec<f64> {
+        let compiler = match &self.state {
+            WLASLGState::Evaluating(compiler) => compiler,
+            _ => panic!("Model not ready for evaluation"),
+        };
+        let graphs = targets
+            .iter()
+            .map(|&(state, action_schema)| compiler.compile(state, action_schema))
+            .collect::<Vec<_>>();
+        let histograms = self.wl.compute_histograms(&graphs);
+        let x = self.wl.compute_x(self.py(), &histograms);
+        let y: Vec<f64> = self.model.predict(&x).extract().unwrap();
+        y
+    }
+
+    fn load(py: Python<'static>, path: &std::path::PathBuf) -> Self {
+        let pickle_path = path.with_extension("pkl");
+        let model = Ranker::unpickle(py, &pickle_path);
+
+        let ron_path = path.with_extension("ron");
+        let file = std::fs::File::open(ron_path).expect("Failed to open model file");
+        let serialisable: SerialisableWLASLGModel =
+            ron::de::from_reader(file).expect("Failed to deserialise model");
+        assert_eq!(serialisable.state, WLASLGState::Trained);
+        Self {
+            model,
+            successor_generator_name: serialisable.successor_generator_name,
+            wl: serialisable.wl,
+            validate: serialisable.validate,
+            state: serialisable.state,
+        }
     }
 }

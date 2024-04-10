@@ -1,10 +1,8 @@
-use std::path::PathBuf;
-
 use crate::search::heuristics::goal_counting::GoalCounting;
 use crate::search::heuristics::wl_ilg::WLILGHeuristic;
 use crate::search::{DBState, Task};
-use clap;
 use ordered_float::OrderedFloat;
+use std::path::PathBuf;
 
 pub type HeuristicValue = OrderedFloat<f64>;
 
@@ -27,7 +25,6 @@ pub trait Heuristic {
 #[derive(clap::ValueEnum, Debug, Clone, Copy)]
 #[clap(rename_all = "kebab-case")]
 pub enum HeuristicName {
-    #[clap(name = "goal-counting", help = "The goal counting heuristic.")]
     GoalCounting,
     #[clap(name = "wl-ilg", help = "The WL-ILG heuristic, requires a model file.")]
     WLILG,

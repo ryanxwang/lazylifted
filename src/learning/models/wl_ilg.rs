@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 use std::{io::Write, path::PathBuf, time};
 use tracing::info;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 enum WLILGState {
     /// The model has been created but not trained.
     New,
@@ -68,6 +68,7 @@ struct SerialisableWLILGModel {
     successor_generator_name: SuccessorGeneratorName,
     wl: WLKernel,
     validate: bool,
+    state: WLILGState,
 }
 
 impl WLILGModel {
@@ -200,6 +201,7 @@ impl Train for WLILGModel {
             successor_generator_name: self.successor_generator_name,
             wl: self.wl.clone(),
             validate: self.validate,
+            state: self.state.clone(),
         };
         let serialised = ron::to_string(&serialisable).expect("Failed to serialise model data");
 
@@ -211,7 +213,7 @@ impl Train for WLILGModel {
 }
 
 impl Evaluate for WLILGModel {
-    type EvaluatedType = DBState;
+    type EvaluatedType<'a> = DBState;
 
     fn set_evaluating_task(&mut self, task: &Task) {
         match &self.state {
@@ -223,12 +225,30 @@ impl Evaluate for WLILGModel {
         }
     }
 
-    fn evaluate(&mut self, states: &[&DBState]) -> Vec<f64> {
+    fn evaluate(&mut self, state: &DBState) -> f64 {
         let compiler = match &self.state {
             WLILGState::Evaluating(compiler) => compiler,
             _ => panic!("Model not ready for evaluation"),
         };
-        let graphs: Vec<CGraph> = states.iter().map(|s| compiler.compile(s)).collect();
+        let graph = compiler.compile(state);
+        let histograms = self.wl.compute_histograms(&[graph]);
+        let x = self.wl.compute_x(self.py(), &histograms);
+        let y = self.model.predict(&x);
+        let y: Vec<f64> = y.extract().unwrap();
+        y[0]
+    }
+
+    fn evaluate_batch(&mut self, states: &[DBState]) -> Vec<f64> {
+        let compiler = match &self.state {
+            WLILGState::Evaluating(compiler) => compiler,
+            _ => panic!("Model not ready for evaluation"),
+        };
+        // when evaluating in batch, we still do it sequentially for better
+        // cache locality
+        let graphs = states
+            .iter()
+            .map(|t| compiler.compile(&t))
+            .collect::<Vec<_>>();
         let histograms = self.wl.compute_histograms(&graphs);
         let x = self.wl.compute_x(self.py(), &histograms);
         let y = self.model.predict(&x);
@@ -243,12 +263,13 @@ impl Evaluate for WLILGModel {
         let data = std::fs::read_to_string(ron_path).expect("Failed to read model data");
         let serialisable: SerialisableWLILGModel =
             ron::from_str(&data).expect("Failed to deserialise model data");
+        assert_eq!(serialisable.state, WLILGState::Trained);
         Self {
             model,
             successor_generator_name: serialisable.successor_generator_name,
             wl: serialisable.wl,
             validate: serialisable.validate,
-            state: WLILGState::Trained,
+            state: serialisable.state,
         }
     }
 }

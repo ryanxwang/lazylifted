@@ -2,7 +2,6 @@ use crate::search::{
     successor_generators::{FullReducer, JoinSuccessorGenerator, NaiveJoinAlgorithm},
     Action, ActionSchema, DBState, Task,
 };
-use clap;
 use serde::{Deserialize, Serialize};
 
 pub trait SuccessorGenerator {

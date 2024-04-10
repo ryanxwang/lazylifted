@@ -8,7 +8,7 @@ use crate::search::{
         SearchEngine, SearchNodeStatus, SearchResult, SearchSpace, SearchStatistics, StateId,
     },
     states::SparseStatePacker,
-    Heuristic, SuccessorGenerator, Task,
+    Heuristic, PreferredOperator, SuccessorGenerator, Task,
 };
 use std::cmp::Reverse;
 
@@ -27,6 +27,7 @@ impl SearchEngine for GBFS {
         task: &Task,
         generator: Box<dyn SuccessorGenerator>,
         mut heuristic: Box<dyn Heuristic>,
+        _preferred_operators: Option<Box<dyn PreferredOperator>>,
     ) -> (SearchResult, SearchStatistics) {
         let mut statistics = SearchStatistics::new();
         let packer = SparseStatePacker::new(task);

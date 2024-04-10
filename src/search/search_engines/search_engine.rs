@@ -1,8 +1,7 @@
 use crate::search::{
     search_engines::{SearchStatistics, BFS, GBFS},
-    Action, Heuristic, SuccessorGenerator, Task,
+    Action, Heuristic, PreferredOperator, SuccessorGenerator, Task,
 };
-use clap;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SearchResult {
@@ -24,6 +23,7 @@ pub trait SearchEngine {
         task: &Task,
         generator: Box<dyn SuccessorGenerator>,
         heuristic: Box<dyn Heuristic>,
+        preferred_operators: Option<Box<dyn PreferredOperator>>,
     ) -> (SearchResult, SearchStatistics);
 }
 
