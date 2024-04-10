@@ -1,3 +1,4 @@
+mod alternating_gbfs;
 mod bfs;
 mod gbfs;
 mod search_engine;
@@ -5,6 +6,7 @@ mod search_node;
 mod search_space;
 mod search_statistics;
 
+use alternating_gbfs::AlternatingGBFS;
 use bfs::BFS;
 use gbfs::GBFS;
 pub use search_engine::{SearchEngine, SearchEngineName, SearchResult};
