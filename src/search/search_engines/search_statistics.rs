@@ -14,6 +14,8 @@ pub struct SearchStatistics {
     generated_actions: i32,
     /// Number of preferred operator evaluations
     preferred_operator_evaluations: i32,
+    /// Number of expanded nodes that were preferred by their parent
+    expanded_preferred_nodes: i32,
     /// Time when the search started
     search_start_time: std::time::Instant,
     /// Time when the last log was printed, used for periodic logging
@@ -30,6 +32,7 @@ impl SearchStatistics {
             reopened_nodes: 0,
             generated_actions: 0,
             preferred_operator_evaluations: 0,
+            expanded_preferred_nodes: 0,
             search_start_time: std::time::Instant::now(),
             last_log_time: std::time::Instant::now(),
         }
@@ -65,6 +68,11 @@ impl SearchStatistics {
         self.log_if_needed();
     }
 
+    pub fn increment_expanded_preferred_nodes(&mut self) {
+        self.expanded_preferred_nodes += 1;
+        self.log_if_needed();
+    }
+
     fn log_if_needed(&mut self) {
         if self.last_log_time.elapsed().as_secs() > 10 {
             self.log();
@@ -79,7 +87,8 @@ impl SearchStatistics {
             generated_nodes = self.generated_nodes,
             reopened_nodes = self.reopened_nodes,
             generated_actions = self.generated_actions,
-            preferred_operator_evaluations = self.preferred_operator_evaluations
+            preferred_operator_evaluations = self.preferred_operator_evaluations,
+            expanded_preferred_nodes = self.expanded_preferred_nodes
         );
     }
 

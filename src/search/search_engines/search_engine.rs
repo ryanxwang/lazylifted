@@ -1,5 +1,5 @@
 use crate::search::{
-    search_engines::{AlternatingGBFS, SearchStatistics, BFS, GBFS},
+    search_engines::{InstrumentedGBFS, SearchStatistics, BFS, GBFS},
     Action, Heuristic, PreferredOperator, SuccessorGenerator, Task,
 };
 
@@ -34,8 +34,10 @@ pub enum SearchEngineName {
     BFS,
     #[clap(help = "Greedy best-first search")]
     GBFS,
-    #[clap(help = "Alternating Greedy best-first search (requires preferred operators)")]
-    AlternatingGBFS,
+    #[clap(
+        help = "Greedy best-first search with some experimental instrumentation (requires preferred operators)"
+    )]
+    InstrumentedGBFS,
 }
 
 impl SearchEngineName {
@@ -43,7 +45,7 @@ impl SearchEngineName {
         match self {
             SearchEngineName::BFS => Box::new(BFS::new()),
             SearchEngineName::GBFS => Box::new(GBFS::new()),
-            SearchEngineName::AlternatingGBFS => Box::new(AlternatingGBFS::new()),
+            SearchEngineName::InstrumentedGBFS => Box::new(InstrumentedGBFS::new()),
         }
     }
 }

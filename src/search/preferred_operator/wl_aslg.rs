@@ -1,6 +1,7 @@
 use crate::learning::models::{Evaluate, WLASLGModel};
-use crate::search::{Action, DBState, PreferredOperator, Task};
+use crate::search::{Action, ActionSchema, DBState, PreferredOperator, Task};
 use pyo3::Python;
+use std::collections::HashSet;
 use std::path::PathBuf;
 
 pub struct WLASLGPrefOp {
@@ -23,19 +24,33 @@ impl PreferredOperator for WLASLGPrefOp {
         actions: &[Action],
     ) -> Vec<bool> {
         self.model.set_evaluating_task(task);
+        let applicable_schemas: HashSet<usize> =
+            actions.iter().map(|action| action.index).collect();
+        let applicable_schemas: Vec<&ActionSchema> = task
+            .action_schemas
+            .iter()
+            .filter_map(|schema| {
+                if applicable_schemas.contains(&schema.index) {
+                    Some(schema)
+                } else {
+                    None
+                }
+            })
+            .collect();
+
         let scores = self.model.evaluate_batch(
-            &task
-                .action_schemas
+            &applicable_schemas
                 .iter()
-                .map(|schema| (state, schema))
+                .map(|&schema| (state, schema))
                 .collect::<Vec<_>>(),
         );
-        let chosen_schema_index = scores
+        let chosen_schema_index = applicable_schemas[scores
             .iter()
             .enumerate()
             .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
             .unwrap()
-            .0;
+            .0]
+            .index;
         actions
             .iter()
             .map(|action| action.index == chosen_schema_index)

@@ -36,6 +36,8 @@ pub struct SearchNode {
     action: Action,
     /// Parent state
     parent_id: StateId,
+    /// Whether the node is preferred by the parent node
+    is_preferred: bool,
 }
 
 impl SearchNode {
@@ -48,6 +50,7 @@ impl SearchNode {
             h: HeuristicValue::infinity(),
             action: NO_ACTION,
             parent_id: NO_STATE,
+            is_preferred: false,
         }
     }
 
@@ -60,7 +63,12 @@ impl SearchNode {
             h: HeuristicValue::infinity(),
             action,
             parent_id,
+            is_preferred: false,
         }
+    }
+
+    pub fn set_is_preferred(&mut self, is_preferred: bool) {
+        self.is_preferred = is_preferred;
     }
 
     pub fn open(&mut self, g: HeuristicValue, h: HeuristicValue) {
@@ -115,5 +123,9 @@ impl SearchNode {
 
     pub fn get_action(&self) -> &Action {
         &self.action
+    }
+
+    pub fn is_preferred(&self) -> bool {
+        self.is_preferred
     }
 }
