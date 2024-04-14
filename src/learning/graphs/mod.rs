@@ -1,8 +1,8 @@
-mod aslg;
 mod graph;
 mod ilg;
+mod palg;
 mod utils;
 
-pub use aslg::ASLGCompiler;
 pub use graph::{CGraph, NodeID};
 pub use ilg::ILGCompiler;
+pub use palg::PALGCompiler;

@@ -1,4 +1,4 @@
 mod preferred_operator;
-mod wl_aslg;
+mod wl_palg;
 
 pub use preferred_operator::{PreferredOperator, PreferredOperatorName};

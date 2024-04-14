@@ -25,7 +25,7 @@ mkdir -p $log_dir
 source scripts/setup_dynamic_library.sh
 cargo build --release --bins
 
-cmd="./target/release/planner -s instrumented-gbfs -e wl-ilg -m trained_models/wl-ilg-gpr-$domain -p trained_models/wl-aslg-lambdamart-$domain benchmarks/ipc23-learning/$domain/domain.pddl benchmarks/ipc23-learning/$domain/$instance.pddl"
+cmd="./target/release/planner -s instrumented-gbfs -e wl-ilg -m trained_models/wl-ilg-gpr-$domain -p trained_models/wl-palg-lambdamart-$domain benchmarks/ipc23-learning/$domain/domain.pddl benchmarks/ipc23-learning/$domain/$instance.pddl"
 instance_str=$(sed 's/\//_/g' <<< $instance)
 err_log=$log_dir/$planner_type-$domain-$instance_str.err
 out_log=$log_dir/$planner_type-$domain-$instance_str.out

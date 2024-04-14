@@ -1,4 +1,4 @@
-[wl-aslg]
+[wl-palg]
 model = "lambdamart"
 successor-generator = "full-reducer"
 iters = 2

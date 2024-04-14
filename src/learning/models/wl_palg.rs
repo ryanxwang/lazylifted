@@ -1,6 +1,6 @@
 use crate::{
     learning::{
-        graphs::{ASLGCompiler, CGraph},
+        graphs::{CGraph, PALGCompiler},
         ml::{Ranker, RankerName},
         models::{Evaluate, Train, TrainingInstance},
         WLKernel,
@@ -15,30 +15,30 @@ use std::io::Write;
 use tracing::info;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-enum WLASLGState {
+enum WLPALGState {
     // The model has been created but not trained
     New,
     // Trained but not ready for evaluating
     Trained,
     // Ready for evaluating
-    Evaluating(ASLGCompiler),
+    Evaluating(PALGCompiler),
 }
 
-impl PartialEq for WLASLGState {
+impl PartialEq for WLPALGState {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (WLASLGState::New, WLASLGState::New) => true,
-            (WLASLGState::Trained, WLASLGState::Trained) => true,
-            (WLASLGState::Evaluating(_), WLASLGState::Evaluating(_)) => true,
+            (WLPALGState::New, WLPALGState::New) => true,
+            (WLPALGState::Trained, WLPALGState::Trained) => true,
+            (WLPALGState::Evaluating(_), WLPALGState::Evaluating(_)) => true,
             _ => false,
         }
     }
 }
 
-/// Configuration for the WL-ASLG model. This is the format used by the trainer
+/// Configuration for the WL-PALG model. This is the format used by the trainer
 /// to create the model.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct WLASLGConfig {
+pub struct WLPALGConfig {
     pub model: RankerName,
     #[serde(alias = "successor-generator")]
     pub successor_generator: SuccessorGeneratorName,
@@ -47,31 +47,31 @@ pub struct WLASLGConfig {
 }
 
 #[derive(Debug)]
-pub struct WLASLGModel {
+pub struct WLPALGModel {
     model: Ranker<'static>,
     /// See also [`crate::learning::models::wl_ilg::WLILGModel::successor_generator_name`].
     successor_generator_name: SuccessorGeneratorName,
     wl: WLKernel,
     validate: bool,
-    state: WLASLGState,
+    state: WLPALGState,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct SerialisableWLASLGModel {
+struct SerialisableWLPALGModel {
     successor_generator_name: SuccessorGeneratorName,
     wl: WLKernel,
     validate: bool,
-    state: WLASLGState,
+    state: WLPALGState,
 }
 
-impl WLASLGModel {
-    pub fn new(py: Python<'static>, config: WLASLGConfig) -> Self {
+impl WLPALGModel {
+    pub fn new(py: Python<'static>, config: WLPALGConfig) -> Self {
         Self {
             model: Ranker::new(py, config.model),
             wl: WLKernel::new(config.iters),
             successor_generator_name: config.successor_generator,
             validate: config.validate,
-            state: WLASLGState::New,
+            state: WLPALGState::New,
         }
     }
 
@@ -90,7 +90,7 @@ impl WLASLGModel {
             let plan = &instance.plan;
             let task = &instance.task;
             let successor_generator = self.successor_generator_name.create(task);
-            let compiler = ASLGCompiler::new(task);
+            let compiler = PALGCompiler::new(task);
 
             let mut cur_state = task.initial_state.clone();
             for action in plan.steps() {
@@ -198,9 +198,9 @@ impl WLASLGModel {
     }
 }
 
-impl Train for WLASLGModel {
+impl Train for WLPALGModel {
     fn train(&mut self, training_data: &[TrainingInstance]) {
-        assert_eq!(self.state, WLASLGState::New);
+        assert_eq!(self.state, WLPALGState::New);
         if self.validate {
             info!("splitting training data into training and validation sets");
         } else {
@@ -270,16 +270,16 @@ impl Train for WLASLGModel {
             );
         }
 
-        self.state = WLASLGState::Trained;
+        self.state = WLPALGState::Trained;
     }
 
     fn save(&self, path: &std::path::PathBuf) {
-        assert_eq!(self.state, WLASLGState::Trained);
+        assert_eq!(self.state, WLPALGState::Trained);
         let pickle_path = path.with_extension("pkl");
         self.model.pickle(&pickle_path);
 
         let ron_path = path.with_extension("ron");
-        let serialisable = SerialisableWLASLGModel {
+        let serialisable = SerialisableWLPALGModel {
             successor_generator_name: self.successor_generator_name,
             wl: self.wl.clone(),
             validate: self.validate,
@@ -294,24 +294,24 @@ impl Train for WLASLGModel {
     }
 }
 
-impl Evaluate for WLASLGModel {
+impl Evaluate for WLPALGModel {
     type EvaluatedType<'a> = (&'a DBState, &'a ActionSchema);
 
     fn set_evaluating_task(&mut self, task: &Task) {
         match &self.state {
-            WLASLGState::New => {
+            WLPALGState::New => {
                 panic!("Model not trained yet, cannot set evaluating task");
             }
-            WLASLGState::Trained => {
-                self.state = WLASLGState::Evaluating(ASLGCompiler::new(task));
+            WLPALGState::Trained => {
+                self.state = WLPALGState::Evaluating(PALGCompiler::new(task));
             }
-            WLASLGState::Evaluating(_) => {}
+            WLPALGState::Evaluating(_) => {}
         }
     }
 
     fn evaluate<'a>(&mut self, &(state, action_schema): &Self::EvaluatedType<'a>) -> f64 {
         let compiler = match &self.state {
-            WLASLGState::Evaluating(compiler) => compiler,
+            WLPALGState::Evaluating(compiler) => compiler,
             _ => panic!("Model not ready for evaluation"),
         };
         let graph = compiler.compile(state, action_schema);
@@ -323,7 +323,7 @@ impl Evaluate for WLASLGModel {
 
     fn evaluate_batch<'a>(&mut self, targets: &[Self::EvaluatedType<'a>]) -> Vec<f64> {
         let compiler = match &self.state {
-            WLASLGState::Evaluating(compiler) => compiler,
+            WLPALGState::Evaluating(compiler) => compiler,
             _ => panic!("Model not ready for evaluation"),
         };
         let graphs = targets
@@ -342,9 +342,9 @@ impl Evaluate for WLASLGModel {
 
         let ron_path = path.with_extension("ron");
         let file = std::fs::File::open(ron_path).expect("Failed to open model file");
-        let serialisable: SerialisableWLASLGModel =
+        let serialisable: SerialisableWLPALGModel =
             ron::de::from_reader(file).expect("Failed to deserialise model");
-        assert_eq!(serialisable.state, WLASLGState::Trained);
+        assert_eq!(serialisable.state, WLPALGState::Trained);
         Self {
             model,
             successor_generator_name: serialisable.successor_generator_name,

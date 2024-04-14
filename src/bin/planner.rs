@@ -97,7 +97,7 @@ fn plan(args: Args, task: &Task) {
     let mut search_engine = args.search_engine_name.create();
     let preferred_operator = args
         .preferred_operator_model
-        .map(|model| PreferredOperatorName::WLASLG.create(&model));
+        .map(|model| PreferredOperatorName::WLPALG.create(&model));
 
     let (result, mut statistics) =
         search_engine.search(&task, successor_generator, heuristic, preferred_operator);

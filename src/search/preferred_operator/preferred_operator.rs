@@ -1,4 +1,4 @@
-use crate::search::{preferred_operator::wl_aslg::WLASLGPrefOp, Action, DBState, Task};
+use crate::search::{preferred_operator::wl_palg::WLPALGPrefOp, Action, DBState, Task};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
@@ -17,16 +17,16 @@ pub trait PreferredOperator {
 #[derive(clap::ValueEnum, Debug, Clone, Serialize, Deserialize)]
 pub enum PreferredOperatorName {
     #[clap(
-        name = "wl-aslg",
-        help = "Using the WL-ALSG ranker to compute preferred operators"
+        name = "wl-palg",
+        help = "Using the WL-PALG ranker to compute preferred operators"
     )]
-    WLASLG,
+    WLPALG,
 }
 
 impl PreferredOperatorName {
     pub fn create(&self, saved_model: &PathBuf) -> Box<dyn PreferredOperator> {
         match self {
-            PreferredOperatorName::WLASLG => Box::new(WLASLGPrefOp::load(saved_model)),
+            PreferredOperatorName::WLPALG => Box::new(WLPALGPrefOp::load(saved_model)),
         }
     }
 }

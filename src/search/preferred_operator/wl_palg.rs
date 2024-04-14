@@ -1,22 +1,22 @@
-use crate::learning::models::{Evaluate, WLASLGModel};
+use crate::learning::models::{Evaluate, WLPALGModel};
 use crate::search::{Action, ActionSchema, DBState, PreferredOperator, Task};
 use pyo3::Python;
 use std::collections::HashSet;
 use std::path::PathBuf;
 
-pub struct WLASLGPrefOp {
-    model: WLASLGModel,
+pub struct WLPALGPrefOp {
+    model: WLPALGModel,
 }
 
-impl WLASLGPrefOp {
+impl WLPALGPrefOp {
     pub fn load(saved_model: &PathBuf) -> Self {
         let py = unsafe { Python::assume_gil_acquired() };
-        let model = WLASLGModel::load(py, saved_model);
+        let model = WLPALGModel::load(py, saved_model);
         Self { model }
     }
 }
 
-impl PreferredOperator for WLASLGPrefOp {
+impl PreferredOperator for WLPALGPrefOp {
     fn preferred_operators(
         &mut self,
         state: &DBState,

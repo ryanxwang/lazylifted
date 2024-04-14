@@ -1,8 +1,8 @@
 //! This module contains traits and structs for training and evaluating models.
 
 use crate::learning::models::{
-    wl_aslg::{WLASLGConfig, WLASLGModel},
     wl_ilg::{WLILGConfig, WLILGModel},
+    wl_palg::{WLPALGConfig, WLPALGModel},
 };
 use crate::search::{Plan, Task};
 use pyo3::Python;
@@ -46,8 +46,8 @@ pub trait Train {
 pub enum ModelConfig {
     #[serde(alias = "wl-ilg")]
     WLILG(WLILGConfig),
-    #[serde(alias = "wl-aslg")]
-    WLASLG(WLASLGConfig),
+    #[serde(alias = "wl-palg")]
+    WLPALG(WLPALGConfig),
 }
 
 impl ModelConfig {
@@ -61,7 +61,7 @@ impl ModelConfig {
 
         match config {
             ModelConfig::WLILG(config) => Box::new(WLILGModel::new(py, config)),
-            ModelConfig::WLASLG(config) => Box::new(WLASLGModel::new(py, config)),
+            ModelConfig::WLPALG(config) => Box::new(WLPALGModel::new(py, config)),
         }
     }
 }

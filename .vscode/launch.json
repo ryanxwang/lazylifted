@@ -76,7 +76,7 @@
                 "--data",
                 "${workspaceFolder}/experiments/ipc23-learning/satellite.toml",
                 "--model",
-                "${workspaceFolder}/experiments/models/wl-aslg-lambdamart.toml"
+                "${workspaceFolder}/experiments/models/wl-palg-lambdamart.toml"
             ],
             "cwd": "${workspaceFolder}"
         },

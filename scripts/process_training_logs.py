@@ -50,7 +50,7 @@ def main():
                 continue
 
             basename = log_file.replace(".err", "")
-            if not basename.startswith("wl-aslg-lambdamart"):
+            if not basename.startswith("wl-palg-lambdamart"):
                 continue
             domain = basename.split("-")[-1]
             row = {"domain": domain}
