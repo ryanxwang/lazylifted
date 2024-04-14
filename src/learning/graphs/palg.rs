@@ -74,9 +74,9 @@ impl PALGCompiler {
                         let param_node_id = param_index_to_node_index[&param_index];
                         graph.add_edge(node_id, param_node_id, arg_index as i32);
                     }
-                    SchemaArgument::Constant(_object_index) => {
-                        // TODO: for now we just ignore these. We very much
-                        // could do something about them
+                    SchemaArgument::Constant(object_index) => {
+                        let object_node_id = self.object_index_to_node_index[&object_index];
+                        graph.add_edge(node_id, object_node_id, arg_index as i32);
                     }
                 };
             }
@@ -238,7 +238,6 @@ impl PALGCompiler {
     }
 
     fn get_param_colour(_param: &SchemaParameter) -> i32 {
-        // TODO: consider using the index of the argument
         const START: i32 = 1 + NUM_ATOM_NODE_TYPES + NUM_SCHEMA_PRED_NODE_TYPES;
         START + 0
     }
