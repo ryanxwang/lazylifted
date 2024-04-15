@@ -108,7 +108,7 @@ impl WLPALGModel {
                     }
                     applicable_schemas_count += 1;
 
-                    graphs.push(compiler.compile(&cur_state, schema));
+                    graphs.push(compiler.compile(&cur_state, schema, &schema.clone().into()));
                     if schema == chosen_schema {
                         ranks.push(1.0);
                     } else {
@@ -314,7 +314,7 @@ impl Evaluate for WLPALGModel {
             WLPALGState::Evaluating(compiler) => compiler,
             _ => panic!("Model not ready for evaluation"),
         };
-        let graph = compiler.compile(state, action_schema);
+        let graph = compiler.compile(state, action_schema, &action_schema.clone().into());
         let histograms = self.wl.compute_histograms(&[graph]);
         let x = self.wl.compute_x(self.py(), &histograms);
         let y: Vec<f64> = self.model.predict(&x).extract().unwrap();
@@ -328,7 +328,9 @@ impl Evaluate for WLPALGModel {
         };
         let graphs = targets
             .iter()
-            .map(|&(state, action_schema)| compiler.compile(state, action_schema))
+            .map(|&(state, action_schema)| {
+                compiler.compile(state, action_schema, &action_schema.clone().into())
+            })
             .collect::<Vec<_>>();
         let histograms = self.wl.compute_histograms(&graphs);
         let x = self.wl.compute_x(self.py(), &histograms);

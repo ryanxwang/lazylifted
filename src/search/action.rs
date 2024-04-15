@@ -10,7 +10,7 @@ pub struct Action {
 }
 
 impl Action {
-    fn new(index: usize, instantiation: Vec<usize>) -> Self {
+    pub fn new(index: usize, instantiation: Vec<usize>) -> Self {
         Self {
             index,
             instantiation,

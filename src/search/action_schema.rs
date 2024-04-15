@@ -5,7 +5,7 @@ use crate::parsed_types::{
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct SchemaParameter {
     index: usize,
     type_index: usize,

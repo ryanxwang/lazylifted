@@ -1,4 +1,5 @@
 use crate::search::{DBState, Goal, SchemaArgument};
+use serde::{Deserialize, Serialize};
 
 /// A simple representation of an atom in a goal. The first element is the
 /// predicate index, the second element is a list of object indices.
@@ -7,7 +8,28 @@ pub type Atom = (usize, Vec<usize>);
 /// A representation of a schema predication, which is basically just a
 /// [`crate::search::SchemaAtom`] without the
 /// [`crate::search::SchemaAtom::negated`] field.
-pub type SchemaPred = (usize, Vec<SchemaArgument>);
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct SchemaPred {
+    predicate_index: usize,
+    arguments: Vec<SchemaArgument>,
+}
+
+impl SchemaPred {
+    pub fn new(predicate_index: usize, arguments: Vec<SchemaArgument>) -> Self {
+        Self {
+            predicate_index,
+            arguments,
+        }
+    }
+
+    pub fn predicate_index(&self) -> usize {
+        self.predicate_index
+    }
+
+    pub fn arguments(&self) -> &[SchemaArgument] {
+        &self.arguments
+    }
+}
 
 /// Returns a list of all atoms in the goal, including nullary atoms.
 /// Nullary atoms are represented as atoms with no arguments. This function

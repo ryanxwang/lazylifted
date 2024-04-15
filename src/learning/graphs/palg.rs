@@ -1,15 +1,16 @@
 //! The Partial Action Learning Graph
-use std::collections::HashMap;
-
-use serde::{Deserialize, Serialize};
-
 use crate::{
     learning::graphs::{
         utils::{atoms_of_goal, atoms_of_state, Atom, SchemaPred},
         CGraph, NodeID,
     },
-    search::{ActionSchema, DBState, Object, Predicate, SchemaArgument, SchemaParameter, Task},
+    search::{
+        ActionSchema, DBState, Object, PartialAction, Predicate, SchemaArgument, SchemaParameter,
+        Task,
+    },
 };
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PALGCompiler {
@@ -41,7 +42,12 @@ impl PALGCompiler {
         compiler
     }
 
-    pub fn compile(&self, state: &DBState, action_schema: &ActionSchema) -> CGraph {
+    pub fn compile(
+        &self,
+        state: &DBState,
+        action_schema: &ActionSchema,
+        partial_action: &PartialAction,
+    ) -> CGraph {
         let mut graph = self
             .base_graph
             .as_ref()
@@ -61,6 +67,9 @@ impl PALGCompiler {
 
         let mut param_index_to_node_index = HashMap::new();
         for param in action_schema.parameters() {
+            if partial_action.partial_instantiation().len() >= param.index() + 1 {
+                continue;
+            }
             param_index_to_node_index
                 .insert(param.index(), graph.add_node(Self::get_param_colour(param)));
         }
@@ -68,11 +77,18 @@ impl PALGCompiler {
         for (schema_pred, &schema_pred_type) in self.schema_pred_types[action_schema.index].iter() {
             let node_id = graph.add_node(Self::get_schema_pred_colour(schema_pred_type));
 
-            for (arg_index, &arg) in schema_pred.1.iter().enumerate() {
+            for (arg_index, &arg) in schema_pred.arguments().iter().enumerate() {
                 match arg {
                     SchemaArgument::Free(param_index) => {
-                        let param_node_id = param_index_to_node_index[&param_index];
-                        graph.add_edge(node_id, param_node_id, arg_index as i32);
+                        if let Some(&object_index) =
+                            partial_action.partial_instantiation().get(param_index)
+                        {
+                            let object_node_id = self.object_index_to_node_index[&object_index];
+                            graph.add_edge(node_id, object_node_id, arg_index as i32);
+                        } else {
+                            let param_node_id = param_index_to_node_index[&param_index];
+                            graph.add_edge(node_id, param_node_id, arg_index as i32);
+                        }
                     }
                     SchemaArgument::Constant(object_index) => {
                         let object_node_id = self.object_index_to_node_index[&object_index];
@@ -81,7 +97,7 @@ impl PALGCompiler {
                 };
             }
 
-            let pred_node_id = self.predicate_index_to_node_index[&schema_pred.0];
+            let pred_node_id = self.predicate_index_to_node_index[&schema_pred.predicate_index()];
             graph.add_edge(node_id, pred_node_id, 0);
         }
 
@@ -131,7 +147,7 @@ impl PALGCompiler {
 
         // Deal with effects first
         for schema_atom in action_schema.effects() {
-            let schema_pred: SchemaPred = (
+            let schema_pred: SchemaPred = SchemaPred::new(
                 schema_atom.predicate_index(),
                 schema_atom.arguments().into(),
             );
@@ -148,7 +164,7 @@ impl PALGCompiler {
             .enumerate()
             .filter_map(|(index, &pred)| if pred { Some(index) } else { None })
         {
-            let schema_pred: SchemaPred = (pred_index, vec![]);
+            let schema_pred: SchemaPred = SchemaPred::new(pred_index, vec![]);
             assert!(schema_pred_types.contains_key(&schema_pred) == false);
             schema_pred_types.insert(schema_pred, SchemaPredNodeType::Added);
         }
@@ -158,14 +174,14 @@ impl PALGCompiler {
             .enumerate()
             .filter_map(|(index, &pred)| if pred { Some(index) } else { None })
         {
-            let schema_pred: SchemaPred = (pred_index, vec![]);
+            let schema_pred: SchemaPred = SchemaPred::new(pred_index, vec![]);
             assert!(schema_pred_types.contains_key(&schema_pred) == false);
             schema_pred_types.insert(schema_pred, SchemaPredNodeType::Removed);
         }
 
         // Then deal with the preconditions not in the effects
         for schema_atom in action_schema.preconditions() {
-            let schema_pred: SchemaPred = (
+            let schema_pred: SchemaPred = SchemaPred::new(
                 schema_atom.predicate_index(),
                 schema_atom.arguments().into(),
             );
@@ -184,7 +200,7 @@ impl PALGCompiler {
             .enumerate()
             .filter_map(|(index, &pred)| if pred { Some(index) } else { None })
         {
-            let schema_pred: SchemaPred = (pred_index, vec![]);
+            let schema_pred: SchemaPred = SchemaPred::new(pred_index, vec![]);
             if schema_pred_types.contains_key(&schema_pred) {
                 continue;
             }
@@ -196,7 +212,7 @@ impl PALGCompiler {
             .enumerate()
             .filter_map(|(index, &pred)| if pred { Some(index) } else { None })
         {
-            let schema_pred: SchemaPred = (pred_index, vec![]);
+            let schema_pred: SchemaPred = SchemaPred::new(pred_index, vec![]);
             if schema_pred_types.contains_key(&schema_pred) {
                 continue;
             }
@@ -333,7 +349,7 @@ mod tests {
 
         let state = task.initial_state.clone();
         let action_schema = task.action_schemas[0].clone();
-        let graph = compiler.compile(&state, &action_schema);
+        let graph = compiler.compile(&state, &action_schema, &action_schema.clone().into());
 
         assert_eq!(graph.node_count(), 24);
         assert_eq!(graph.edge_count(), 31);

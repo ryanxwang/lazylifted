@@ -4,6 +4,7 @@ pub mod database;
 mod goal;
 pub mod heuristics;
 mod object;
+mod partial_action;
 mod plan;
 mod predicate;
 pub mod preferred_operator;
@@ -18,6 +19,7 @@ pub use action_schema::{ActionSchema, SchemaArgument, SchemaAtom, SchemaParamete
 pub use goal::{Goal, GoalAtom};
 pub use heuristics::{Heuristic, HeuristicValue};
 pub use object::Object;
+pub use partial_action::PartialAction;
 pub use plan::Plan;
 pub use predicate::Predicate;
 pub use preferred_operator::PreferredOperator;
