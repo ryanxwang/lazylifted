@@ -5,12 +5,15 @@ use crate::{
         models::{Evaluate, Train, TrainingInstance},
         WLKernel,
     },
-    search::{successor_generators::SuccessorGeneratorName, ActionSchema, DBState, Task},
+    search::{
+        successor_generators::SuccessorGeneratorName, Action, ActionSchema, DBState, PartialAction,
+        Task,
+    },
 };
 use numpy::{PyArray1, PyArrayMethods, PyUntypedArrayMethods};
 use pyo3::{prelude::*, Python};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::io::Write;
 use tracing::info;
 
@@ -93,29 +96,66 @@ impl WLPALGModel {
             let compiler = PALGCompiler::new(task);
 
             let mut cur_state = task.initial_state.clone();
-            for action in plan.steps() {
-                let chosen_schema = &task.action_schemas[action.index];
-                let next_state =
-                    successor_generator.generate_successor(&cur_state, chosen_schema, action);
+            for chosen_action in plan.steps() {
+                let next_state = successor_generator.generate_successor(
+                    &cur_state,
+                    &task.action_schemas[chosen_action.index],
+                    chosen_action,
+                );
 
-                let mut applicable_schemas_count = 0;
-                for schema in &task.action_schemas {
-                    if successor_generator
-                        .get_applicable_actions(&cur_state, schema)
-                        .is_empty()
-                    {
+                let applicable_actions: Vec<Action> = task
+                    .action_schemas
+                    .iter()
+                    .flat_map(|schema| -> Vec<Action> {
+                        successor_generator.get_applicable_actions(&cur_state, schema)
+                    })
+                    .collect();
+
+                for partial_depth in 0..chosen_action.instantiation.len() {
+                    let chosen_partial = PartialAction::from_action(chosen_action, partial_depth);
+
+                    // The siblings are all applicable partial actions that have
+                    // the same prefix as the chosen partial action for depth
+                    // partial_depth - 1.
+                    let siblings: HashSet<PartialAction> = if partial_depth == 0 {
+                        applicable_actions
+                            .iter()
+                            .map(|action| PartialAction::from_action(&action, 0))
+                            .collect()
+                    } else {
+                        applicable_actions
+                            .iter()
+                            .filter_map(|action| {
+                                if action.index != chosen_partial.index() {
+                                    return None;
+                                }
+
+                                let partial =
+                                    PartialAction::from_action(&action, partial_depth - 1);
+                                if partial.is_superset_of(&chosen_partial) {
+                                    Some(PartialAction::from_action(&action, partial_depth))
+                                } else {
+                                    None
+                                }
+                            })
+                            .collect()
+                    };
+                    assert!(siblings.contains(&chosen_partial));
+                    if siblings.len() == 1 {
                         continue;
                     }
-                    applicable_schemas_count += 1;
 
-                    graphs.push(compiler.compile(&cur_state, schema, &schema.clone().into()));
-                    if schema == chosen_schema {
-                        ranks.push(1.0);
-                    } else {
-                        ranks.push(0.0);
+                    groups.push(siblings.len());
+                    for sibling in siblings {
+                        graphs.push(compiler.compile(
+                            &cur_state,
+                            &task.action_schemas[sibling.index()],
+                            &sibling,
+                        ));
+
+                        ranks.push(if sibling == chosen_partial { 1.0 } else { 0.0 });
                     }
                 }
-                groups.push(applicable_schemas_count);
 
                 cur_state = next_state;
             }
@@ -165,30 +205,12 @@ impl WLPALGModel {
     /// Compute what a baseline model would score for the given training data.
     /// Here baseline means "randomly picking an applicable action schema for
     /// each state"
-    fn compute_baseline_score(&self, training_data: &[TrainingInstance]) -> f64 {
+    fn compute_baseline_score(&self, groups: &Vec<usize>) -> f64 {
         let mut baseline = 0.;
         let mut total = 0.;
-        for instance in training_data {
-            let task = &instance.task;
-            let successor_generator = self.successor_generator_name.create(task);
-            let mut cur_state = task.initial_state.clone();
-            for action in instance.plan.steps() {
-                let num_applicable_schemas = task
-                    .action_schemas
-                    .iter()
-                    .filter(|&schema| {
-                        successor_generator
-                            .get_applicable_actions(&cur_state, schema)
-                            .len()
-                            > 0
-                    })
-                    .count();
-                baseline += 1. / num_applicable_schemas as f64;
-                total += 1.;
-                let action_schema = &task.action_schemas[action.index];
-                cur_state =
-                    successor_generator.generate_successor(&cur_state, action_schema, action);
-            }
+        for group in groups {
+            baseline += 1. / *group as f64;
+            total += 1.;
         }
         baseline / total
     }
@@ -251,7 +273,7 @@ impl Train for WLPALGModel {
         let train_score_start = std::time::Instant::now();
         let train_score = self.score(&train_histograms, &train_ranks, &train_groups);
         info!(train_score_time = train_score_start.elapsed().as_secs_f64());
-        let train_baseline = self.compute_baseline_score(train_instances);
+        let train_baseline = self.compute_baseline_score(&train_groups);
         info!(
             train_score = train_score,
             train_baseline = train_baseline,
@@ -262,7 +284,7 @@ impl Train for WLPALGModel {
             let val_score_start = std::time::Instant::now();
             let val_score = self.score(&val_histograms, &val_ranks, &val_groups);
             info!(val_score_time = val_score_start.elapsed().as_secs_f64());
-            let val_baseline = self.compute_baseline_score(val_instances);
+            let val_baseline = self.compute_baseline_score(&val_groups);
             info!(
                 val_score = val_score,
                 val_baseline = val_baseline,

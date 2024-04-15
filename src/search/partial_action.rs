@@ -1,7 +1,9 @@
 use crate::search::{Action, ActionSchema};
 
 /// Struct that represents a partially instantiated action schema.
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// [`PartialAction`] can be viewed as a representation of a set of actions, and
+/// hence induce the natural subset relation.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PartialAction {
     /// The action schema index.
     index: usize,
@@ -16,6 +18,19 @@ impl PartialAction {
         }
     }
 
+    pub fn from_action(action: &Action, partial_depth: usize) -> Self {
+        assert!(partial_depth <= action.instantiation.len());
+        Self {
+            index: action.index,
+            partial_instantiation: action
+                .instantiation
+                .iter()
+                .take(partial_depth)
+                .copied()
+                .collect(),
+        }
+    }
+
     pub fn index(&self) -> usize {
         self.index
     }
@@ -24,7 +39,7 @@ impl PartialAction {
         &self.partial_instantiation
     }
 
-    pub fn is_subset_of(&self, other: &PartialAction) -> bool {
+    pub fn is_superset_of(&self, other: &PartialAction) -> bool {
         self.index == other.index
             && self
                 .partial_instantiation
@@ -35,8 +50,8 @@ impl PartialAction {
                 })
     }
 
-    pub fn is_superset_of(&self, other: &PartialAction) -> bool {
-        other.is_subset_of(self)
+    pub fn is_subset_of(&self, other: &PartialAction) -> bool {
+        other.is_superset_of(self)
     }
 }
 
@@ -55,5 +70,44 @@ impl From<ActionSchema> for PartialAction {
             index: action_schema.index,
             partial_instantiation: vec![],
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_from_action() {
+        let action = Action::new(0, vec![1, 2, 3]);
+
+        // depth 0
+        let partial_action = PartialAction::from_action(&action, 0);
+        assert_eq!(partial_action.index(), 0);
+        assert_eq!(*partial_action.partial_instantiation(), vec![]);
+
+        // depth 1
+        let partial_action = PartialAction::from_action(&action, 1);
+        assert_eq!(partial_action.index(), 0);
+        assert_eq!(*partial_action.partial_instantiation(), vec![1]);
+
+        // depth 2
+        let partial_action = PartialAction::from_action(&action, 2);
+        assert_eq!(partial_action.index(), 0);
+        assert_eq!(*partial_action.partial_instantiation(), vec![1, 2]);
+
+        // depth 3
+        let partial_action = PartialAction::from_action(&action, 3);
+        assert_eq!(partial_action.index(), 0);
+        assert_eq!(*partial_action.partial_instantiation(), vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn test_subset_relation() {
+        let partial = PartialAction::new(0, vec![1, 2]);
+        let other = PartialAction::new(0, vec![1, 2, 3]);
+
+        assert!(other.is_subset_of(&partial));
+        assert!(partial.is_superset_of(&other));
     }
 }

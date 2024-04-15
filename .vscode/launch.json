@@ -60,7 +60,7 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'trainer' on satellite",
+            "name": "Debug executable 'trainer' on blocksworld",
             "cargo": {
                 "args": [
                     "build",
@@ -74,7 +74,7 @@
             },
             "args": [
                 "--data",
-                "${workspaceFolder}/experiments/ipc23-learning/satellite.toml",
+                "${workspaceFolder}/experiments/ipc23-learning/blocksworld.toml",
                 "--model",
                 "${workspaceFolder}/experiments/models/wl-palg-lambdamart.toml"
             ],

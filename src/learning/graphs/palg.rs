@@ -48,6 +48,7 @@ impl PALGCompiler {
         action_schema: &ActionSchema,
         partial_action: &PartialAction,
     ) -> CGraph {
+        assert!(partial_action.index() == action_schema.index);
         let mut graph = self
             .base_graph
             .as_ref()
