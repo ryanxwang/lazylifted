@@ -11,7 +11,7 @@ pub struct PlanStep {
 impl PlanStep {
     pub const fn new(action_name: ActionName, parameters: Vec<Name>) -> Self {
         Self {
-            action_name: action_name,
+            action_name,
             parameters,
         }
     }

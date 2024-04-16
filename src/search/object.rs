@@ -15,10 +15,9 @@ impl Object {
             .clone()
             .into_iter()
             .map(|t| {
-                type_table
+                *type_table
                     .get(t.name())
                     .expect("Object type not found in domain type table.")
-                    .clone()
             })
             .collect();
         Self {

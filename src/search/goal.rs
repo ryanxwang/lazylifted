@@ -20,18 +20,16 @@ impl GoalAtom {
     ) -> Self {
         debug_assert!(!atom.values().is_empty());
 
-        let predicate_index = predicate_table
+        let predicate_index = *predicate_table
             .get(atom.predicate_name())
-            .expect("Goal atom predicate not found in domain predicate table.")
-            .clone();
+            .expect("Goal atom predicate not found in domain predicate table.");
         let arguments = atom
             .values()
             .iter()
             .map(|name| {
-                object_table
+                *object_table
                     .get(name)
                     .expect("Goal atom argument not found in object table.")
-                    .clone()
             })
             .collect();
 
@@ -69,10 +67,9 @@ impl Goal {
             };
 
             if atom.values().is_empty() {
-                let pred_index = predicate_table
+                let pred_index = *predicate_table
                     .get(atom.predicate_name())
-                    .expect("Goal predicate not found in domain predicate table.")
-                    .clone();
+                    .expect("Goal predicate not found in domain predicate table.");
                 if negated {
                     negative_nullary_goals.push(pred_index);
                 } else {
@@ -82,8 +79,8 @@ impl Goal {
                 atoms.push(GoalAtom::new(
                     atom,
                     negated,
-                    &predicate_table,
-                    &object_table,
+                    predicate_table,
+                    object_table,
                 ));
             }
         }

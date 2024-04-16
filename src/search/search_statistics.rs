@@ -22,6 +22,12 @@ pub struct SearchStatistics {
     last_log_time: std::time::Instant,
 }
 
+impl Default for SearchStatistics {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SearchStatistics {
     pub fn new() -> Self {
         info!("starting search");

@@ -22,7 +22,7 @@ impl ActionDefinition {
         Self {
             name,
             parameters,
-            preconditions: preconditions,
+            preconditions,
             effects,
         }
     }

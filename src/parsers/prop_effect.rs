@@ -26,7 +26,7 @@ use nom::combinator::map;
 /// ));
 /// ```
 pub fn parse_prop_effect<'a, T: Into<Span<'a>>>(input: T) -> ParseResult<'a, PropEffect> {
-    let is = map(atom(parse_term), |af| PropEffect::new_add(af));
+    let is = map(atom(parse_term), PropEffect::new_add);
     let is_not = map(prefix_expr("not", atom(parse_term)), |af| {
         PropEffect::new_delete(af)
     });

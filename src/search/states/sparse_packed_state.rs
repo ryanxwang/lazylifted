@@ -72,11 +72,11 @@ impl SparseStatePacker {
             }
         }
 
-        return Self {
+        Self {
             hash_multipliers,
             obj_to_hash_index,
             hash_index_to_obj,
-        };
+        }
     }
 
     pub fn pack(&self, state: &DBState) -> SparsePackedState {
@@ -99,11 +99,11 @@ impl SparseStatePacker {
             predicate_symbols.push(relation.predicate_symbol);
         }
 
-        return SparsePackedState {
+        SparsePackedState {
             packed_relations,
             predicate_symbols,
             nullary_atoms: state.nullary_atoms.clone(),
-        };
+        }
     }
 
     pub fn unpack(&self, packed_state: &SparsePackedState) -> DBState {

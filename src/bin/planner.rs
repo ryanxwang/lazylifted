@@ -1,7 +1,7 @@
 use clap::Parser;
 use lazylifted::search::{
     heuristics::HeuristicName,
-    preferred_operator::PreferredOperatorName,
+    preferred_operators::PreferredOperatorName,
     search_engines::{SearchEngineName, SearchResult},
     successor_generators::SuccessorGeneratorName,
     Task, Verbosity,

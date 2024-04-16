@@ -68,7 +68,7 @@ impl PALGCompiler {
 
         let mut param_index_to_node_index = HashMap::new();
         for param in action_schema.parameters() {
-            if partial_action.partial_instantiation().len() >= param.index() + 1 {
+            if partial_action.partial_instantiation().len() > param.index() {
                 continue;
             }
             param_index_to_node_index
@@ -152,7 +152,7 @@ impl PALGCompiler {
                 schema_atom.predicate_index(),
                 schema_atom.arguments().into(),
             );
-            assert!(schema_pred_types.contains_key(&schema_pred) == false);
+            assert!(!schema_pred_types.contains_key(&schema_pred));
             if schema_atom.is_negated() {
                 schema_pred_types.insert(schema_pred, SchemaPredNodeType::Removed);
             } else {
@@ -166,7 +166,7 @@ impl PALGCompiler {
             .filter_map(|(index, &pred)| if pred { Some(index) } else { None })
         {
             let schema_pred: SchemaPred = SchemaPred::new(pred_index, vec![]);
-            assert!(schema_pred_types.contains_key(&schema_pred) == false);
+            assert!(!schema_pred_types.contains_key(&schema_pred));
             schema_pred_types.insert(schema_pred, SchemaPredNodeType::Added);
         }
         for pred_index in action_schema
@@ -176,7 +176,7 @@ impl PALGCompiler {
             .filter_map(|(index, &pred)| if pred { Some(index) } else { None })
         {
             let schema_pred: SchemaPred = SchemaPred::new(pred_index, vec![]);
-            assert!(schema_pred_types.contains_key(&schema_pred) == false);
+            assert!(!schema_pred_types.contains_key(&schema_pred));
             schema_pred_types.insert(schema_pred, SchemaPredNodeType::Removed);
         }
 
@@ -224,7 +224,7 @@ impl PALGCompiler {
     }
 
     fn create_atom_node(
-        self: &Self,
+        &self,
         graph: &mut CGraph,
         atom: &Atom,
         atom_type: AtomNodeType,
@@ -241,7 +241,7 @@ impl PALGCompiler {
 
     fn get_object_colour(_object: &Object) -> i32 {
         const START: i32 = 0;
-        START + 0
+        START
     }
 
     fn get_atom_colour(atom_type: AtomNodeType) -> i32 {
@@ -256,7 +256,7 @@ impl PALGCompiler {
 
     fn get_param_colour(_param: &SchemaParameter) -> i32 {
         const START: i32 = 1 + NUM_ATOM_NODE_TYPES + NUM_SCHEMA_PRED_NODE_TYPES;
-        START + 0
+        START
     }
 
     // The number of predicate colours is dependent on the domain, so for

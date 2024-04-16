@@ -13,15 +13,15 @@ use crate::search::{
 use std::cmp::Reverse;
 
 /// Greedy best-first search
-pub struct GBFS {}
+pub struct Gbfs {}
 
-impl GBFS {
+impl Gbfs {
     pub fn new() -> Self {
         Self {}
     }
 }
 
-impl SearchEngine for GBFS {
+impl SearchEngine for Gbfs {
     fn search(
         &mut self,
         task: &Task,
@@ -64,7 +64,7 @@ impl SearchEngine for GBFS {
                 // immutable
                 let goal_node = search_space.get_node(state_id);
                 return (
-                    SearchResult::Success(search_space.extract_plan(&goal_node)),
+                    SearchResult::Success(search_space.extract_plan(goal_node)),
                     statistics,
                 );
             }
@@ -92,7 +92,7 @@ impl SearchEngine for GBFS {
                 .zip(successors.iter())
                 .map(|(action, successor)| {
                     let child_node =
-                        search_space.insert_or_get_node(packer.pack(&successor), action, state_id);
+                        search_space.insert_or_get_node(packer.pack(successor), action, state_id);
                     child_node.get_state_id()
                 })
                 .collect();

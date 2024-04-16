@@ -10,15 +10,15 @@ use crate::search::{
 };
 use std::collections::VecDeque;
 
-pub struct BFS {}
+pub struct Bfs {}
 
-impl BFS {
+impl Bfs {
     pub fn new() -> Self {
         Self {}
     }
 }
 
-impl SearchEngine for BFS {
+impl SearchEngine for Bfs {
     fn search(
         &mut self,
         task: &Task,

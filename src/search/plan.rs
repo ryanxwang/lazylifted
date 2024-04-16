@@ -38,7 +38,7 @@ impl Plan {
 
         let mut steps = vec![];
         for step in parsed_plan.steps() {
-            if !action_table.contains_key(&step.action_name()) {
+            if !action_table.contains_key(step.action_name()) {
                 panic!("Action {} not found in task", step.action_name());
             }
 
@@ -67,6 +67,10 @@ impl Plan {
 
     pub fn len(&self) -> usize {
         self.steps.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.steps.is_empty()
     }
 }
 

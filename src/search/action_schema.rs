@@ -20,16 +20,10 @@ impl SchemaParameter {
             .name();
         Self {
             index,
-            type_index: type_table
+            type_index: *type_table
                 .get(param_type)
-                .expect(
-                    format!(
-                        "Schema parameter type {:?} not found in domain type table {:?}",
-                        param_type, type_table
-                    )
-                    .as_str(),
-                )
-                .clone(),
+                .unwrap_or_else(|| panic!("Schema parameter type {:?} not found in domain type table {:?}",
+                        param_type, type_table)),
         }
     }
 
@@ -105,10 +99,9 @@ impl SchemaAtom {
     ) -> Self {
         debug_assert!(!atom.values().is_empty());
 
-        let predicate_index = predicate_table
+        let predicate_index = *predicate_table
             .get(atom.predicate_name())
-            .expect("Schema atom predicate not found in domain predicate table.")
-            .clone();
+            .expect("Schema atom predicate not found in domain predicate table.");
         let arguments = atom
             .values()
             .iter()

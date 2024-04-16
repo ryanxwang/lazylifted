@@ -73,7 +73,7 @@ impl FullReducer {
                     }
                 }
 
-                if ear == None {
+                if ear.is_none() {
                     break;
                 }
             }

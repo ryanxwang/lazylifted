@@ -1,4 +1,4 @@
-use crate::search::{preferred_operator::wl_palg::WLPALGPrefOp, Action, DBState, Task};
+use crate::search::{preferred_operators::wl_palg::WLPALGPrefOp, Action, DBState, Task};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 

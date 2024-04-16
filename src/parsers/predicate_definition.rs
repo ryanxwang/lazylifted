@@ -29,7 +29,7 @@ pub fn parse_predicate_definition<'a, T: Into<Span<'a>>>(
             parse_predicate_name,
             leading_whitespace(typed_list(parse_variable)),
         ))),
-        |tuple| PredicateDefinition::from(tuple),
+        PredicateDefinition::from,
     )(input.into())
 }
 

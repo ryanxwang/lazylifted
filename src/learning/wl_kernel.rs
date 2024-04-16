@@ -146,7 +146,7 @@ impl WLKernel {
     fn get_hash_value(&mut self, neighbourhood: Neighbourhood) -> i32 {
         match self.mode {
             Mode::Train => match self.hashes.get(&neighbourhood) {
-                Some(hash) => return *hash,
+                Some(hash) => *hash,
                 None => {
                     let new_hash = self.hashes.len() as i32;
                     self.hashes.insert(neighbourhood, new_hash);

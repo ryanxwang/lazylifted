@@ -120,7 +120,7 @@ impl WLPALGModel {
                     let siblings: HashSet<PartialAction> = if partial_depth == 0 {
                         applicable_actions
                             .iter()
-                            .map(|action| PartialAction::from_action(&action, 0))
+                            .map(|action| PartialAction::from_action(action, 0))
                             .collect()
                     } else {
                         applicable_actions
@@ -131,9 +131,9 @@ impl WLPALGModel {
                                 }
 
                                 let partial =
-                                    PartialAction::from_action(&action, partial_depth - 1);
+                                    PartialAction::from_action(action, partial_depth - 1);
                                 if partial.is_superset_of(&chosen_partial) {
-                                    Some(PartialAction::from_action(&action, partial_depth))
+                                    Some(PartialAction::from_action(action, partial_depth))
                                 } else {
                                     None
                                 }
@@ -331,7 +331,7 @@ impl Evaluate for WLPALGModel {
         }
     }
 
-    fn evaluate<'a>(&mut self, &(state, action_schema): &Self::EvaluatedType<'a>) -> f64 {
+    fn evaluate(&mut self, &(state, action_schema): &Self::EvaluatedType<'_>) -> f64 {
         let compiler = match &self.state {
             WLPALGState::Evaluating(compiler) => compiler,
             _ => panic!("Model not ready for evaluation"),
@@ -343,7 +343,7 @@ impl Evaluate for WLPALGModel {
         y[0]
     }
 
-    fn evaluate_batch<'a>(&mut self, targets: &[Self::EvaluatedType<'a>]) -> Vec<f64> {
+    fn evaluate_batch(&mut self, targets: &[Self::EvaluatedType<'_>]) -> Vec<f64> {
         let compiler = match &self.state {
             WLPALGState::Evaluating(compiler) => compiler,
             _ => panic!("Model not ready for evaluation"),

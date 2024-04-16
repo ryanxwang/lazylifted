@@ -21,7 +21,7 @@ impl Predicate {
             .variables()
             .iter()
             .map(|x| {
-                type_table
+                *type_table
                     .get(
                         x.type_()
                             .get_primitive()
@@ -29,7 +29,6 @@ impl Predicate {
                             .name(),
                     )
                     .expect("Predicate argument type not found in domain type table.")
-                    .clone()
             })
             .collect();
 

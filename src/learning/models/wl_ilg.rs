@@ -247,7 +247,7 @@ impl Evaluate for WLILGModel {
         // cache locality
         let graphs = states
             .iter()
-            .map(|t| compiler.compile(&t))
+            .map(|t| compiler.compile(t))
             .collect::<Vec<_>>();
         let histograms = self.wl.compute_histograms(&graphs);
         let x = self.wl.compute_x(self.py(), &histograms);

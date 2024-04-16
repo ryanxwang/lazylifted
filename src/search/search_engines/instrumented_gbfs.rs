@@ -70,7 +70,7 @@ impl SearchEngine for InstrumentedGBFS {
                 // immutable
                 let goal_node = search_space.get_node(state_id);
                 return (
-                    SearchResult::Success(search_space.extract_plan(&goal_node)),
+                    SearchResult::Success(search_space.extract_plan(goal_node)),
                     statistics,
                 );
             }
@@ -94,14 +94,14 @@ impl SearchEngine for InstrumentedGBFS {
             }
             statistics.increment_generated_actions(actions.len());
 
-            let is_preferred = preferred_operators.preferred_operators(&state, &task, &actions);
+            let is_preferred = preferred_operators.preferred_operators(&state, task, &actions);
             statistics.increment_preferred_operator_evaluations();
             let child_node_ids: Vec<StateId> = actions
                 .into_iter()
                 .zip(successors.iter())
                 .map(|(action, successor)| {
                     let child_node =
-                        search_space.insert_or_get_node(packer.pack(&successor), action, state_id);
+                        search_space.insert_or_get_node(packer.pack(successor), action, state_id);
                     child_node.get_state_id()
                 })
                 .collect();

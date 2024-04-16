@@ -1,5 +1,5 @@
 use crate::search::{
-    search_engines::{InstrumentedGBFS, BFS, GBFS},
+    search_engines::{Bfs, Gbfs, InstrumentedGBFS},
     Action, Heuristic, PreferredOperator, SearchStatistics, SuccessorGenerator, Task,
 };
 
@@ -43,8 +43,8 @@ pub enum SearchEngineName {
 impl SearchEngineName {
     pub fn create(&self) -> Box<dyn SearchEngine> {
         match self {
-            SearchEngineName::BFS => Box::new(BFS::new()),
-            SearchEngineName::GBFS => Box::new(GBFS::new()),
+            SearchEngineName::BFS => Box::new(Bfs::new()),
+            SearchEngineName::GBFS => Box::new(Gbfs::new()),
             SearchEngineName::InstrumentedGBFS => Box::new(InstrumentedGBFS::new()),
         }
     }

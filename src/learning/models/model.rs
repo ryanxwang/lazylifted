@@ -16,9 +16,9 @@ pub trait Evaluate {
     /// this method, further calls should be ignored.
     fn set_evaluating_task(&mut self, task: &Task);
 
-    fn evaluate<'a>(&mut self, t: &Self::EvaluatedType<'a>) -> f64;
+    fn evaluate(&mut self, t: &Self::EvaluatedType<'_>) -> f64;
 
-    fn evaluate_batch<'a>(&mut self, ts: &[Self::EvaluatedType<'a>]) -> Vec<f64>;
+    fn evaluate_batch(&mut self, ts: &[Self::EvaluatedType<'_>]) -> Vec<f64>;
 
     fn load(py: Python<'static>, path: &PathBuf) -> Self;
 }
