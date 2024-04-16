@@ -6,7 +6,7 @@
 use crate::learning::models::{Evaluate, WLILGModel};
 use crate::search::{DBState, Heuristic, HeuristicValue, Task};
 use pyo3::Python;
-use std::path::PathBuf;
+use std::path::Path;
 
 pub struct WLILGHeuristic {
     model: WLILGModel,
@@ -14,7 +14,7 @@ pub struct WLILGHeuristic {
 
 /// A heuristic that uses the WL-ILG model to evaluate states.
 impl WLILGHeuristic {
-    pub fn load(saved_model: &PathBuf) -> Self {
+    pub fn load(saved_model: &Path) -> Self {
         let py = unsafe { Python::assume_gil_acquired() };
         let model = WLILGModel::load(py, saved_model);
         Self { model }

@@ -36,6 +36,7 @@ impl Type {
     /// The predefined type `object`.
     pub const OBJECT: Type = Type::Exactly(TYPE_OBJECT);
 
+    #[allow(clippy::len_without_is_empty)]
     pub fn len(&self) -> usize {
         match self {
             Type::Exactly(_) => 1,
@@ -87,7 +88,7 @@ impl From<Vec<PrimitiveType>> for Type {
     }
 }
 
-impl<'a, P> FromIterator<P> for Type
+impl<P> FromIterator<P> for Type
 where
     P: Into<PrimitiveType>,
 {
@@ -96,7 +97,7 @@ where
     }
 }
 
-impl<'a, T> From<T> for PrimitiveType
+impl<T> From<T> for PrimitiveType
 where
     T: Into<Name>,
 {

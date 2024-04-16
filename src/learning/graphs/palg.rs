@@ -223,12 +223,7 @@ impl PALGCompiler {
         schema_pred_types
     }
 
-    fn create_atom_node(
-        &self,
-        graph: &mut CGraph,
-        atom: &Atom,
-        atom_type: AtomNodeType,
-    ) -> NodeID {
+    fn create_atom_node(&self, graph: &mut CGraph, atom: &Atom, atom_type: AtomNodeType) -> NodeID {
         let node_id = graph.add_node(Self::get_atom_colour(atom_type));
         for (arg_index, object_index) in atom.1.iter().enumerate() {
             let object_node_id = self.object_index_to_node_index[&object_index];
@@ -267,6 +262,7 @@ impl PALGCompiler {
     }
 }
 
+#[allow(clippy::enum_variant_names)]
 #[derive(Debug, Clone, PartialEq, Eq, Copy, Serialize, Deserialize)]
 #[repr(i32)]
 enum AtomNodeType {

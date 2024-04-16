@@ -13,8 +13,11 @@ use crate::{
 use numpy::{PyArray1, PyArrayMethods, PyUntypedArrayMethods};
 use pyo3::{prelude::*, Python};
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
-use std::io::Write;
+use std::{
+    collections::{HashMap, HashSet},
+    io::Write,
+    path::Path,
+};
 use tracing::info;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -24,17 +27,17 @@ enum WLPALGState {
     // Trained but not ready for evaluating
     Trained,
     // Ready for evaluating
-    Evaluating(PALGCompiler),
+    Evaluating(Box<PALGCompiler>),
 }
 
 impl PartialEq for WLPALGState {
     fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (WLPALGState::New, WLPALGState::New) => true,
-            (WLPALGState::Trained, WLPALGState::Trained) => true,
-            (WLPALGState::Evaluating(_), WLPALGState::Evaluating(_)) => true,
-            _ => false,
-        }
+        matches!(
+            (self, other),
+            (WLPALGState::New, WLPALGState::New)
+                | (WLPALGState::Trained, WLPALGState::Trained)
+                | (WLPALGState::Evaluating(_), WLPALGState::Evaluating(_))
+        )
     }
 }
 
@@ -130,8 +133,7 @@ impl WLPALGModel {
                                     return None;
                                 }
 
-                                let partial =
-                                    PartialAction::from_action(action, partial_depth - 1);
+                                let partial = PartialAction::from_action(action, partial_depth - 1);
                                 if partial.is_superset_of(&chosen_partial) {
                                     Some(PartialAction::from_action(action, partial_depth))
                                 } else {
@@ -164,12 +166,7 @@ impl WLPALGModel {
         (graphs, ranks, groups)
     }
 
-    fn score(
-        &self,
-        histograms: &Vec<HashMap<i32, usize>>,
-        ranks: &Vec<f64>,
-        group: &Vec<usize>,
-    ) -> f64 {
+    fn score(&self, histograms: &[HashMap<i32, usize>], ranks: &[f64], group: &Vec<usize>) -> f64 {
         let mut start = 0;
         let mut correct_count = 0;
         for &group_size in group {
@@ -295,7 +292,7 @@ impl Train for WLPALGModel {
         self.state = WLPALGState::Trained;
     }
 
-    fn save(&self, path: &std::path::PathBuf) {
+    fn save(&self, path: &Path) {
         assert_eq!(self.state, WLPALGState::Trained);
         let pickle_path = path.with_extension("pkl");
         self.model.pickle(&pickle_path);
@@ -325,7 +322,7 @@ impl Evaluate for WLPALGModel {
                 panic!("Model not trained yet, cannot set evaluating task");
             }
             WLPALGState::Trained => {
-                self.state = WLPALGState::Evaluating(PALGCompiler::new(task));
+                self.state = WLPALGState::Evaluating(Box::new(PALGCompiler::new(task)));
             }
             WLPALGState::Evaluating(_) => {}
         }
@@ -360,7 +357,7 @@ impl Evaluate for WLPALGModel {
         y
     }
 
-    fn load(py: Python<'static>, path: &std::path::PathBuf) -> Self {
+    fn load(py: Python<'static>, path: &Path) -> Self {
         let pickle_path = path.with_extension("pkl");
         let model = Ranker::unpickle(py, &pickle_path);
 

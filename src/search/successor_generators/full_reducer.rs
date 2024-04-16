@@ -1,7 +1,7 @@
 //! This module contains a
 //! [`crate::search::successor_generators::JoinAlgorithm`] implementation that
 //! uses the full reducer algorithm. See the Ullman book for more information.
-use std::collections::HashSet;
+use std::{cmp::Ordering, collections::HashSet};
 
 use priority_queue::PriorityQueue;
 
@@ -48,6 +48,7 @@ impl FullReducer {
                         continue;
                     }
 
+                    #[allow(clippy::needless_range_loop)] // slightly more readable
                     for j in 0..hypergraph.hyperedges.len() {
                         if removed[j] || i == j {
                             continue;
@@ -145,13 +146,13 @@ impl JoinAlgorithm for FullReducer {
         assert!(!tables.is_empty());
 
         for &(i, j) in &self.full_reducer_program[data.action_index] {
-            let (table_i, table_j) = {
-                if i < j {
+            let (table_i, table_j) = match i.cmp(&j) {
+                Ordering::Less => {
                     let (left, right) = tables.split_at_mut(j);
                     (&mut left[i], &right[0])
-                } else if i == j {
-                    panic!("Cannot semi-join the same table")
-                } else {
+                }
+                Ordering::Equal => panic!("Cannot semi-join the same table"),
+                Ordering::Greater => {
                     let (left, right) = tables.split_at_mut(i);
                     (&mut right[0], &left[j])
                 }

@@ -2,14 +2,14 @@ use crate::learning::models::{Evaluate, WLPALGModel};
 use crate::search::{Action, ActionSchema, DBState, PreferredOperator, Task};
 use pyo3::Python;
 use std::collections::HashSet;
-use std::path::PathBuf;
+use std::path::Path;
 
 pub struct WLPALGPrefOp {
     model: WLPALGModel,
 }
 
 impl WLPALGPrefOp {
-    pub fn load(saved_model: &PathBuf) -> Self {
+    pub fn load(saved_model: &Path) -> Self {
         let py = unsafe { Python::assume_gil_acquired() };
         let model = WLPALGModel::load(py, saved_model);
         Self { model }
@@ -29,13 +29,7 @@ impl PreferredOperator for WLPALGPrefOp {
         let applicable_schemas: Vec<&ActionSchema> = task
             .action_schemas
             .iter()
-            .filter_map(|schema| {
-                if applicable_schemas.contains(&schema.index) {
-                    Some(schema)
-                } else {
-                    None
-                }
-            })
+            .filter(|&schema| applicable_schemas.contains(&schema.index))
             .collect();
 
         let scores = self.model.evaluate_batch(

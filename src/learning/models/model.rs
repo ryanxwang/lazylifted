@@ -7,7 +7,7 @@ use crate::learning::models::{
 use crate::search::{Plan, Task};
 use pyo3::Python;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::Path;
 
 pub trait Evaluate {
     type EvaluatedType<'a>;
@@ -20,7 +20,7 @@ pub trait Evaluate {
 
     fn evaluate_batch(&mut self, ts: &[Self::EvaluatedType<'_>]) -> Vec<f64>;
 
-    fn load(py: Python<'static>, path: &PathBuf) -> Self;
+    fn load(py: Python<'static>, path: &Path) -> Self;
 }
 
 /// A training instance is a pair of a plan and a task.
@@ -39,7 +39,7 @@ impl TrainingInstance {
 pub trait Train {
     fn train(&mut self, training_data: &[TrainingInstance]);
 
-    fn save(&self, path: &PathBuf);
+    fn save(&self, path: &Path);
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -51,7 +51,7 @@ pub enum ModelConfig {
 }
 
 impl ModelConfig {
-    pub fn load(path: &PathBuf) -> Box<dyn Train> {
+    pub fn load(path: &Path) -> Box<dyn Train> {
         let py = unsafe { Python::assume_gil_acquired() };
         let config: ModelConfig = toml::from_str(
             &std::fs::read_to_string(path)

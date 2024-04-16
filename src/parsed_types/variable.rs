@@ -14,6 +14,7 @@ impl Variable {
     }
 
     #[inline(always)]
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(name: &str) -> Self {
         Self(Name::new(name))
     }
@@ -46,7 +47,7 @@ impl ToTyped<Variable> for Variable {
     }
 }
 
-impl<'a, T> From<T> for Variable
+impl<T> From<T> for Variable
 where
     T: Into<Name>,
 {

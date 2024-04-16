@@ -3,7 +3,7 @@ use crate::learning::ml::py_utils;
 use numpy::{PyArray1, PyArray2};
 use pyo3::{prelude::*, types::IntoPyDict};
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::Path;
 use std::time;
 use tracing::info;
 
@@ -75,11 +75,11 @@ impl<'py> Regressor<'py> {
             }
         }
     }
-    pub fn pickle(&self, pickle_path: &PathBuf) {
+    pub fn pickle(&self, pickle_path: &Path) {
         py_utils::pickle(self.py(), &self.model, pickle_path);
     }
 
-    pub fn unpickle(py: Python<'py>, pickle_path: &PathBuf) -> Self {
+    pub fn unpickle(py: Python<'py>, pickle_path: &Path) -> Self {
         let model = py_utils::unpickle(py, pickle_path);
         Self { model }
     }

@@ -1,6 +1,6 @@
 use crate::search::{preferred_operators::wl_palg::WLPALGPrefOp, Action, DBState, Task};
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::Path;
 
 pub trait PreferredOperator {
     /// Rethrn a vector of booleans with the same length as the number of
@@ -24,7 +24,7 @@ pub enum PreferredOperatorName {
 }
 
 impl PreferredOperatorName {
-    pub fn create(&self, saved_model: &PathBuf) -> Box<dyn PreferredOperator> {
+    pub fn create(&self, saved_model: &Path) -> Box<dyn PreferredOperator> {
         match self {
             PreferredOperatorName::WLPALG => Box::new(WLPALGPrefOp::load(saved_model)),
         }

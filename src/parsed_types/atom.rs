@@ -29,13 +29,13 @@ impl<T> Atom<T> {
     }
 }
 
-impl<'a, T> From<(PredicateName, Vec<T>)> for Atom<T> {
+impl<T> From<(PredicateName, Vec<T>)> for Atom<T> {
     fn from(value: (PredicateName, Vec<T>)) -> Self {
         Atom::new(value.0, value.1)
     }
 }
 
-impl<'a, T> Deref for Atom<T> {
+impl<T> Deref for Atom<T> {
     type Target = [T];
 
     fn deref(&self) -> &Self::Target {

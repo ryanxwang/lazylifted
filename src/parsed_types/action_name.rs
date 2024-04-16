@@ -14,6 +14,7 @@ impl ActionName {
     }
 
     #[inline(always)]
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(name: &str) -> Self {
         Self(Name::new(name))
     }
@@ -24,7 +25,7 @@ impl ActionName {
     }
 }
 
-impl<'a, T> From<T> for ActionName
+impl<T> From<T> for ActionName
 where
     T: Into<Name>,
 {

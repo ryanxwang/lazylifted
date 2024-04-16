@@ -14,6 +14,7 @@ impl PredicateName {
     }
 
     #[inline(always)]
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(name: &str) -> Self {
         Self(Name::new(name))
     }
@@ -29,7 +30,7 @@ impl PredicateName {
     }
 }
 
-impl<'a, T> From<T> for PredicateName
+impl<T> From<T> for PredicateName
 where
     T: Into<Name>,
 {

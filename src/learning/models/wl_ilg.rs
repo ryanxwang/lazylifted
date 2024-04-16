@@ -13,7 +13,7 @@ use pyo3::{
     Bound, Python,
 };
 use serde::{Deserialize, Serialize};
-use std::{io::Write, path::PathBuf, time};
+use std::{io::Write, path::Path, time};
 use tracing::info;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -28,12 +28,12 @@ enum WLILGState {
 
 impl PartialEq for WLILGState {
     fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (WLILGState::New, WLILGState::New) => true,
-            (WLILGState::Trained, WLILGState::Trained) => true,
-            (WLILGState::Evaluating(_), WLILGState::Evaluating(_)) => true,
-            _ => false,
-        }
+        matches!(
+            (self, other),
+            (WLILGState::New, WLILGState::New)
+                | (WLILGState::Trained, WLILGState::Trained)
+                | (WLILGState::Evaluating(_), WLILGState::Evaluating(_))
+        )
     }
 }
 
@@ -191,7 +191,7 @@ impl Train for WLILGModel {
         self.state = WLILGState::Trained;
     }
 
-    fn save(&self, path: &PathBuf) {
+    fn save(&self, path: &Path) {
         assert_eq!(self.state, WLILGState::Trained);
         let pickle_path = path.with_extension("pkl");
         self.model.pickle(&pickle_path);
@@ -255,7 +255,7 @@ impl Evaluate for WLILGModel {
         y.extract().unwrap()
     }
 
-    fn load(py: Python<'static>, path: &PathBuf) -> Self {
+    fn load(py: Python<'static>, path: &Path) -> Self {
         let pickle_path = path.with_extension("pkl");
         let model = Regressor::unpickle(py, &pickle_path);
 

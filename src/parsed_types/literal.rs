@@ -9,7 +9,7 @@ pub enum Literal<T> {
     Negative(Atom<T>),
 }
 
-impl<'a, T> Literal<T> {
+impl<T> Literal<T> {
     pub const fn new(atom: Atom<T>) -> Self {
         Self::Positive(atom)
     }
@@ -23,7 +23,7 @@ impl<'a, T> Literal<T> {
     }
 }
 
-impl<'a, T> From<Atom<T>> for Literal<T> {
+impl<T> From<Atom<T>> for Literal<T> {
     fn from(value: Atom<T>) -> Self {
         Literal::new(value)
     }
