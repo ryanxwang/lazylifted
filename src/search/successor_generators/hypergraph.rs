@@ -53,7 +53,9 @@ impl Hypergraph {
                 let index = arg.get_index();
                 free_variables.insert(index);
                 if hypernodes.contains(&index) {
-                    node_counters.get_mut(&index).map(|c| *c += 1);
+                    if let Some(c) = node_counters.get_mut(&index) {
+                        *c += 1;
+                    }
                 } else {
                     node_indices.insert(index, hypernodes.len());
                     hypernodes.push(index);

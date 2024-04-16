@@ -1,4 +1,4 @@
-use crate::search::{Action, ActionSchema};
+use crate::search::{Action, ActionSchema, Transition};
 
 /// Struct that represents a partially instantiated action schema.
 /// [`PartialAction`] can be viewed as a representation of a set of actions, and
@@ -70,6 +70,17 @@ impl From<ActionSchema> for PartialAction {
             index: action_schema.index,
             partial_instantiation: vec![],
         }
+    }
+}
+
+const NO_PARTIAL: PartialAction = PartialAction {
+    index: usize::MAX,
+    partial_instantiation: vec![],
+};
+
+impl Transition for PartialAction {
+    fn no_transition() -> Self {
+        NO_PARTIAL
     }
 }
 

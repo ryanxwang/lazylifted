@@ -92,7 +92,7 @@ fn main() {
 }
 
 fn plan(args: Args, task: &Task) {
-    let successor_generator = args.successor_generator_name.create(&task);
+    let successor_generator = args.successor_generator_name.create(task);
     let heuristic = args.heuristic_name.create(&args.saved_model);
     let mut search_engine = args.search_engine_name.create();
     let preferred_operator = args
@@ -100,13 +100,13 @@ fn plan(args: Args, task: &Task) {
         .map(|model| PreferredOperatorName::WLPALG.create(&model));
 
     let (result, mut statistics) =
-        search_engine.search(&task, successor_generator, heuristic, preferred_operator);
+        search_engine.search(task, successor_generator, heuristic, preferred_operator);
     statistics.finalise_search();
     match result {
         SearchResult::Success(plan) => {
             println!("Plan found:");
             for action in &plan {
-                println!("{}", action.to_string(&task));
+                println!("{}", action.to_string(task));
             }
             println!("Plan length: {}", plan.len());
         }

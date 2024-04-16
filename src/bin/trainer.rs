@@ -50,7 +50,6 @@ fn load_data(data_config: &DataConfig) -> Vec<TrainingInstance> {
 
     let plan_paths: Vec<PathBuf> = fs::read_dir(&data_config.plans_dir)
         .expect("Failed to read plans directory, does it exist?")
-        .into_iter()
         .map(|entry| entry.unwrap().path())
         .collect();
 
@@ -61,7 +60,7 @@ fn load_data(data_config: &DataConfig) -> Vec<TrainingInstance> {
             .join(format!("{}.pddl", problem_name));
 
         let task = Task::from_path(&data_config.domain_pddl, &problem_path);
-        let plan = Plan::from_path(&plan_path, &task);
+        let plan = Plan::from_path(plan_path, &task);
 
         instances.push(TrainingInstance::new(plan, task));
     }

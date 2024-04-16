@@ -70,7 +70,7 @@ fn get_indices_and_constants_in_precondition(
     for (i, arg) in atom.arguments().iter().enumerate() {
         match arg {
             SchemaArgument::Constant(index) => {
-                indices.push((*index as i32 + 1) * (-1));
+                indices.push(-(*index as i32 + 1));
                 constants.push(i)
             }
             SchemaArgument::Free(index) => indices.push(*index as i32),

@@ -20,7 +20,7 @@ where
         let action_data = task
             .action_schemas
             .iter()
-            .map(|action_schema| precompile_action_data(action_schema))
+            .map(precompile_action_data)
             .collect();
 
         Self {
