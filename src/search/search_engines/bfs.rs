@@ -3,9 +3,10 @@
 use ordered_float::OrderedFloat;
 
 use crate::search::{
-    search_engines::{SearchEngine, SearchNodeStatus, SearchResult, SearchSpace, SearchStatistics},
+    search_engines::{SearchEngine, SearchResult},
     states::SparseStatePacker,
-    Heuristic, PreferredOperator, SuccessorGenerator, Task,
+    Heuristic, PreferredOperator, SearchNodeStatus, SearchSpace, SearchStatistics,
+    SuccessorGenerator, Task,
 };
 use std::collections::VecDeque;
 

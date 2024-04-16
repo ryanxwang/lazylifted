@@ -1,8 +1,8 @@
-use crate::search::{search_engines::SearchNode, states::SparsePackedState, Action};
+use crate::search::{Action, SearchNode};
 use segvec::{Linear, SegVec};
 use std::{
     collections::HashMap,
-    hash::{BuildHasher, RandomState},
+    hash::{BuildHasher, Hash, RandomState},
     sync::atomic::AtomicUsize,
 };
 
@@ -20,16 +20,22 @@ impl StateId {
 
 pub const NO_STATE: StateId = StateId(usize::MAX);
 
-pub struct SearchSpace {
+pub struct SearchSpace<S>
+where
+    S: Hash,
+{
     root_state_id: StateId,
     nodes: SegVec<SearchNode, Linear>,
-    states: SegVec<SparsePackedState, Linear>,
+    states: SegVec<S, Linear>,
     registered_states: HashMap<u64, StateId>,
     state_build_hasher: RandomState,
 }
 
-impl SearchSpace {
-    pub fn new(initial_state: SparsePackedState) -> Self {
+impl<S> SearchSpace<S>
+where
+    S: Hash,
+{
+    pub fn new(initial_state: S) -> Self {
         let state_build_hasher = RandomState::new();
 
         let mut nodes = SegVec::new();
@@ -53,7 +59,7 @@ impl SearchSpace {
 
     pub fn insert_or_get_node(
         &mut self,
-        state: SparsePackedState,
+        state: S,
         action: Action,
         parent_id: StateId,
     ) -> &mut SearchNode {
@@ -96,7 +102,7 @@ impl SearchSpace {
         self.nodes.get_mut(state_id.0).expect("Invalid state id")
     }
 
-    pub fn get_state(&self, state_id: StateId) -> &SparsePackedState {
+    pub fn get_state(&self, state_id: StateId) -> &S {
         self.states.get(state_id.0).expect("Invalid state id")
     }
 

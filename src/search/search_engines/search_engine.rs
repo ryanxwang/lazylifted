@@ -1,6 +1,6 @@
 use crate::search::{
-    search_engines::{InstrumentedGBFS, SearchStatistics, BFS, GBFS},
-    Action, Heuristic, PreferredOperator, SuccessorGenerator, Task,
+    search_engines::{InstrumentedGBFS, BFS, GBFS},
+    Action, Heuristic, PreferredOperator, SearchStatistics, SuccessorGenerator, Task,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
