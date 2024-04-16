@@ -210,12 +210,12 @@ mod tests {
         graph.add_edge(node_0, node_1, 0);
         graph.add_edge(node_1, node_2, 0);
 
-        let histograms = kernel.compute_histograms(&vec![graph.clone()]);
+        let histograms = kernel.compute_histograms(&[graph.clone()]);
         assert_eq!(histograms.len(), 1);
         assert_eq!(histograms[0].len(), 4);
 
         // Check that the histograms are the same when repeated.
-        let repeated_histograms = kernel.compute_histograms(&vec![graph.clone()]);
+        let repeated_histograms = kernel.compute_histograms(&[graph.clone()]);
         assert_eq!(histograms, repeated_histograms);
     }
 
@@ -229,7 +229,7 @@ mod tests {
         graph.add_edge(node_0, node_1, 0);
         graph.add_edge(node_1, node_2, 0);
 
-        let histograms = kernel.compute_histograms(&vec![graph.clone()]);
+        let histograms = kernel.compute_histograms(&[graph.clone()]);
         Python::with_gil(|py| {
             let x = kernel.compute_x(py, &histograms);
             assert_eq!(unsafe { x.as_slice().unwrap() }, &[2.0, 1.0, 2.0, 1.0]);
@@ -244,7 +244,7 @@ mod tests {
         graph2.add_edge(node_1, node_2, 0);
         graph2.add_edge(node_1, node_3, 0);
 
-        let histograms2 = kernel.compute_histograms(&vec![graph2.clone()]);
+        let histograms2 = kernel.compute_histograms(&[graph2.clone()]);
         Python::with_gil(|py| {
             let x = kernel.compute_x(py, &histograms2);
             assert_eq!(unsafe { x.as_slice().unwrap() }, &[3.0, 1.0, 3.0, 0.0]);

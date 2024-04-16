@@ -21,16 +21,14 @@ mod tests {
     #[test]
     fn comment_only() {
         let input = "; comment";
-        let (remainder, comment) = ignore_single_line_comment(input).unwrap();
-        assert_eq!(comment, ());
+        let (remainder, _comment) = ignore_single_line_comment(input).unwrap();
         assert!(remainder.is_empty());
     }
 
     #[test]
     fn keeps_text() {
         let input = "; comment\nnext line";
-        let (remainder, comment) = ignore_single_line_comment(input).unwrap();
-        assert_eq!(comment, ());
+        let (remainder, _comment) = ignore_single_line_comment(input).unwrap();
         assert_eq!(remainder.fragment(), &"next line");
     }
 }

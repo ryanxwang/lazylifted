@@ -228,7 +228,7 @@ mod tests {
         // should be the pickup action
         let action_data = precompile_action_data(&task.action_schemas[0]);
 
-        assert_eq!(action_data.is_ground, false);
+        assert!(!action_data.is_ground);
         assert_eq!(action_data.relevant_precondition_atoms.len(), 2); // number of non-nullary preconditions
     }
 }

@@ -109,11 +109,11 @@ mod tests {
     fn test_fit_and_predict_for_gpr() {
         Python::with_gil(|py| {
             let regressor = Regressor::new(py, RegressorName::GaussianProcessRegressor);
-            let x = PyArray2::from_vec2_bound(py, &vec![vec![1.0, 2.0], vec![3.0, 4.0]]).unwrap();
+            let x = PyArray2::from_vec2_bound(py, &[vec![1.0, 2.0], vec![3.0, 4.0]]).unwrap();
             let y = PyArray1::from_vec_bound(py, vec![1.0, 2.0]);
             regressor.fit(&x, &y);
 
-            let x = PyArray2::from_vec2_bound(py, &vec![vec![5.0, 6.0], vec![7.0, 8.0]]).unwrap();
+            let x = PyArray2::from_vec2_bound(py, &[vec![5.0, 6.0], vec![7.0, 8.0]]).unwrap();
             let y = regressor.predict(&x);
             assert_eq!(y.len().unwrap(), 2);
             let y = y.to_vec().unwrap();
@@ -126,11 +126,11 @@ mod tests {
     fn test_fit_and_predict_for_lr() {
         Python::with_gil(|py| {
             let regressor = Regressor::new(py, RegressorName::LinearRegressor);
-            let x = PyArray2::from_vec2_bound(py, &vec![vec![1.0, 2.0], vec![3.0, 4.0]]).unwrap();
+            let x = PyArray2::from_vec2_bound(py, &[vec![1.0, 2.0], vec![3.0, 4.0]]).unwrap();
             let y = PyArray1::from_vec_bound(py, vec![1.0, 2.0]);
             regressor.fit(&x, &y);
 
-            let x = PyArray2::from_vec2_bound(py, &vec![vec![5.0, 6.0], vec![7.0, 8.0]]).unwrap();
+            let x = PyArray2::from_vec2_bound(py, &[vec![5.0, 6.0], vec![7.0, 8.0]]).unwrap();
             let y = regressor.predict(&x);
             assert_eq!(y.len().unwrap(), 2);
             let y = y.to_vec().unwrap();
