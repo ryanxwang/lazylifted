@@ -1,4 +1,4 @@
-use crate::search::Task;
+use crate::search::{Task, Transition};
 
 /// Action struct that represents an instantiated action schema.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -29,7 +29,17 @@ impl Action {
     }
 }
 
-pub const NO_ACTION: Action = Action {
+/// This is a hack specific to the initial node of the search space, which does
+/// not have a parent action. [`NO_ACTION`] should only be used for this
+/// purpose. We use this instead of an [`Option<Action>`] to avoid the overhead
+/// of an [`Option`] type.
+const NO_ACTION: Action = Action {
     index: usize::MAX,
     instantiation: vec![],
 };
+
+impl Transition for Action {
+    fn no_transition() -> Self {
+        NO_ACTION
+    }
+}

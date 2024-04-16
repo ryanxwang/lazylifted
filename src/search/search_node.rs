@@ -1,6 +1,7 @@
-use crate::search::{action::NO_ACTION, Action, HeuristicValue, StateId, NO_STATE};
+use crate::search::{HeuristicValue, StateId, Transition, NO_STATE};
 use ordered_float::Float;
 
+/// The status of a search node.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SearchNodeStatus {
     /// New node, not yet opened
@@ -13,8 +14,14 @@ pub enum SearchNodeStatus {
     Deadend,
 }
 
+/// A [`SearchNode`] is a node in the search space. It contains information
+/// about the state specific to the search, such as heuristic cost and parent
+/// node.
 #[derive(Debug, Clone)]
-pub struct SearchNode {
+pub struct SearchNode<T>
+where
+    T: Transition,
+{
     /// Unique identifier of the state
     state_id: StateId,
     /// Status of the node
@@ -28,15 +35,21 @@ pub struct SearchNode {
     /// the goal. In search algorithms that only care about the f-value, this
     /// should be ignored.
     h: HeuristicValue,
-    /// Action that led to this node
-    action: Action,
+    /// Transition that led to this node
+    transition: T,
     /// Parent state
     parent_id: StateId,
     /// Whether the node is preferred by the parent node
     is_preferred: bool,
 }
 
-impl SearchNode {
+impl<T> SearchNode<T>
+where
+    T: Transition,
+{
+    /// Create a new search node with no parent. This should only be used for
+    /// the root node of the search space. For non-root nodes see
+    /// [`SearchNode::new_with_parent`].
     pub fn new_without_parent() -> Self {
         Self {
             state_id: StateId::new(),
@@ -44,20 +57,23 @@ impl SearchNode {
             f: HeuristicValue::infinity(),
             g: HeuristicValue::infinity(),
             h: HeuristicValue::infinity(),
-            action: NO_ACTION,
+            transition: T::no_transition(),
             parent_id: NO_STATE,
             is_preferred: false,
         }
     }
 
-    pub fn new_with_parent(parent_id: StateId, action: Action) -> Self {
+    /// Create a new search node with a parent. This should be used for all
+    /// nodes that are not the root node. For root nodes see
+    /// [`SearchNode::new_without_parent`].
+    pub fn new_with_parent(parent_id: StateId, transition: T) -> Self {
         Self {
             state_id: StateId::new(),
             status: SearchNodeStatus::New,
             f: HeuristicValue::infinity(),
             g: HeuristicValue::infinity(),
             h: HeuristicValue::infinity(),
-            action,
+            transition,
             parent_id,
             is_preferred: false,
         }
@@ -117,8 +133,8 @@ impl SearchNode {
         self.parent_id
     }
 
-    pub fn get_action(&self) -> &Action {
-        &self.action
+    pub fn get_transition(&self) -> &T {
+        &self.transition
     }
 
     pub fn is_preferred(&self) -> bool {

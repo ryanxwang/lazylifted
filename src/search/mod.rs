@@ -15,6 +15,7 @@ mod search_statistics;
 pub mod states;
 pub mod successor_generators;
 mod task;
+mod transition;
 mod verbosity;
 
 pub use action::Action;
@@ -22,7 +23,7 @@ pub use action_schema::{ActionSchema, SchemaArgument, SchemaAtom, SchemaParamete
 pub use goal::{Goal, GoalAtom};
 pub use heuristics::{Heuristic, HeuristicValue};
 pub use object::Object;
-pub use partial_action::PartialAction;
+pub(crate) use partial_action::PartialAction;
 pub use plan::Plan;
 pub use predicate::Predicate;
 pub use preferred_operator::PreferredOperator;
@@ -32,4 +33,5 @@ pub(crate) use search_statistics::SearchStatistics;
 pub use states::DBState;
 pub use successor_generators::SuccessorGenerator;
 pub use task::Task;
+pub(crate) use transition::Transition;
 pub use verbosity::Verbosity;
