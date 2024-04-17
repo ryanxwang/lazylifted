@@ -21,7 +21,7 @@ priority-queue = "2.0.2"
 pyo3 = { version = "0.21.2", features = ["auto-initialize", "serde"] }
 ron = "0.8.1"
 segvec = "0.2.0"
-serde = { version = "1.0.197", features = ["derive"] }
+serde = { version = "1.0.198", features = ["derive"] }
 thiserror = "1.0.40"
 toml = "0.8.12"
 tracing = "0.1.40"
