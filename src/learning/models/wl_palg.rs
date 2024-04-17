@@ -102,12 +102,12 @@ impl WLPALGModel {
             for chosen_action in plan.steps() {
                 let next_state = successor_generator.generate_successor(
                     &cur_state,
-                    &task.action_schemas[chosen_action.index],
+                    &task.action_schemas()[chosen_action.index],
                     chosen_action,
                 );
 
                 let applicable_actions: Vec<Action> = task
-                    .action_schemas
+                    .action_schemas()
                     .iter()
                     .flat_map(|schema| -> Vec<Action> {
                         successor_generator.get_applicable_actions(&cur_state, schema)
@@ -151,7 +151,7 @@ impl WLPALGModel {
                     for sibling in siblings {
                         graphs.push(compiler.compile(
                             &cur_state,
-                            &task.action_schemas[sibling.index()],
+                            &task.action_schemas()[sibling.index()],
                             &sibling,
                         ));
 

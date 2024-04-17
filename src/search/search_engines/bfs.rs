@@ -53,7 +53,7 @@ impl SearchEngine for Bfs {
 
             let state = packer.unpack(search_space.get_state(sid));
 
-            for action_schema in &task.action_schemas {
+            for action_schema in task.action_schemas() {
                 let actions = generator.get_applicable_actions(&state, action_schema);
                 statistics.increment_generated_actions(actions.len());
 

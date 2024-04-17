@@ -25,10 +25,10 @@ impl FullReducer {
     /// program and the join order. For cyclic action schemas, it computes the
     /// "partial reducer".
     pub fn new(task: &Task) -> Self {
-        let mut full_join_order = vec![vec![]; task.action_schemas.len()];
-        let mut full_reducer_program = vec![vec![]; task.action_schemas.len()];
+        let mut full_join_order = vec![vec![]; task.action_schemas().len()];
+        let mut full_reducer_program = vec![vec![]; task.action_schemas().len()];
 
-        for action_schema in &task.action_schemas {
+        for action_schema in task.action_schemas() {
             let hypergraph = Hypergraph::from_action_schema(action_schema);
 
             if hypergraph.hyperedges.len() <= 1 {
@@ -191,19 +191,19 @@ mod tests {
         let state = &task.initial_state;
 
         // pickup is not applicable in the initial state
-        let actions = generator.get_applicable_actions(state, &task.action_schemas[0]);
+        let actions = generator.get_applicable_actions(state, &task.action_schemas()[0]);
         assert_eq!(actions.len(), 0);
 
         // putdown is not applicable in the initial state
-        let actions = generator.get_applicable_actions(state, &task.action_schemas[1]);
+        let actions = generator.get_applicable_actions(state, &task.action_schemas()[1]);
         assert_eq!(actions.len(), 0);
 
         // stack is not applicable in the initial state
-        let actions = generator.get_applicable_actions(state, &task.action_schemas[2]);
+        let actions = generator.get_applicable_actions(state, &task.action_schemas()[2]);
         assert_eq!(actions.len(), 0);
 
         // unstack is the only applicable action in the initial state
-        let actions = generator.get_applicable_actions(state, &task.action_schemas[3]);
+        let actions = generator.get_applicable_actions(state, &task.action_schemas()[3]);
         assert_eq!(actions.len(), 1);
         assert_eq!(actions[0].index, 3);
         assert_eq!(actions[0].instantiation, vec![0, 1]);
@@ -215,12 +215,16 @@ mod tests {
         let generator = JoinSuccessorGenerator::new(FullReducer::new(&task), &task);
 
         let mut states = Vec::new();
-        states.push(task.initial_state);
+        states.push(task.initial_state.clone());
 
         // action: (unstack b1 b2)
-        let actions = generator.get_applicable_actions(&states[0], &task.action_schemas[3]);
+        let actions = generator.get_applicable_actions(&states[0], &task.action_schemas()[3]);
         assert_eq!(actions.len(), 1);
-        states.push(generator.generate_successor(&states[0], &task.action_schemas[3], &actions[0]));
+        states.push(generator.generate_successor(
+            &states[0],
+            &task.action_schemas()[3],
+            &actions[0],
+        ));
 
         // state: (clear b2, on-table b4, holding b1, on b2 b3, on b3 b4)
         assert_eq!(
@@ -229,9 +233,13 @@ mod tests {
         );
 
         // action: (putdown b1)
-        let actions = generator.get_applicable_actions(&states[1], &task.action_schemas[1]);
+        let actions = generator.get_applicable_actions(&states[1], &task.action_schemas()[1]);
         assert_eq!(actions.len(), 1);
-        states.push(generator.generate_successor(&states[1], &task.action_schemas[1], &actions[0]));
+        states.push(generator.generate_successor(
+            &states[1],
+            &task.action_schemas()[1],
+            &actions[0],
+        ));
 
         // state: (clear b1, clear b2, on-table b1, on-table b4, arm-empty, on b2 b3, on b3 b4)
         assert_eq!(
@@ -240,9 +248,13 @@ mod tests {
         );
 
         // action: (unstack b2 b3)
-        let actions = generator.get_applicable_actions(&states[2], &task.action_schemas[3]);
+        let actions = generator.get_applicable_actions(&states[2], &task.action_schemas()[3]);
         assert_eq!(actions.len(), 1);
-        states.push(generator.generate_successor(&states[2], &task.action_schemas[3], &actions[0]));
+        states.push(generator.generate_successor(
+            &states[2],
+            &task.action_schemas()[3],
+            &actions[0],
+        ));
 
         // state: (clear b1, clear b3, on-table b1, on-table b4, holding b2, on b3 b4)
         assert_eq!(
@@ -251,9 +263,13 @@ mod tests {
         );
 
         // action: (putdown b2)
-        let actions = generator.get_applicable_actions(&states[3], &task.action_schemas[1]);
+        let actions = generator.get_applicable_actions(&states[3], &task.action_schemas()[1]);
         assert_eq!(actions.len(), 1);
-        states.push(generator.generate_successor(&states[3], &task.action_schemas[1], &actions[0]));
+        states.push(generator.generate_successor(
+            &states[3],
+            &task.action_schemas()[1],
+            &actions[0],
+        ));
 
         // state: (clear b1, clear b2, clear b3, on-table b1, on-table b2, on-table b4, arm-empty, on b3 b4)
         assert_eq!(
@@ -262,9 +278,13 @@ mod tests {
         );
 
         // action: (unstack b3 b4)
-        let actions = generator.get_applicable_actions(&states[4], &task.action_schemas[3]);
+        let actions = generator.get_applicable_actions(&states[4], &task.action_schemas()[3]);
         assert_eq!(actions.len(), 1);
-        states.push(generator.generate_successor(&states[4], &task.action_schemas[3], &actions[0]));
+        states.push(generator.generate_successor(
+            &states[4],
+            &task.action_schemas()[3],
+            &actions[0],
+        ));
 
         // state: (clear b1, clear b2, clear b4, on-table b1, on-table b2, on-table b4, holding b3)
         assert_eq!(
@@ -273,7 +293,7 @@ mod tests {
         );
 
         // action: (stack b3 b1)
-        let actions = generator.get_applicable_actions(&states[5], &task.action_schemas[2]);
+        let actions = generator.get_applicable_actions(&states[5], &task.action_schemas()[2]);
         assert_eq!(actions.len(), 3);
         assert!(actions.contains(&Action {
             // (stack b3 b1)
@@ -291,7 +311,7 @@ mod tests {
             instantiation: vec![2, 3]
         }));
         let action = actions.iter().find(|a| a.instantiation[1] == 0).unwrap();
-        states.push(generator.generate_successor(&states[5], &task.action_schemas[2], action));
+        states.push(generator.generate_successor(&states[5], &task.action_schemas()[2], action));
 
         // state: (clear b2, clear b3, clear b4, on-table b1, on-table b2, on-table b4, arm-empty, on b3 b1)
         assert_eq!(
@@ -300,7 +320,7 @@ mod tests {
         );
 
         // action: (pickup b2)
-        let actions = generator.get_applicable_actions(&states[6], &task.action_schemas[0]);
+        let actions = generator.get_applicable_actions(&states[6], &task.action_schemas()[0]);
         assert_eq!(actions.len(), 2);
         assert!(actions.contains(&Action {
             // (pickup b2)
@@ -313,7 +333,7 @@ mod tests {
             instantiation: vec![3]
         }));
         let action = actions.iter().find(|a| a.instantiation[0] == 1).unwrap();
-        states.push(generator.generate_successor(&states[6], &task.action_schemas[0], action));
+        states.push(generator.generate_successor(&states[6], &task.action_schemas()[0], action));
 
         // state: (clear b3, clear b4, on-table b1, on-table b4, holding b2, on b3 b1)
         assert_eq!(
@@ -322,7 +342,7 @@ mod tests {
         );
 
         // action: (stack b2 b3)
-        let actions = generator.get_applicable_actions(&states[7], &task.action_schemas[2]);
+        let actions = generator.get_applicable_actions(&states[7], &task.action_schemas()[2]);
         assert_eq!(actions.len(), 2);
         assert!(actions.contains(&Action {
             // (stack b2 b3)
@@ -335,7 +355,7 @@ mod tests {
             instantiation: vec![1, 3]
         }));
         let action = actions.iter().find(|a| a.instantiation[1] == 2).unwrap();
-        states.push(generator.generate_successor(&states[7], &task.action_schemas[2], action));
+        states.push(generator.generate_successor(&states[7], &task.action_schemas()[2], action));
 
         // state: (clear b2, clear b4, on-table b1, on-table b4, arm-empty, on b2 b3, on b3 b1)
         assert_eq!(
@@ -344,9 +364,13 @@ mod tests {
         );
 
         // action: (pickup b4)
-        let actions = generator.get_applicable_actions(&states[8], &task.action_schemas[0]);
+        let actions = generator.get_applicable_actions(&states[8], &task.action_schemas()[0]);
         assert_eq!(actions.len(), 1);
-        states.push(generator.generate_successor(&states[8], &task.action_schemas[0], &actions[0]));
+        states.push(generator.generate_successor(
+            &states[8],
+            &task.action_schemas()[0],
+            &actions[0],
+        ));
 
         // state: (clear b2, on-table b1, holding b4, on b2 b3, on b3 b1)
         assert_eq!(
@@ -355,9 +379,13 @@ mod tests {
         );
 
         // action: (stack b4 b2)
-        let actions = generator.get_applicable_actions(&states[9], &task.action_schemas[2]);
+        let actions = generator.get_applicable_actions(&states[9], &task.action_schemas()[2]);
         assert_eq!(actions.len(), 1);
-        states.push(generator.generate_successor(&states[9], &task.action_schemas[2], &actions[0]));
+        states.push(generator.generate_successor(
+            &states[9],
+            &task.action_schemas()[2],
+            &actions[0],
+        ));
 
         // state: (clear b4, on-table b1, arm-empty, on b2 b3, on b3 b1, on b4 b2)
         assert_eq!(

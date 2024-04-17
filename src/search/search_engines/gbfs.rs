@@ -77,7 +77,7 @@ impl SearchEngine for Gbfs {
 
             let mut successors = Vec::new();
             let mut actions = Vec::new();
-            for action_schema in &task.action_schemas {
+            for action_schema in task.action_schemas() {
                 let applicable_actions = generator.get_applicable_actions(&state, action_schema);
                 statistics.increment_generated_actions(applicable_actions.len());
                 for action in applicable_actions {

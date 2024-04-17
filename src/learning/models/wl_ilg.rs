@@ -93,7 +93,7 @@ impl WLILGModel {
 
             let mut cur_state = task.initial_state.clone();
             for (i, action) in plan.steps().iter().enumerate() {
-                let action_schema = &task.action_schemas[action.index];
+                let action_schema = &task.action_schemas()[action.index];
                 let next_state =
                     successor_generator.generate_successor(&cur_state, action_schema, action);
                 graphs.push(compiler.compile(&cur_state));

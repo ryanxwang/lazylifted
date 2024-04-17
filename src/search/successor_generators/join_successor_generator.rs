@@ -18,7 +18,7 @@ where
 {
     pub fn new(join_algorithm: T, task: &Task) -> Self {
         let action_data = task
-            .action_schemas
+            .action_schemas()
             .iter()
             .map(precompile_action_data)
             .collect();
@@ -226,7 +226,7 @@ mod tests {
     fn test_precompile_action_data() {
         let task = Task::from_text(BLOCKSWORLD_DOMAIN_TEXT, BLOCKSWORLD_PROBLEM13_TEXT);
         // should be the pickup action
-        let action_data = precompile_action_data(&task.action_schemas[0]);
+        let action_data = precompile_action_data(&task.action_schemas()[0]);
 
         assert!(!action_data.is_ground);
         assert_eq!(action_data.relevant_precondition_atoms.len(), 2); // number of non-nullary preconditions

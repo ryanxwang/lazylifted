@@ -13,7 +13,7 @@ pub struct Task {
     pub objects: Vec<Object>,
     pub goal: Goal,
     pub initial_state: DBState,
-    pub action_schemas: Vec<ActionSchema>,
+    action_schemas: Vec<ActionSchema>,
     pub predicates: Vec<Predicate>,
     pub nullary_predicates: HashSet<usize>,
 }
@@ -131,6 +131,10 @@ impl Task {
         }
 
         objects_per_type
+    }
+
+    pub fn action_schemas(&self) -> &Vec<ActionSchema> {
+        &self.action_schemas
     }
 }
 

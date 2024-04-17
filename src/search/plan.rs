@@ -23,7 +23,7 @@ impl Plan {
             crate::parsed_types::Plan::from_str(text).expect("Failed to parse plan");
 
         let action_table: HashMap<ActionName, usize> = task
-            .action_schemas
+            .action_schemas()
             .iter()
             .enumerate()
             .map(|(index, action_schema)| (action_schema.name.clone(), index))

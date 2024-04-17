@@ -27,7 +27,7 @@ impl PreferredOperator for WLPALGPrefOp {
         let applicable_schemas: HashSet<usize> =
             actions.iter().map(|action| action.index).collect();
         let applicable_schemas: Vec<&ActionSchema> = task
-            .action_schemas
+            .action_schemas()
             .iter()
             .filter(|&schema| applicable_schemas.contains(&schema.index))
             .collect();

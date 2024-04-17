@@ -18,7 +18,7 @@ impl Action {
     }
 
     pub fn to_string(&self, task: &Task) -> String {
-        let schema_name: &str = task.action_schemas[self.index].name.as_ref();
+        let schema_name: &str = task.action_schemas()[self.index].name.as_ref();
         let objects: Vec<&str> = self
             .instantiation
             .iter()

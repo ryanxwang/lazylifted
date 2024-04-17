@@ -108,7 +108,7 @@ impl PALGCompiler {
     fn precompile(&mut self, task: &Task) {
         self.precompile_base_graph(task);
 
-        for action_schema in &task.action_schemas {
+        for action_schema in task.action_schemas() {
             self.schema_pred_types
                 .push(self.precompute_schema_pred_types(action_schema));
         }
@@ -345,7 +345,7 @@ mod tests {
         let compiler = PALGCompiler::new(&task);
 
         let state = task.initial_state.clone();
-        let action_schema = task.action_schemas[0].clone();
+        let action_schema = task.action_schemas()[0].clone();
         let graph = compiler.compile(&state, &action_schema, &action_schema.clone().into());
 
         assert_eq!(graph.node_count(), 24);
