@@ -5,10 +5,7 @@ use crate::{
         models::{Evaluate, Train, TrainingInstance},
         WlKernel,
     },
-    search::{
-        successor_generators::SuccessorGeneratorName, Action, ActionSchema, DBState, PartialAction,
-        Task,
-    },
+    search::{successor_generators::SuccessorGeneratorName, Action, DBState, PartialAction, Task},
 };
 use numpy::{PyArray1, PyArrayMethods, PyUntypedArrayMethods};
 use pyo3::{prelude::*, Python};
@@ -27,6 +24,7 @@ enum WlPalgState {
     // Trained but not ready for evaluating
     Trained,
     // Ready for evaluating
+    #[serde(skip)]
     Evaluating(Box<PalgCompiler>),
 }
 
@@ -149,11 +147,7 @@ impl WlPalgModel {
 
                     groups.push(siblings.len());
                     for sibling in siblings {
-                        graphs.push(compiler.compile(
-                            &cur_state,
-                            &task.action_schemas()[sibling.index()],
-                            &sibling,
-                        ));
+                        graphs.push(compiler.compile(&cur_state, &sibling));
 
                         ranks.push(if sibling == chosen_partial { 1.0 } else { 0.0 });
                     }
@@ -314,7 +308,7 @@ impl Train for WlPalgModel {
 }
 
 impl Evaluate for WlPalgModel {
-    type EvaluatedType<'a> = (&'a DBState, &'a ActionSchema);
+    type EvaluatedType<'a> = (&'a DBState, &'a PartialAction);
 
     fn set_evaluating_task(&mut self, task: &Task) {
         match &self.state {
@@ -328,12 +322,12 @@ impl Evaluate for WlPalgModel {
         }
     }
 
-    fn evaluate(&mut self, &(state, action_schema): &Self::EvaluatedType<'_>) -> f64 {
+    fn evaluate(&mut self, &(state, partial_action): &Self::EvaluatedType<'_>) -> f64 {
         let compiler = match &self.state {
             WlPalgState::Evaluating(compiler) => compiler,
             _ => panic!("Model not ready for evaluation"),
         };
-        let graph = compiler.compile(state, action_schema, &action_schema.clone().into());
+        let graph = compiler.compile(state, partial_action);
         let histograms = self.wl.compute_histograms(&[graph]);
         let x = self.wl.compute_x(self.py(), &histograms);
         let y: Vec<f64> = self.model.predict(&x).extract().unwrap();
@@ -347,9 +341,7 @@ impl Evaluate for WlPalgModel {
         };
         let graphs = targets
             .iter()
-            .map(|&(state, action_schema)| {
-                compiler.compile(state, action_schema, &action_schema.clone().into())
-            })
+            .map(|&(state, partial_action)| compiler.compile(state, partial_action))
             .collect::<Vec<_>>();
         let histograms = self.wl.compute_histograms(&graphs);
         let x = self.wl.compute_x(self.py(), &histograms);

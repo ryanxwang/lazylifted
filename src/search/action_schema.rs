@@ -20,10 +20,12 @@ impl SchemaParameter {
             .name();
         Self {
             index,
-            type_index: *type_table
-                .get(param_type)
-                .unwrap_or_else(|| panic!("Schema parameter type {:?} not found in domain type table {:?}",
-                        param_type, type_table)),
+            type_index: *type_table.get(param_type).unwrap_or_else(|| {
+                panic!(
+                    "Schema parameter type {:?} not found in domain type table {:?}",
+                    param_type, type_table
+                )
+            }),
         }
     }
 

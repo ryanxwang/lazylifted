@@ -12,7 +12,7 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct PalgCompiler {
     /// A precompiled graph for the task.
     base_graph: Option<CGraph>,
@@ -25,6 +25,7 @@ pub struct PalgCompiler {
     /// An action schema indexed vector of maps from schema predicates to their
     /// types.
     schema_pred_types: Vec<HashMap<SchemaPred, SchemaPredNodeType>>,
+    action_schemas: Vec<ActionSchema>,
 }
 
 impl PalgCompiler {
@@ -35,6 +36,7 @@ impl PalgCompiler {
             predicate_index_to_node_index: HashMap::new(),
             goal_atom_to_node_index: HashMap::new(),
             schema_pred_types: vec![],
+            action_schemas: task.action_schemas().clone(),
         };
 
         compiler.precompile(task);
@@ -42,13 +44,8 @@ impl PalgCompiler {
         compiler
     }
 
-    pub fn compile(
-        &self,
-        state: &DBState,
-        action_schema: &ActionSchema,
-        partial_action: &PartialAction,
-    ) -> CGraph {
-        assert!(partial_action.index() == action_schema.index);
+    pub fn compile(&self, state: &DBState, partial_action: &PartialAction) -> CGraph {
+        let action_schema = &self.action_schemas[partial_action.index()];
         let mut graph = self
             .base_graph
             .as_ref()
@@ -346,7 +343,7 @@ mod tests {
 
         let state = task.initial_state.clone();
         let action_schema = task.action_schemas()[0].clone();
-        let graph = compiler.compile(&state, &action_schema, &action_schema.clone().into());
+        let graph = compiler.compile(&state, &action_schema.clone().into());
 
         assert_eq!(graph.node_count(), 24);
         assert_eq!(graph.edge_count(), 31);
