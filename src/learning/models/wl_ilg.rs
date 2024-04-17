@@ -1,9 +1,9 @@
 use crate::{
     learning::{
-        graphs::{CGraph, ILGCompiler},
+        graphs::{CGraph, IlgCompiler},
         ml::{Regressor, RegressorName},
         models::{Evaluate, Train, TrainingInstance},
-        WLKernel,
+        WlKernel,
     },
     search::{successor_generators::SuccessorGeneratorName, DBState, Task},
 };
@@ -17,22 +17,22 @@ use std::{io::Write, path::Path, time};
 use tracing::info;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-enum WLILGState {
+enum WlIlgState {
     /// The model has been created but not trained.
     New,
     /// Trained but not ready for evaluating.
     Trained,
     /// Ready for evaluating.
-    Evaluating(ILGCompiler),
+    Evaluating(IlgCompiler),
 }
 
-impl PartialEq for WLILGState {
+impl PartialEq for WlIlgState {
     fn eq(&self, other: &Self) -> bool {
         matches!(
             (self, other),
-            (WLILGState::New, WLILGState::New)
-                | (WLILGState::Trained, WLILGState::Trained)
-                | (WLILGState::Evaluating(_), WLILGState::Evaluating(_))
+            (WlIlgState::New, WlIlgState::New)
+                | (WlIlgState::Trained, WlIlgState::Trained)
+                | (WlIlgState::Evaluating(_), WlIlgState::Evaluating(_))
         )
     }
 }
@@ -40,7 +40,7 @@ impl PartialEq for WLILGState {
 /// Configuration for the WL-ILG model. This is the format used by the trainer
 /// to create the model.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct WLILGConfig {
+pub struct WlIlgConfig {
     pub model: RegressorName,
     #[serde(alias = "successor-generator")]
     pub successor_generator: SuccessorGeneratorName,
@@ -49,7 +49,7 @@ pub struct WLILGConfig {
 }
 
 #[derive(Debug)]
-pub struct WLILGModel {
+pub struct WlIlgModel {
     model: Regressor<'static>,
     /// The successor generator to use for generating successor states when
     /// training. It might appear weird we store the name of the successor
@@ -57,28 +57,28 @@ pub struct WLILGModel {
     /// it is only used in training, and 2) each task requires its own successor
     /// generator, so we can't store a single instance of the generator.
     successor_generator_name: SuccessorGeneratorName,
-    wl: WLKernel,
+    wl: WlKernel,
     validate: bool,
-    state: WLILGState,
+    state: WlIlgState,
 }
 
 /// Dummy struct to allow serialising/deserialising the model to disk.
 #[derive(Debug, Serialize, Deserialize)]
-struct SerialisableWLILGModel {
+struct SerialisableWlIlgModel {
     successor_generator_name: SuccessorGeneratorName,
-    wl: WLKernel,
+    wl: WlKernel,
     validate: bool,
-    state: WLILGState,
+    state: WlIlgState,
 }
 
-impl WLILGModel {
-    pub fn new(py: Python<'static>, config: WLILGConfig) -> Self {
+impl WlIlgModel {
+    pub fn new(py: Python<'static>, config: WlIlgConfig) -> Self {
         Self {
             model: Regressor::new(py, config.model),
-            wl: WLKernel::new(config.iters),
+            wl: WlKernel::new(config.iters),
             successor_generator_name: config.successor_generator,
             validate: config.validate,
-            state: WLILGState::New,
+            state: WlIlgState::New,
         }
     }
 
@@ -89,7 +89,7 @@ impl WLILGModel {
             let plan = &instance.plan;
             let task = &instance.task;
             let successor_generator = self.successor_generator_name.create(task);
-            let compiler = ILGCompiler::new(task);
+            let compiler = IlgCompiler::new(task);
 
             let mut cur_state = task.initial_state.clone();
             for (i, action) in plan.steps().iter().enumerate() {
@@ -127,10 +127,10 @@ impl WLILGModel {
     }
 }
 
-impl Train for WLILGModel {
+impl Train for WlIlgModel {
     fn train(&mut self, training_data: &[TrainingInstance]) {
         let py = self.py();
-        assert_eq!(self.state, WLILGState::New);
+        assert_eq!(self.state, WlIlgState::New);
         if self.validate {
             info!("splitting training data into training and validation sets");
         } else {
@@ -188,16 +188,16 @@ impl Train for WLILGModel {
             info!(val_score = val_score);
         }
 
-        self.state = WLILGState::Trained;
+        self.state = WlIlgState::Trained;
     }
 
     fn save(&self, path: &Path) {
-        assert_eq!(self.state, WLILGState::Trained);
+        assert_eq!(self.state, WlIlgState::Trained);
         let pickle_path = path.with_extension("pkl");
         self.model.pickle(&pickle_path);
 
         let ron_path = path.with_extension("ron");
-        let serialisable = SerialisableWLILGModel {
+        let serialisable = SerialisableWlIlgModel {
             successor_generator_name: self.successor_generator_name,
             wl: self.wl.clone(),
             validate: self.validate,
@@ -212,22 +212,22 @@ impl Train for WLILGModel {
     }
 }
 
-impl Evaluate for WLILGModel {
+impl Evaluate for WlIlgModel {
     type EvaluatedType<'a> = DBState;
 
     fn set_evaluating_task(&mut self, task: &Task) {
         match &self.state {
-            WLILGState::New => {
+            WlIlgState::New => {
                 panic!("Model not trained yet, cannot set evaluating task");
             }
-            WLILGState::Trained => self.state = WLILGState::Evaluating(ILGCompiler::new(task)),
-            WLILGState::Evaluating(_) => {}
+            WlIlgState::Trained => self.state = WlIlgState::Evaluating(IlgCompiler::new(task)),
+            WlIlgState::Evaluating(_) => {}
         }
     }
 
     fn evaluate(&mut self, state: &DBState) -> f64 {
         let compiler = match &self.state {
-            WLILGState::Evaluating(compiler) => compiler,
+            WlIlgState::Evaluating(compiler) => compiler,
             _ => panic!("Model not ready for evaluation"),
         };
         let graph = compiler.compile(state);
@@ -240,7 +240,7 @@ impl Evaluate for WLILGModel {
 
     fn evaluate_batch(&mut self, states: &[DBState]) -> Vec<f64> {
         let compiler = match &self.state {
-            WLILGState::Evaluating(compiler) => compiler,
+            WlIlgState::Evaluating(compiler) => compiler,
             _ => panic!("Model not ready for evaluation"),
         };
         // when evaluating in batch, we still do it sequentially for better
@@ -261,9 +261,9 @@ impl Evaluate for WLILGModel {
 
         let ron_path = path.with_extension("ron");
         let data = std::fs::read_to_string(ron_path).expect("Failed to read model data");
-        let serialisable: SerialisableWLILGModel =
+        let serialisable: SerialisableWlIlgModel =
             ron::from_str(&data).expect("Failed to deserialise model data");
-        assert_eq!(serialisable.state, WLILGState::Trained);
+        assert_eq!(serialisable.state, WlIlgState::Trained);
         Self {
             model,
             successor_generator_name: serialisable.successor_generator_name,

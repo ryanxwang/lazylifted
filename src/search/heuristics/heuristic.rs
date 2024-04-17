@@ -1,5 +1,5 @@
 use crate::search::heuristics::goal_counting::GoalCounting;
-use crate::search::heuristics::wl_ilg::WLILGHeuristic;
+use crate::search::heuristics::wl_ilg::WlIlgHeuristic;
 use crate::search::{DBState, Task};
 use ordered_float::OrderedFloat;
 use std::fmt::Debug;
@@ -28,20 +28,21 @@ pub trait Heuristic: Debug {
 #[derive(clap::ValueEnum, Debug, Clone, Copy)]
 #[clap(rename_all = "kebab-case")]
 pub enum StateHeuristicNames {
+    #[clap(help = "The goal counting heuristic.")]
     GoalCounting,
     #[clap(name = "wl-ilg", help = "The WL-ILG heuristic, requires a model file.")]
-    WLILG,
+    WlIlg,
 }
 
 impl StateHeuristicNames {
     pub fn create(&self, saved_model: &Option<PathBuf>) -> Box<dyn Heuristic<Target = DBState>> {
         match self {
             StateHeuristicNames::GoalCounting => Box::new(GoalCounting::new()),
-            StateHeuristicNames::WLILG => {
+            StateHeuristicNames::WlIlg => {
                 let saved_model = saved_model
                     .as_ref()
                     .expect("No saved model provided for WL-ILG heuristic");
-                Box::new(WLILGHeuristic::load(saved_model))
+                Box::new(WlIlgHeuristic::load(saved_model))
             }
         }
     }

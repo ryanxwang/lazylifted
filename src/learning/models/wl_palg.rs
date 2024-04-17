@@ -1,9 +1,9 @@
 use crate::{
     learning::{
-        graphs::{CGraph, PALGCompiler},
+        graphs::{CGraph, PalgCompiler},
         ml::{Ranker, RankerName},
         models::{Evaluate, Train, TrainingInstance},
-        WLKernel,
+        WlKernel,
     },
     search::{
         successor_generators::SuccessorGeneratorName, Action, ActionSchema, DBState, PartialAction,
@@ -21,22 +21,22 @@ use std::{
 use tracing::info;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-enum WLPALGState {
+enum WlPalgState {
     // The model has been created but not trained
     New,
     // Trained but not ready for evaluating
     Trained,
     // Ready for evaluating
-    Evaluating(Box<PALGCompiler>),
+    Evaluating(Box<PalgCompiler>),
 }
 
-impl PartialEq for WLPALGState {
+impl PartialEq for WlPalgState {
     fn eq(&self, other: &Self) -> bool {
         matches!(
             (self, other),
-            (WLPALGState::New, WLPALGState::New)
-                | (WLPALGState::Trained, WLPALGState::Trained)
-                | (WLPALGState::Evaluating(_), WLPALGState::Evaluating(_))
+            (WlPalgState::New, WlPalgState::New)
+                | (WlPalgState::Trained, WlPalgState::Trained)
+                | (WlPalgState::Evaluating(_), WlPalgState::Evaluating(_))
         )
     }
 }
@@ -44,7 +44,7 @@ impl PartialEq for WLPALGState {
 /// Configuration for the WL-PALG model. This is the format used by the trainer
 /// to create the model.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct WLPALGConfig {
+pub struct WlPalgConfig {
     pub model: RankerName,
     #[serde(alias = "successor-generator")]
     pub successor_generator: SuccessorGeneratorName,
@@ -53,31 +53,31 @@ pub struct WLPALGConfig {
 }
 
 #[derive(Debug)]
-pub struct WLPALGModel {
+pub struct WlPalgModel {
     model: Ranker<'static>,
     /// See also [`crate::learning::models::wl_ilg::WLILGModel::successor_generator_name`].
     successor_generator_name: SuccessorGeneratorName,
-    wl: WLKernel,
+    wl: WlKernel,
     validate: bool,
-    state: WLPALGState,
+    state: WlPalgState,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct SerialisableWLPALGModel {
+struct SerialisableWlPalgModel {
     successor_generator_name: SuccessorGeneratorName,
-    wl: WLKernel,
+    wl: WlKernel,
     validate: bool,
-    state: WLPALGState,
+    state: WlPalgState,
 }
 
-impl WLPALGModel {
-    pub fn new(py: Python<'static>, config: WLPALGConfig) -> Self {
+impl WlPalgModel {
+    pub fn new(py: Python<'static>, config: WlPalgConfig) -> Self {
         Self {
             model: Ranker::new(py, config.model),
-            wl: WLKernel::new(config.iters),
+            wl: WlKernel::new(config.iters),
             successor_generator_name: config.successor_generator,
             validate: config.validate,
-            state: WLPALGState::New,
+            state: WlPalgState::New,
         }
     }
 
@@ -96,7 +96,7 @@ impl WLPALGModel {
             let plan = &instance.plan;
             let task = &instance.task;
             let successor_generator = self.successor_generator_name.create(task);
-            let compiler = PALGCompiler::new(task);
+            let compiler = PalgCompiler::new(task);
 
             let mut cur_state = task.initial_state.clone();
             for chosen_action in plan.steps() {
@@ -217,9 +217,9 @@ impl WLPALGModel {
     }
 }
 
-impl Train for WLPALGModel {
+impl Train for WlPalgModel {
     fn train(&mut self, training_data: &[TrainingInstance]) {
-        assert_eq!(self.state, WLPALGState::New);
+        assert_eq!(self.state, WlPalgState::New);
         if self.validate {
             info!("splitting training data into training and validation sets");
         } else {
@@ -289,16 +289,16 @@ impl Train for WLPALGModel {
             );
         }
 
-        self.state = WLPALGState::Trained;
+        self.state = WlPalgState::Trained;
     }
 
     fn save(&self, path: &Path) {
-        assert_eq!(self.state, WLPALGState::Trained);
+        assert_eq!(self.state, WlPalgState::Trained);
         let pickle_path = path.with_extension("pkl");
         self.model.pickle(&pickle_path);
 
         let ron_path = path.with_extension("ron");
-        let serialisable = SerialisableWLPALGModel {
+        let serialisable = SerialisableWlPalgModel {
             successor_generator_name: self.successor_generator_name,
             wl: self.wl.clone(),
             validate: self.validate,
@@ -313,24 +313,24 @@ impl Train for WLPALGModel {
     }
 }
 
-impl Evaluate for WLPALGModel {
+impl Evaluate for WlPalgModel {
     type EvaluatedType<'a> = (&'a DBState, &'a ActionSchema);
 
     fn set_evaluating_task(&mut self, task: &Task) {
         match &self.state {
-            WLPALGState::New => {
+            WlPalgState::New => {
                 panic!("Model not trained yet, cannot set evaluating task");
             }
-            WLPALGState::Trained => {
-                self.state = WLPALGState::Evaluating(Box::new(PALGCompiler::new(task)));
+            WlPalgState::Trained => {
+                self.state = WlPalgState::Evaluating(Box::new(PalgCompiler::new(task)));
             }
-            WLPALGState::Evaluating(_) => {}
+            WlPalgState::Evaluating(_) => {}
         }
     }
 
     fn evaluate(&mut self, &(state, action_schema): &Self::EvaluatedType<'_>) -> f64 {
         let compiler = match &self.state {
-            WLPALGState::Evaluating(compiler) => compiler,
+            WlPalgState::Evaluating(compiler) => compiler,
             _ => panic!("Model not ready for evaluation"),
         };
         let graph = compiler.compile(state, action_schema, &action_schema.clone().into());
@@ -342,7 +342,7 @@ impl Evaluate for WLPALGModel {
 
     fn evaluate_batch(&mut self, targets: &[Self::EvaluatedType<'_>]) -> Vec<f64> {
         let compiler = match &self.state {
-            WLPALGState::Evaluating(compiler) => compiler,
+            WlPalgState::Evaluating(compiler) => compiler,
             _ => panic!("Model not ready for evaluation"),
         };
         let graphs = targets
@@ -363,9 +363,9 @@ impl Evaluate for WLPALGModel {
 
         let ron_path = path.with_extension("ron");
         let file = std::fs::File::open(ron_path).expect("Failed to open model file");
-        let serialisable: SerialisableWLPALGModel =
+        let serialisable: SerialisableWlPalgModel =
             ron::de::from_reader(file).expect("Failed to deserialise model");
-        assert_eq!(serialisable.state, WLPALGState::Trained);
+        assert_eq!(serialisable.state, WlPalgState::Trained);
         Self {
             model,
             successor_generator_name: serialisable.successor_generator_name,

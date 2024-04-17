@@ -36,13 +36,13 @@ const NUM_ATOM_NODE_TYPES: i32 = 3;
 
 /// A compiler to convert states to ILGs.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ILGCompiler {
+pub struct IlgCompiler {
     base_graph: Option<CGraph>,
     object_index_to_node_index: HashMap<usize, NodeID>,
     goal_atom_to_node_index: HashMap<Atom, NodeID>,
 }
 
-impl ILGCompiler {
+impl IlgCompiler {
     pub fn new(task: &Task) -> Self {
         let mut compiler = Self {
             base_graph: None,
@@ -131,29 +131,29 @@ mod tests {
     #[test]
     fn get_atom_colour() {
         assert_eq!(
-            ILGCompiler::get_atom_colour(0, AtomNodeType::UnachievedGoal),
+            IlgCompiler::get_atom_colour(0, AtomNodeType::UnachievedGoal),
             1
         );
         assert_eq!(
-            ILGCompiler::get_atom_colour(0, AtomNodeType::AchievedGoal),
+            IlgCompiler::get_atom_colour(0, AtomNodeType::AchievedGoal),
             2
         );
-        assert_eq!(ILGCompiler::get_atom_colour(0, AtomNodeType::NonGoal), 3);
+        assert_eq!(IlgCompiler::get_atom_colour(0, AtomNodeType::NonGoal), 3);
         assert_eq!(
-            ILGCompiler::get_atom_colour(1, AtomNodeType::UnachievedGoal),
+            IlgCompiler::get_atom_colour(1, AtomNodeType::UnachievedGoal),
             4
         );
         assert_eq!(
-            ILGCompiler::get_atom_colour(1, AtomNodeType::AchievedGoal),
+            IlgCompiler::get_atom_colour(1, AtomNodeType::AchievedGoal),
             5
         );
-        assert_eq!(ILGCompiler::get_atom_colour(1, AtomNodeType::NonGoal), 6);
+        assert_eq!(IlgCompiler::get_atom_colour(1, AtomNodeType::NonGoal), 6);
     }
 
     #[test]
     fn blocksworld_precomilation() {
         let task = Task::from_text(BLOCKSWORLD_DOMAIN_TEXT, BLOCKSWORLD_PROBLEM13_TEXT);
-        let compiler = ILGCompiler::new(&task);
+        let compiler = IlgCompiler::new(&task);
 
         let graph = compiler.base_graph.as_ref().unwrap();
         assert_eq!(graph.node_count(), 9);
@@ -164,14 +164,14 @@ mod tests {
                 .contains_key(&object.index));
             assert_eq!(
                 graph[compiler.object_index_to_node_index[&object.index]],
-                ILGCompiler::get_object_colour(object)
+                IlgCompiler::get_object_colour(object)
             );
         }
         for atom in atoms_of_goal(&task.goal) {
             assert!(compiler.goal_atom_to_node_index.contains_key(&atom));
             assert_eq!(
                 graph[compiler.goal_atom_to_node_index[&atom]],
-                ILGCompiler::get_atom_colour(atom.0, AtomNodeType::UnachievedGoal)
+                IlgCompiler::get_atom_colour(atom.0, AtomNodeType::UnachievedGoal)
             );
         }
     }
@@ -179,7 +179,7 @@ mod tests {
     #[test]
     fn blocksworld_compilation() {
         let task = Task::from_text(BLOCKSWORLD_DOMAIN_TEXT, BLOCKSWORLD_PROBLEM13_TEXT);
-        let compiler = ILGCompiler::new(&task);
+        let compiler = IlgCompiler::new(&task);
 
         let graph = compiler.compile(&task.initial_state);
 
@@ -191,12 +191,12 @@ mod tests {
                 // (on b2 b3) is an achieved goal
                 assert_eq!(
                     graph[compiler.goal_atom_to_node_index[&atom]],
-                    ILGCompiler::get_atom_colour(atom.0, AtomNodeType::AchievedGoal)
+                    IlgCompiler::get_atom_colour(atom.0, AtomNodeType::AchievedGoal)
                 )
             } else {
                 assert_eq!(
                     graph[compiler.goal_atom_to_node_index[&atom]],
-                    ILGCompiler::get_atom_colour(atom.0, AtomNodeType::UnachievedGoal)
+                    IlgCompiler::get_atom_colour(atom.0, AtomNodeType::UnachievedGoal)
                 )
             }
         }
@@ -206,7 +206,7 @@ mod tests {
                 .contains_key(&object.index));
             assert_eq!(
                 graph[compiler.object_index_to_node_index[&object.index]],
-                ILGCompiler::get_object_colour(object)
+                IlgCompiler::get_object_colour(object)
             );
         }
     }

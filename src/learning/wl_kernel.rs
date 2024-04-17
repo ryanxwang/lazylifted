@@ -32,7 +32,7 @@ impl Neighbourhood {
 
 /// A Weisfeiler-Lehman kernel.
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct WLKernel {
+pub struct WlKernel {
     /// The mode of the kernel. In training mode, the kernel will create new
     /// hashes for unseen subgraphs. In evaluation mode, the kernel will
     /// record statistics about the kernel but will not create new hashes.
@@ -51,7 +51,7 @@ pub struct WLKernel {
     missed_colours: i32,
 }
 
-impl WLKernel {
+impl WlKernel {
     /// Create a new [`WLKernel`] in training mode. See [`WLKernel::iters`] for
     /// more information on the arguments.
     pub fn new(iters: usize) -> Self {
@@ -184,13 +184,13 @@ mod tests {
 
     #[test]
     fn starts_in_train_mode() {
-        let kernel = WLKernel::new(1);
+        let kernel = WlKernel::new(1);
         assert_eq!(kernel.mode, Mode::Train);
     }
 
     #[test]
     fn computing_histograms_changes_mode() {
-        let mut kernel = WLKernel::new(1);
+        let mut kernel = WlKernel::new(1);
         let graphs = vec![];
         kernel.compute_histograms(&graphs);
         assert_eq!(kernel.mode, Mode::Evaluate);
@@ -202,7 +202,7 @@ mod tests {
 
     #[test]
     fn computes_histograms_correctly() {
-        let mut kernel = WLKernel::new(1);
+        let mut kernel = WlKernel::new(1);
         let mut graph = CGraph::new_undirected();
         let node_0 = graph.add_node(0);
         let node_1 = graph.add_node(1);
@@ -221,7 +221,7 @@ mod tests {
 
     #[test]
     fn computes_x_correctly() {
-        let mut kernel = WLKernel::new(1);
+        let mut kernel = WlKernel::new(1);
         let mut graph = CGraph::new_undirected();
         let node_0 = graph.add_node(0);
         let node_1 = graph.add_node(1);

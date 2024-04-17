@@ -4,5 +4,5 @@ mod palg;
 mod utils;
 
 pub use graph::{CGraph, NodeID};
-pub use ilg::ILGCompiler;
-pub use palg::PALGCompiler;
+pub use ilg::IlgCompiler;
+pub use palg::PalgCompiler;

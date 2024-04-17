@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PALGCompiler {
+pub struct PalgCompiler {
     /// A precompiled graph for the task.
     base_graph: Option<CGraph>,
     /// A map from object index to node index in the base graph.
@@ -27,7 +27,7 @@ pub struct PALGCompiler {
     schema_pred_types: Vec<HashMap<SchemaPred, SchemaPredNodeType>>,
 }
 
-impl PALGCompiler {
+impl PalgCompiler {
     pub fn new(task: &Task) -> Self {
         let mut compiler = Self {
             base_graph: None,
@@ -299,7 +299,7 @@ mod tests {
     #[test]
     fn blocksworld_precomilation() {
         let task = Task::from_text(BLOCKSWORLD_DOMAIN_TEXT, BLOCKSWORLD_PROBLEM13_TEXT);
-        let compiler = PALGCompiler::new(&task);
+        let compiler = PalgCompiler::new(&task);
 
         // Check the graph
         let graph = compiler.base_graph.as_ref().unwrap();
@@ -311,14 +311,14 @@ mod tests {
                 .contains_key(&object.index));
             assert_eq!(
                 graph[compiler.object_index_to_node_index[&object.index]],
-                PALGCompiler::get_object_colour(object)
+                PalgCompiler::get_object_colour(object)
             );
         }
         for atom in atoms_of_goal(&task.goal) {
             assert!(compiler.goal_atom_to_node_index.contains_key(&atom));
             assert_eq!(
                 graph[compiler.goal_atom_to_node_index[&atom]],
-                PALGCompiler::get_atom_colour(AtomNodeType::UnachievedGoal)
+                PalgCompiler::get_atom_colour(AtomNodeType::UnachievedGoal)
             );
         }
         for pred in &task.predicates {
@@ -327,7 +327,7 @@ mod tests {
                 .contains_key(&pred.index));
             assert_eq!(
                 graph[compiler.predicate_index_to_node_index[&pred.index]],
-                PALGCompiler::get_predicate_colour(pred)
+                PalgCompiler::get_predicate_colour(pred)
             );
         }
 
@@ -342,7 +342,7 @@ mod tests {
     #[test]
     fn blocksworld_compilation() {
         let task = Task::from_text(BLOCKSWORLD_DOMAIN_TEXT, BLOCKSWORLD_PROBLEM13_TEXT);
-        let compiler = PALGCompiler::new(&task);
+        let compiler = PalgCompiler::new(&task);
 
         let state = task.initial_state.clone();
         let action_schema = task.action_schemas()[0].clone();
