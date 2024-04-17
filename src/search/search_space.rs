@@ -89,6 +89,10 @@ where
         }
     }
 
+    pub fn get_root_node(&self) -> &SearchNode<T> {
+        self.get_node(self.root_state_id)
+    }
+
     pub fn get_root_node_mut(&mut self) -> &mut SearchNode<T> {
         self.get_node_mut(self.root_state_id)
     }
