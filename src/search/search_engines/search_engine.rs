@@ -1,6 +1,6 @@
 use crate::search::{
     search_engines::{Bfs, Gbfs},
-    Action, Heuristic, SearchStatistics, SuccessorGenerator, Task,
+    Action, SearchProblem, Transition,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -17,13 +17,8 @@ pub enum SearchResult {
     TimeLimitExceeded,
 }
 
-pub trait SearchEngine {
-    fn search(
-        &mut self,
-        task: &Task,
-        generator: Box<dyn SuccessorGenerator>,
-        heuristic: Box<dyn Heuristic>,
-    ) -> (SearchResult, SearchStatistics);
+pub trait SearchEngine<S, T> {
+    fn search(&self, problem: Box<dyn SearchProblem<S, T>>) -> SearchResult;
 }
 
 #[derive(clap::ValueEnum, Debug, Clone, Copy)]
@@ -36,10 +31,11 @@ pub enum SearchEngineName {
 }
 
 impl SearchEngineName {
-    pub fn create(&self) -> Box<dyn SearchEngine> {
-        match self {
+    pub fn search<S, T: Transition>(&self, problem: Box<dyn SearchProblem<S, T>>) -> SearchResult {
+        let engine: Box<dyn SearchEngine<S, T>> = match self {
             SearchEngineName::BFS => Box::new(Bfs::new()),
             SearchEngineName::GBFS => Box::new(Gbfs::new()),
-        }
+        };
+        engine.search(problem)
     }
 }

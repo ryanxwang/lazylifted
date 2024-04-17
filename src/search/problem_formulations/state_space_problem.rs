@@ -5,6 +5,7 @@ use crate::search::{
 };
 use std::rc::Rc;
 
+#[derive(Debug)]
 pub struct StateSpaceProblem {
     task: Rc<Task>,
     statistics: SearchStatistics,
@@ -61,9 +62,10 @@ impl SearchProblem<SparsePackedState, Action> for StateSpaceProblem {
         };
         self.statistics.increment_expanded_nodes();
         let g_value = node.get_g();
+        let h_value = node.get_h();
+        self.statistics.register_heuristic_value(h_value);
 
         let state = self.packer.unpack(self.search_space.get_state(state_id));
-        // TODO register new best heuristic values
 
         let (new_states, new_ids, existing_ids) = {
             let mut new_states = Vec::new();
@@ -102,12 +104,14 @@ impl SearchProblem<SparsePackedState, Action> for StateSpaceProblem {
 
         let h_values = self.heuristic.evaluate_batch(&new_states, &self.task);
         for (child_node_id, h_value) in new_ids.iter().zip(h_values.into_iter()) {
+            self.statistics.increment_evaluated_nodes();
             let child_node = self.search_space.get_node_mut(*child_node_id);
             child_node.open(g_value + 1., h_value);
         }
         for child_node_id in existing_ids.iter() {
             let child_node = self.search_space.get_node_mut(*child_node_id);
             if g_value + 1. < child_node.get_g() {
+                self.statistics.increment_reopened_nodes();
                 child_node.open(g_value + 1., child_node.get_h());
             }
         }
@@ -118,5 +122,11 @@ impl SearchProblem<SparsePackedState, Action> for StateSpaceProblem {
         }
 
         child_nodes
+    }
+
+    fn extract_plan(&self, goal_id: StateId) -> Vec<Action> {
+        self.statistics.finalise_search();
+        self.search_space
+            .extract_plan(self.search_space.get_node(goal_id))
     }
 }

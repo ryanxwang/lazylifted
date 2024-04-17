@@ -8,6 +8,7 @@ use crate::search::{DBState, Heuristic, HeuristicValue, Task};
 use pyo3::Python;
 use std::path::Path;
 
+#[derive(Debug)]
 pub struct WLILGHeuristic {
     model: WLILGModel,
 }

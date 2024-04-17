@@ -1,12 +1,13 @@
 use clap::Parser;
 use lazylifted::search::{
     heuristics::HeuristicName,
+    problem_formulations::StateSpaceProblem,
     search_engines::{SearchEngineName, SearchResult},
     successor_generators::SuccessorGeneratorName,
     Task, Verbosity,
 };
 use pyo3::Python;
-use std::path::PathBuf;
+use std::{path::PathBuf, rc::Rc};
 
 #[derive(Parser)]
 #[command(version)]
@@ -77,21 +78,21 @@ fn main() {
     let task = Task::from_path(&args.domain, &args.problem);
 
     // Assume GIL is required
-    Python::with_gil(|_| plan(args, &task));
+    Python::with_gil(|_| plan(args, task));
 }
 
-fn plan(args: Args, task: &Task) {
-    let successor_generator = args.successor_generator_name.create(task);
+fn plan(args: Args, task: Task) {
+    let task = Rc::new(task);
+    let successor_generator = args.successor_generator_name.create(&task);
     let heuristic = args.heuristic_name.create(&args.saved_model);
-    let mut search_engine = args.search_engine_name.create();
+    let problem = StateSpaceProblem::new(Rc::clone(&task), successor_generator, heuristic);
 
-    let (result, mut statistics) = search_engine.search(task, successor_generator, heuristic);
-    statistics.finalise_search();
+    let result = args.search_engine_name.search(Box::new(problem));
     match result {
         SearchResult::Success(plan) => {
             println!("Plan found:");
             for action in &plan {
-                println!("{}", action.to_string(task));
+                println!("{}", action.to_string(&task));
             }
             println!("Plan length: {}", plan.len());
         }

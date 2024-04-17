@@ -2,11 +2,12 @@ use crate::search::heuristics::goal_counting::GoalCounting;
 use crate::search::heuristics::wl_ilg::WLILGHeuristic;
 use crate::search::{DBState, Task};
 use ordered_float::OrderedFloat;
+use std::fmt::Debug;
 use std::path::PathBuf;
 
 pub type HeuristicValue = OrderedFloat<f64>;
 
-pub trait Heuristic {
+pub trait Heuristic: Debug {
     /// Evaluate the given state with respect to the given task.
     fn evaluate(&mut self, state: &DBState, task: &Task) -> HeuristicValue;
 

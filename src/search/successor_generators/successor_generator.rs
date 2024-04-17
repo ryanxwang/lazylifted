@@ -3,8 +3,9 @@ use crate::search::{
     Action, ActionSchema, DBState, Task,
 };
 use serde::{Deserialize, Serialize};
+use std::fmt::Debug;
 
-pub trait SuccessorGenerator {
+pub trait SuccessorGenerator: Debug {
     fn get_applicable_actions(&self, state: &DBState, action: &ActionSchema) -> Vec<Action>;
 
     fn generate_successor(

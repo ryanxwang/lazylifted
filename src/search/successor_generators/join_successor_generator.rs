@@ -3,10 +3,12 @@ use crate::search::successor_generators::{
     JoinAlgorithm, PrecompiledActionData, SuccessorGenerator,
 };
 use crate::search::{Action, ActionSchema, DBState, SchemaAtom, Task};
+use std::fmt::Debug;
 
+#[derive(Debug)]
 pub struct JoinSuccessorGenerator<T>
 where
-    T: JoinAlgorithm,
+    T: JoinAlgorithm + Debug,
 {
     join_algorithm: T,
     action_data: Vec<PrecompiledActionData>,
@@ -14,7 +16,7 @@ where
 
 impl<T> JoinSuccessorGenerator<T>
 where
-    T: JoinAlgorithm,
+    T: JoinAlgorithm + Debug,
 {
     pub fn new(join_algorithm: T, task: &Task) -> Self {
         let action_data = task
@@ -32,7 +34,7 @@ where
 
 impl<T> SuccessorGenerator for JoinSuccessorGenerator<T>
 where
-    T: JoinAlgorithm,
+    T: JoinAlgorithm + Debug,
 {
     fn get_applicable_actions(&self, state: &DBState, action: &ActionSchema) -> Vec<Action> {
         if is_trivially_inapplicable(action, state) {

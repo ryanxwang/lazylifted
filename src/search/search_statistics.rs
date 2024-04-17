@@ -1,3 +1,5 @@
+use crate::search::HeuristicValue;
+use ordered_float::Float;
 use tracing::info;
 
 #[derive(Debug)]
@@ -12,10 +14,8 @@ pub struct SearchStatistics {
     reopened_nodes: i32,
     /// Number of applicable actions generated
     generated_actions: i32,
-    /// Number of preferred operator evaluations
-    preferred_operator_evaluations: i32,
-    /// Number of expanded nodes that were preferred by their parent
-    expanded_preferred_nodes: i32,
+    /// Best heuristic value found so far
+    best_heuristic_value: HeuristicValue,
     /// Time when the search started
     search_start_time: std::time::Instant,
     /// Time when the last log was printed, used for periodic logging
@@ -37,10 +37,16 @@ impl SearchStatistics {
             generated_nodes: 0,
             reopened_nodes: 0,
             generated_actions: 0,
-            preferred_operator_evaluations: 0,
-            expanded_preferred_nodes: 0,
+            best_heuristic_value: HeuristicValue::infinity(),
             search_start_time: std::time::Instant::now(),
             last_log_time: std::time::Instant::now(),
+        }
+    }
+
+    pub fn register_heuristic_value(&mut self, heuristic_value: HeuristicValue) {
+        if heuristic_value < self.best_heuristic_value {
+            self.best_heuristic_value = heuristic_value;
+            info!(best_heuristic_value = self.best_heuristic_value.into_inner());
         }
     }
 
@@ -69,36 +75,25 @@ impl SearchStatistics {
         self.log_if_needed();
     }
 
-    pub fn increment_preferred_operator_evaluations(&mut self) {
-        self.preferred_operator_evaluations += 1;
-        self.log_if_needed();
-    }
-
-    pub fn increment_expanded_preferred_nodes(&mut self) {
-        self.expanded_preferred_nodes += 1;
-        self.log_if_needed();
-    }
-
     fn log_if_needed(&mut self) {
         if self.last_log_time.elapsed().as_secs() > 10 {
+            self.last_log_time = std::time::Instant::now();
             self.log();
         }
     }
 
-    pub fn log(&mut self) {
-        self.last_log_time = std::time::Instant::now();
+    fn log(&self) {
         info!(
             expanded_nodes = self.expanded_nodes,
             evaluated_nodes = self.evaluated_nodes,
             generated_nodes = self.generated_nodes,
             reopened_nodes = self.reopened_nodes,
             generated_actions = self.generated_actions,
-            preferred_operator_evaluations = self.preferred_operator_evaluations,
-            expanded_preferred_nodes = self.expanded_preferred_nodes
+            best_heuristic_value = self.best_heuristic_value.into_inner(),
         );
     }
 
-    pub fn finalise_search(&mut self) {
+    pub fn finalise_search(&self) {
         info!("finalising search");
         self.log();
         info!(search_duration = self.search_start_time.elapsed().as_secs_f64());

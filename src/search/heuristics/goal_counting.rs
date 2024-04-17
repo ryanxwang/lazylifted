@@ -3,6 +3,7 @@ use crate::search::{
     DBState, GoalAtom, Task,
 };
 
+#[derive(Debug)]
 pub struct GoalCounting {}
 
 impl GoalCounting {

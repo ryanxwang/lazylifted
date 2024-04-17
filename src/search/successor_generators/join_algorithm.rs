@@ -4,6 +4,7 @@ use crate::search::database::{hash_join, Table};
 use crate::search::states::GroundAtom;
 use crate::search::{DBState, SchemaArgument, SchemaAtom};
 
+#[derive(Debug)]
 pub struct PrecompiledActionData {
     /// The index of the action schema in the task
     pub action_index: usize,
@@ -100,6 +101,7 @@ fn select_tuples(state: &DBState, atom: &SchemaAtom, constants: &[usize]) -> Vec
     tuples
 }
 
+#[derive(Debug)]
 pub struct NaiveJoinAlgorithm;
 
 impl NaiveJoinAlgorithm {

@@ -1,4 +1,4 @@
-use crate::search::{Action, SearchNode, Transition};
+use crate::search::{Action, PartialAction, SearchNode, Transition};
 use segvec::{Linear, SegVec};
 use std::{
     collections::HashMap,
@@ -19,6 +19,12 @@ impl StateId {
     }
 }
 
+impl Default for StateId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// [`NO_STATE`] is a special state id that should only be used to indicate that
 /// a node has no parent. We use this instead of an [`Option<StateId>`] to avoid
 /// the overhead of an [`Option`] type.
@@ -28,11 +34,8 @@ pub const NO_STATE: StateId = StateId(usize::MAX);
 /// during a search. Here state and state transitions are both abstract. That
 /// is, we only require the state to be hashable and the transition to satisfy
 /// the [`Transition`] trait.
-pub struct SearchSpace<S, T>
-where
-    S: Hash,
-    T: Transition,
-{
+#[derive(Debug)]
+pub struct SearchSpace<S: Hash, T: Transition> {
     root_state_id: StateId,
     nodes: SegVec<SearchNode<T>, Linear>,
     states: SegVec<S, Linear>,
@@ -40,11 +43,7 @@ where
     state_build_hasher: RandomState,
 }
 
-impl<S, T> SearchSpace<S, T>
-where
-    S: Hash,
-    T: Transition,
-{
+impl<S: Hash, T: Transition> SearchSpace<S, T> {
     pub fn new(initial_state: S) -> Self {
         let state_build_hasher = RandomState::new();
 
@@ -114,10 +113,7 @@ where
     }
 }
 
-impl<S> SearchSpace<S, Action>
-where
-    S: Hash,
-{
+impl<S: Hash> SearchSpace<S, Action> {
     pub fn extract_plan(&self, goal_node: &SearchNode<Action>) -> Vec<Action> {
         let mut plan = vec![];
         let mut current_node = goal_node;
@@ -127,5 +123,11 @@ where
         }
         plan.reverse();
         plan
+    }
+}
+
+impl<S: Hash> SearchSpace<S, PartialAction> {
+    pub fn extract_plan(&self, _goal_node: &SearchNode<PartialAction>) -> Vec<PartialAction> {
+        todo!("Implement this function")
     }
 }
