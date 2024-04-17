@@ -23,6 +23,8 @@ impl WLILGHeuristic {
 }
 
 impl Heuristic for WLILGHeuristic {
+    type Target = DBState;
+
     fn evaluate(&mut self, state: &DBState, task: &Task) -> HeuristicValue {
         self.model.set_evaluating_task(task);
         self.model.evaluate(state).into()

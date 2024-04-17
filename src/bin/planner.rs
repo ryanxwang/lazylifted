@@ -1,6 +1,6 @@
 use clap::Parser;
 use lazylifted::search::{
-    heuristics::HeuristicName,
+    heuristics::StateHeuristicNames,
     problem_formulations::StateSpaceProblem,
     search_engines::{SearchEngineName, SearchResult},
     successor_generators::SuccessorGeneratorName,
@@ -41,7 +41,7 @@ struct Args {
         long = "evaluator",
         id = "EVLUATOR"
     )]
-    heuristic_name: HeuristicName,
+    heuristic_name: StateHeuristicNames,
     #[arg(
         help = "The saved model (as a path) to use for the heuristic \
         evaluator, only needed for heuristics that require training.",

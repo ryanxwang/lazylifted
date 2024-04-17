@@ -1,7 +1,7 @@
 use crate::search::{
     states::{SparsePackedState, SparseStatePacker},
-    Action, Heuristic, SearchNode, SearchNodeStatus, SearchProblem, SearchSpace, SearchStatistics,
-    StateId, SuccessorGenerator, Task,
+    Action, DBState, Heuristic, SearchNode, SearchNodeStatus, SearchProblem, SearchSpace,
+    SearchStatistics, StateId, SuccessorGenerator, Task,
 };
 use std::rc::Rc;
 
@@ -12,7 +12,7 @@ pub struct StateSpaceProblem {
     packer: SparseStatePacker,
     generator: Box<dyn SuccessorGenerator>,
     search_space: SearchSpace<SparsePackedState, Action>,
-    heuristic: Box<dyn Heuristic>,
+    heuristic: Box<dyn Heuristic<Target = DBState>>,
 }
 
 impl StateSpaceProblem {
@@ -21,7 +21,7 @@ impl StateSpaceProblem {
     pub fn new(
         task: Rc<Task>,
         generator: Box<dyn SuccessorGenerator>,
-        mut heuristic: Box<dyn Heuristic>,
+        mut heuristic: Box<dyn Heuristic<Target = DBState>>,
     ) -> Self {
         let statistics = SearchStatistics::new();
         let packer = SparseStatePacker::new(&task);

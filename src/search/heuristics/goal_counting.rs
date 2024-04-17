@@ -13,6 +13,8 @@ impl GoalCounting {
 }
 
 impl Heuristic for GoalCounting {
+    type Target = DBState;
+
     fn evaluate(&mut self, state: &DBState, task: &Task) -> HeuristicValue {
         let mut unsatisfied_goal_count = 0;
         for goal_atom in &task.goal.atoms {
