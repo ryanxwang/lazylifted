@@ -12,9 +12,8 @@ Lazylifted is a domain-independent lifted PDDL planner utilising graph represent
 
 ## Installation
 
-Lazylifted is written in rust, and can be built with any recent version of
-cargo. The produced binaries (and any tests) will [dynamically link to a Python
-shared
+Lazylifted is written in rust, and can be built with `cargo build --release`.
+The produced binaries (and any tests) will [dynamically link to a Python shared
 library](https://pyo3.rs/v0.15.0/building_and_distribution.html#dynamically-embedding-the-python-interpreter),
 and the location it looks for can be configured by adding to the environment
 variables described in the [cargo
@@ -23,20 +22,6 @@ Running the following command should set this up for you on Unix systems.
 
 ```bash
 source ./scripts/setup_dynamic_library.sh
-```
-
-When developping in VS Code, it is useful to add the following to
-`settings.json` to allow the VS Code extensions to work properly (replacing
-`/opt/homebrew/anaconda3/lib` with the local folder containing the Python shared
-library).
-
-```json
-"rust-analyzer.cargo.extraEnv": {
-    "RUSTFLAGS": "-C link-args=-Wl,-rpath,/opt/homebrew/anaconda3/lib"
-},
-"rust-analyzer.runnables.extraEnv": {
-    "RUSTFLAGS": "-C link-args=-Wl,-rpath,/opt/homebrew/anaconda3/lib"
-},
 ```
 
 ## Usage
@@ -51,6 +36,27 @@ and
 
 ```bash
 ./planner --help
+```
+
+## Development
+
+When developping in VS Code, it is useful to add the following to
+`settings.json` to allow the VS Code extensions to work properly. The path
+`/opt/homebrew/anaconda3/lib` should be replaced with the local folder
+containing the Python shared library, and the environment variable
+`DYLD_FALLBACK_LIBRARY_PATH` should also be replaced the appropriate one for the
+OS.
+
+```json
+"rust-analyzer.cargo.extraEnv": {
+    "DYLD_FALLBACK_LIBRARY_PATH": "/opt/homebrew/anaconda3/lib"
+},
+"rust-analyzer.runnables.extraEnv": {
+    "DYLD_FALLBACK_LIBRARY_PATH": "/opt/homebrew/anaconda3/lib"
+},
+"lldb.launch.env": {
+    "DYLD_FALLBACK_LIBRARY_PATH": "/opt/homebrew/anaconda3/lib"
+},
 ```
 
 ## References
