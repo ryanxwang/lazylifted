@@ -1,6 +1,6 @@
 use crate::search::{
-    search_engines::{Bfs, Gbfs, InstrumentedGBFS},
-    Action, Heuristic, PreferredOperator, SearchStatistics, SuccessorGenerator, Task,
+    search_engines::{Bfs, Gbfs},
+    Action, Heuristic, SearchStatistics, SuccessorGenerator, Task,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -23,7 +23,6 @@ pub trait SearchEngine {
         task: &Task,
         generator: Box<dyn SuccessorGenerator>,
         heuristic: Box<dyn Heuristic>,
-        preferred_operators: Option<Box<dyn PreferredOperator>>,
     ) -> (SearchResult, SearchStatistics);
 }
 
@@ -34,10 +33,6 @@ pub enum SearchEngineName {
     BFS,
     #[clap(help = "Greedy best-first search")]
     GBFS,
-    #[clap(
-        help = "Greedy best-first search with some experimental instrumentation (requires preferred operators)"
-    )]
-    InstrumentedGBFS,
 }
 
 impl SearchEngineName {
@@ -45,7 +40,6 @@ impl SearchEngineName {
         match self {
             SearchEngineName::BFS => Box::new(Bfs::new()),
             SearchEngineName::GBFS => Box::new(Gbfs::new()),
-            SearchEngineName::InstrumentedGBFS => Box::new(InstrumentedGBFS::new()),
         }
     }
 }

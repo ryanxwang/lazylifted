@@ -1,7 +1,6 @@
 use clap::Parser;
 use lazylifted::search::{
     heuristics::HeuristicName,
-    preferred_operators::PreferredOperatorName,
     search_engines::{SearchEngineName, SearchResult},
     successor_generators::SuccessorGeneratorName,
     Task, Verbosity,
@@ -51,16 +50,6 @@ struct Args {
     )]
     saved_model: Option<PathBuf>,
     #[arg(
-        help = "The saved model (as a path) to use for the preferred operator \
-        provider. Only meaning if the search engine uses it. Will use the
-        WL-ALSG ranker to compute preferred operators so the model should be \
-        for WL-ALSG.",
-        short = 'p',
-        long = "preferred",
-        id = "PREFERRED"
-    )]
-    preferred_operator_model: Option<PathBuf>,
-    #[arg(
         value_enum,
         help = "The verbosity level",
         short = 'v',
@@ -95,12 +84,8 @@ fn plan(args: Args, task: &Task) {
     let successor_generator = args.successor_generator_name.create(task);
     let heuristic = args.heuristic_name.create(&args.saved_model);
     let mut search_engine = args.search_engine_name.create();
-    let preferred_operator = args
-        .preferred_operator_model
-        .map(|model| PreferredOperatorName::WLPALG.create(&model));
 
-    let (result, mut statistics) =
-        search_engine.search(task, successor_generator, heuristic, preferred_operator);
+    let (result, mut statistics) = search_engine.search(task, successor_generator, heuristic);
     statistics.finalise_search();
     match result {
         SearchResult::Success(plan) => {

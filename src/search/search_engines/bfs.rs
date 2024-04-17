@@ -5,8 +5,7 @@ use ordered_float::OrderedFloat;
 use crate::search::{
     search_engines::{SearchEngine, SearchResult},
     states::SparseStatePacker,
-    Heuristic, PreferredOperator, SearchNodeStatus, SearchSpace, SearchStatistics,
-    SuccessorGenerator, Task,
+    Heuristic, SearchNodeStatus, SearchSpace, SearchStatistics, SuccessorGenerator, Task,
 };
 use std::collections::VecDeque;
 
@@ -24,7 +23,6 @@ impl SearchEngine for Bfs {
         task: &Task,
         generator: Box<dyn SuccessorGenerator>,
         _heuristic: Box<dyn Heuristic>,
-        _preferred_operators: Option<Box<dyn PreferredOperator>>,
     ) -> (SearchResult, SearchStatistics) {
         let mut statistics = SearchStatistics::new();
         let packer = SparseStatePacker::new(task);
