@@ -23,7 +23,7 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'planner'",
+            "name": "Debug executable 'planner' for blocksworld",
             "cargo": {
                 "args": [
                     "build",
@@ -35,7 +35,15 @@
                     "kind": "bin"
                 }
             },
-            "args": [],
+            "args": [
+                "${workspaceFolder}/benchmarks/ipc23-learning/blocksworld/domain.pddl",
+                "${workspaceFolder}/benchmarks/ipc23-learning/blocksworld/training/easy/p01.pddl",
+                "partial-action-search",
+                "--heuristic",
+                "wl-palg",
+                "--model",
+                "${workspaceFolder}/trained_models/wl-palg-lambdamart-blocksworld",
+            ],
             "cwd": "${workspaceFolder}"
         },
         {

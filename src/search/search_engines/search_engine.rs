@@ -1,12 +1,12 @@
 use crate::search::{
     search_engines::{Bfs, Gbfs},
-    Action, SearchProblem, Transition,
+    Plan, SearchProblem, Transition,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SearchResult {
     /// The search was successful
-    Success(Vec<Action>),
+    Success(Plan),
     /// The search was provably unsolvable
     ProvablyUnsolvable,
     /// The search was unsolvable, but the search engine is also incomplete

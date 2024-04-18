@@ -7,8 +7,8 @@ use std::path::PathBuf;
 
 #[derive(Debug)]
 pub struct Task {
-    pub domain_name: Name,
-    pub problem_name: Name,
+    domain_name: Name,
+    problem_name: Name,
     pub types: Types,
     pub objects: Vec<Object>,
     pub goal: Goal,
@@ -131,6 +131,14 @@ impl Task {
         }
 
         objects_per_type
+    }
+
+    pub fn domain_name(&self) -> &Name {
+        &self.domain_name
+    }
+
+    pub fn problem_name(&self) -> &Name {
+        &self.problem_name
     }
 
     pub fn action_schemas(&self) -> &Vec<ActionSchema> {

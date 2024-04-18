@@ -1,12 +1,10 @@
-use crate::search::{Action, SearchNode, Transition};
+use crate::search::{Action, PartialActionDiff, Plan, SearchNode, Transition};
 use segvec::{Linear, SegVec};
 use std::{
     collections::HashMap,
     hash::{BuildHasher, Hash, RandomState},
     sync::atomic::AtomicUsize,
 };
-
-use super::PartialActionDiff;
 
 /// [`StateId`] are used to uniquely identify states in the search space.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -122,21 +120,21 @@ impl<S: Hash, T: Transition> SearchSpace<S, T> {
 }
 
 impl<S: Hash> SearchSpace<S, Action> {
-    pub fn extract_plan(&self, goal_node: &SearchNode<Action>) -> Vec<Action> {
-        let mut plan = vec![];
+    pub fn extract_plan(&self, goal_node: &SearchNode<Action>) -> Plan {
+        let mut steps = vec![];
         let mut current_node = goal_node;
         while NO_STATE != current_node.get_parent_id() {
-            plan.push(current_node.get_transition().clone());
+            steps.push(current_node.get_transition().clone());
             current_node = self.get_node(current_node.get_parent_id());
         }
-        plan.reverse();
-        plan
+        steps.reverse();
+        Plan::new(steps)
     }
 }
 
 impl<S: Hash> SearchSpace<S, PartialActionDiff> {
-    pub fn extract_plan(&self, goal_node: &SearchNode<PartialActionDiff>) -> Vec<Action> {
-        let mut plan = vec![];
+    pub fn extract_plan(&self, goal_node: &SearchNode<PartialActionDiff>) -> Plan {
+        let mut steps = vec![];
         let mut current_node = goal_node;
 
         while NO_STATE != current_node.get_parent_id() {
@@ -151,13 +149,13 @@ impl<S: Hash> SearchSpace<S, PartialActionDiff> {
             match current_node.get_transition() {
                 PartialActionDiff::Schema(schema_index) => {
                     let action = Action::new(*schema_index, instantiations);
-                    plan.push(action);
+                    steps.push(action);
                 }
                 _ => panic!("Invalid transition type"),
             }
             current_node = self.get_node(current_node.get_parent_id());
         }
-
-        plan
+        steps.reverse();
+        Plan::new(steps)
     }
 }

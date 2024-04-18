@@ -1,4 +1,4 @@
-use crate::search::{Action, SearchNode, StateId, Transition};
+use crate::search::{Plan, SearchNode, StateId, Transition};
 
 /// A [`SearchProblem`] is a problem formulation exposing the necessary
 /// information to the search algorithms. It allows framing the planning search
@@ -22,5 +22,5 @@ pub trait SearchProblem<S, T: Transition> {
     /// the search. This should be called only once. When this is called, final
     /// statistics logs are emitted. No further calls to
     /// [`SearchProblem::expand`] should be made.
-    fn extract_plan(&self, goal_id: StateId) -> Vec<Action>;
+    fn extract_plan(&self, goal_id: StateId) -> Plan;
 }

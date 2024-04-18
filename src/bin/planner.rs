@@ -20,6 +20,14 @@ struct Cli {
     #[arg(help = "The PDDL problem instance file")]
     problem: PathBuf,
     #[arg(
+        help = "The output plan file",
+        short = 'o',
+        long = "output",
+        id = "OUTPUT",
+        default_value = "<domain>_<problem>.plan"
+    )]
+    plan: PathBuf,
+    #[arg(
         value_enum,
         help = "The search engine to use",
         short = 'e',
@@ -139,10 +147,17 @@ fn plan(cli: Cli, task: Task) {
     match result {
         SearchResult::Success(plan) => {
             println!("Plan found:");
-            for action in &plan {
-                println!("{}", action.to_string(&task));
-            }
+            println!("{}", plan.to_string(&task));
             println!("Plan length: {}", plan.len());
+
+            let plan_path = if cli.plan == PathBuf::from("<domain>_<problem>.plan") {
+                let domain_name = task.domain_name();
+                let problem_name = task.problem_name();
+                PathBuf::from(format!("{}-{}.plan", domain_name, problem_name))
+            } else {
+                cli.plan
+            };
+            std::fs::write(plan_path, plan.to_string(&task)).expect("Failed to write plan file");
         }
         _ => {
             println!("No plan found: {:?}", result);

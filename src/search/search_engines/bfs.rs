@@ -2,7 +2,7 @@
 
 use crate::search::{
     search_engines::{SearchEngine, SearchResult},
-    SearchProblem, StateId, Transition,
+    Plan, SearchProblem, StateId, Transition,
 };
 use std::collections::VecDeque;
 
@@ -20,7 +20,7 @@ where
 {
     fn search(&self, mut problem: Box<dyn SearchProblem<S, T>>) -> SearchResult {
         if problem.is_goal(problem.initial_state().get_state_id()) {
-            return SearchResult::Success(vec![]);
+            return SearchResult::Success(Plan::empty());
         }
 
         let mut queue = VecDeque::new();

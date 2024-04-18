@@ -1,6 +1,6 @@
 use crate::search::{
     states::{SparsePackedState, SparseStatePacker},
-    Action, DBState, Heuristic, HeuristicValue, PartialAction, PartialActionDiff, SearchNode,
+    Action, DBState, Heuristic, HeuristicValue, PartialAction, PartialActionDiff, Plan, SearchNode,
     SearchNodeStatus, SearchProblem, SearchSpace, SearchStatistics, StateId, SuccessorGenerator,
     Task, NO_PARTIAL,
 };
@@ -209,7 +209,7 @@ impl SearchProblem<(SparsePackedState, PartialAction), PartialActionDiff> for Pa
         child_nodes
     }
 
-    fn extract_plan(&self, goal_id: StateId) -> Vec<Action> {
+    fn extract_plan(&self, goal_id: StateId) -> Plan {
         self.statistics.finalise_search();
         self.search_space
             .extract_plan(self.search_space.get_node(goal_id))

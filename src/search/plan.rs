@@ -5,14 +5,23 @@ use crate::parsed_types::{ActionName, Name};
 use crate::parsers::Parser;
 use crate::search::{Action, Task};
 use std::collections::HashMap;
+use std::ops::{Deref, DerefMut};
 use std::path::PathBuf;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Plan {
     steps: Vec<Action>,
 }
 
 impl Plan {
+    pub fn empty() -> Self {
+        Self { steps: vec![] }
+    }
+
+    pub fn new(steps: Vec<Action>) -> Self {
+        Self { steps }
+    }
+
     pub fn from_path(path: &PathBuf, task: &Task) -> Self {
         let contents = std::fs::read_to_string(path).expect("Failed to read plan file");
         Self::from_text(&contents, task)
@@ -71,6 +80,37 @@ impl Plan {
 
     pub fn is_empty(&self) -> bool {
         self.steps.is_empty()
+    }
+
+    pub fn to_string(&self, task: &Task) -> String {
+        self.steps
+            .iter()
+            .map(|action| action.to_string(task))
+            .collect::<Vec<String>>()
+            .join("\n")
+    }
+}
+
+impl IntoIterator for Plan {
+    type Item = Action;
+    type IntoIter = std::vec::IntoIter<Action>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.steps.into_iter()
+    }
+}
+
+impl Deref for Plan {
+    type Target = [Action];
+
+    fn deref(&self) -> &Self::Target {
+        &self.steps
+    }
+}
+
+impl DerefMut for Plan {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.steps
     }
 }
 
