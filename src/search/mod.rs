@@ -16,6 +16,7 @@ pub mod states;
 pub mod successor_generators;
 mod task;
 mod transition;
+mod validate;
 mod verbosity;
 
 pub use action::Action;
@@ -34,4 +35,5 @@ pub use states::DBState;
 pub use successor_generators::SuccessorGenerator;
 pub use task::Task;
 pub(crate) use transition::Transition;
+pub use validate::validate;
 pub use verbosity::Verbosity;
