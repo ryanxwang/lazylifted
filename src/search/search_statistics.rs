@@ -47,6 +47,8 @@ impl SearchStatistics {
         if heuristic_value < self.best_heuristic_value {
             self.best_heuristic_value = heuristic_value;
             info!(best_heuristic_value = self.best_heuristic_value.into_inner());
+            self.last_log_time = std::time::Instant::now();
+            self.log();
         }
     }
 

@@ -127,6 +127,11 @@ impl SearchProblem<(SparsePackedState, PartialAction), PartialActionDiff> for Pa
 
     fn is_goal(&self, state_id: StateId) -> bool {
         let (state, partial) = self.search_space.get_state(state_id);
+        if *partial == NO_PARTIAL {
+            let state = self.packer.unpack(state);
+            return self.task.goal.is_satisfied(&state);
+        }
+
         match Action::from_partial(partial, &self.task) {
             Some(action) => {
                 let schema = &self.task.action_schemas()[action.index];
@@ -190,12 +195,14 @@ impl SearchProblem<(SparsePackedState, PartialAction), PartialActionDiff> for Pa
         for child_node_id in existing_ids.iter() {
             let child_node = self.search_space.get_node_mut(*child_node_id);
             if g_value + 1. < child_node.get_g() {
+                self.statistics.increment_reopened_nodes();
                 child_node.open(g_value + 1., child_node.get_h());
             }
         }
 
         let mut child_nodes = Vec::with_capacity(new_ids.len());
         for child_node_id in new_ids.into_iter().chain(existing_ids.into_iter()) {
+            // for child_node_id in new_ids.into_iter() {
             child_nodes.push(self.search_space.get_node(child_node_id));
         }
 

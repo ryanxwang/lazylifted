@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
 pub trait SuccessorGenerator: Debug {
-    fn get_applicable_actions(&self, state: &DBState, action: &ActionSchema) -> Vec<Action>;
+    fn get_applicable_actions(&self, state: &DBState, action_schema: &ActionSchema) -> Vec<Action>;
 
     fn generate_successor(
         &self,
