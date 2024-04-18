@@ -12,7 +12,7 @@ pub struct StateSpaceProblem {
     packer: SparseStatePacker,
     generator: Box<dyn SuccessorGenerator>,
     search_space: SearchSpace<SparsePackedState, Action>,
-    heuristic: Box<dyn Heuristic<Target = DBState>>,
+    heuristic: Box<dyn Heuristic<DBState>>,
 }
 
 impl StateSpaceProblem {
@@ -21,14 +21,16 @@ impl StateSpaceProblem {
     pub fn new(
         task: Rc<Task>,
         generator: Box<dyn SuccessorGenerator>,
-        mut heuristic: Box<dyn Heuristic<Target = DBState>>,
+        mut heuristic: Box<dyn Heuristic<DBState>>,
     ) -> Self {
-        let statistics = SearchStatistics::new();
+        let mut statistics = SearchStatistics::new();
         let packer = SparseStatePacker::new(&task);
         let mut search_space = SearchSpace::new(packer.pack(&task.initial_state));
 
         let root_node = search_space.get_root_node_mut();
-        root_node.open((0.).into(), heuristic.evaluate(&task.initial_state, &task));
+        let initial_heuristic = heuristic.evaluate(&task.initial_state, &task);
+        statistics.register_heuristic_value(initial_heuristic);
+        root_node.open((0.).into(), initial_heuristic);
 
         Self {
             task,

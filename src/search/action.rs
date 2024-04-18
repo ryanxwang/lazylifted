@@ -1,4 +1,4 @@
-use crate::search::{Task, Transition};
+use crate::search::{PartialAction, Task, Transition};
 
 /// Action struct that represents an instantiated action schema.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -15,6 +15,18 @@ impl Action {
             index,
             instantiation,
         }
+    }
+
+    pub fn from_partial(partial: &PartialAction, task: &Task) -> Option<Self> {
+        let schema = &task.action_schemas()[partial.index()];
+        if partial.partial_instantiation().len() != schema.parameters().len() {
+            return None;
+        }
+
+        Some(Self {
+            index: partial.index(),
+            instantiation: partial.partial_instantiation().to_vec(),
+        })
     }
 
     pub fn to_string(&self, task: &Task) -> String {

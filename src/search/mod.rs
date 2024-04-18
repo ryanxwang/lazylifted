@@ -23,7 +23,7 @@ pub use action_schema::{ActionSchema, SchemaArgument, SchemaAtom, SchemaParamete
 pub use goal::{Goal, GoalAtom};
 pub use heuristics::{Heuristic, HeuristicValue};
 pub use object::Object;
-pub(crate) use partial_action::PartialAction;
+pub(crate) use partial_action::{PartialAction, PartialActionDiff, NO_PARTIAL};
 pub use plan::Plan;
 pub use predicate::Predicate;
 pub(crate) use problem_formulations::SearchProblem;

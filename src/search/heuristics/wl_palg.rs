@@ -16,9 +16,7 @@ impl WlPalgHeuristic {
     }
 }
 
-impl Heuristic for WlPalgHeuristic {
-    type Target = (DBState, PartialAction);
-
+impl Heuristic<(DBState, PartialAction)> for WlPalgHeuristic {
     fn evaluate(
         &mut self,
         (state, partial): &(DBState, PartialAction),

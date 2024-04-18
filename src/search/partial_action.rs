@@ -1,4 +1,4 @@
-use crate::search::{Action, ActionSchema, Transition};
+use crate::search::{Action, ActionSchema, Task, Transition};
 
 /// Struct that represents a partially instantiated action schema.
 /// [`PartialAction`] can be viewed as a representation of a set of actions, and
@@ -9,6 +9,13 @@ pub struct PartialAction {
     index: usize,
     partial_instantiation: Vec<usize>,
 }
+
+/// This should only be used as the action associated with the initial node of
+/// the search space.
+pub const NO_PARTIAL: PartialAction = PartialAction {
+    index: usize::MAX,
+    partial_instantiation: vec![],
+};
 
 impl PartialAction {
     pub fn new(index: usize, partial_instantiation: Vec<usize>) -> Self {
@@ -39,6 +46,10 @@ impl PartialAction {
         &self.partial_instantiation
     }
 
+    pub fn is_complete(&self, task: &Task) -> bool {
+        self.partial_instantiation.len() == task.action_schemas()[self.index].parameters().len()
+    }
+
     pub fn is_superset_of(&self, other: &PartialAction) -> bool {
         self.index == other.index
             && self
@@ -52,6 +63,15 @@ impl PartialAction {
 
     pub fn is_subset_of(&self, other: &PartialAction) -> bool {
         other.is_superset_of(self)
+    }
+
+    pub fn add_instantiation(&self, object_index: usize) -> Self {
+        let mut new_instantiation = self.partial_instantiation.clone();
+        new_instantiation.push(object_index);
+        Self {
+            index: self.index,
+            partial_instantiation: new_instantiation,
+        }
     }
 }
 
@@ -73,14 +93,19 @@ impl From<ActionSchema> for PartialAction {
     }
 }
 
-const NO_PARTIAL: PartialAction = PartialAction {
-    index: usize::MAX,
-    partial_instantiation: vec![],
-};
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Copy)]
+pub enum PartialActionDiff {
+    Schema(usize),
+    Instantiation(usize),
+}
 
-impl Transition for PartialAction {
+/// This should be used only as a placeholder for the parent action of the
+/// initial node
+const NO_PARTIAL_DIFF: PartialActionDiff = PartialActionDiff::Schema(usize::MAX);
+
+impl Transition for PartialActionDiff {
     fn no_transition() -> Self {
-        NO_PARTIAL
+        NO_PARTIAL_DIFF
     }
 }
 

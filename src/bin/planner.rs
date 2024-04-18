@@ -1,7 +1,7 @@
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use lazylifted::search::{
-    heuristics::StateHeuristicNames,
-    problem_formulations::StateSpaceProblem,
+    heuristics::{PartialActionHeuristicNames, StateHeuristicNames},
+    problem_formulations::{PartialActionProblem, StateSpaceProblem},
     search_engines::{SearchEngineName, SearchResult},
     successor_generators::SuccessorGeneratorName,
     Task, Verbosity,
@@ -12,17 +12,20 @@ use std::{path::PathBuf, rc::Rc};
 #[derive(Parser)]
 #[command(version)]
 /// Run the lazylifted planner.
-struct Args {
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
     #[arg(help = "The PDDL domain file")]
     domain: PathBuf,
     #[arg(help = "The PDDL problem instance file")]
     problem: PathBuf,
     #[arg(
         value_enum,
-        help = "The search algorithm to use",
-        short = 's',
-        long = "search",
-        id = "SEARCH"
+        help = "The search engine to use",
+        short = 'e',
+        long = "engine",
+        id = "ENGINE",
+        default_value_t = SearchEngineName::GBFS
     )]
     search_engine_name: SearchEngineName,
     #[arg(
@@ -36,22 +39,6 @@ struct Args {
     successor_generator_name: SuccessorGeneratorName,
     #[arg(
         value_enum,
-        help = "The heuristic evaluator to use",
-        short = 'e',
-        long = "evaluator",
-        id = "EVLUATOR"
-    )]
-    heuristic_name: StateHeuristicNames,
-    #[arg(
-        help = "The saved model (as a path) to use for the heuristic \
-        evaluator, only needed for heuristics that require training.",
-        short = 'm',
-        long = "model",
-        id = "MODEL"
-    )]
-    saved_model: Option<PathBuf>,
-    #[arg(
-        value_enum,
         help = "The verbosity level",
         short = 'v',
         long = "verbosity",
@@ -63,31 +50,92 @@ struct Args {
     colour: bool,
 }
 
-fn main() {
-    let args = Args::parse();
+#[derive(Subcommand)]
+enum Commands {
+    /// Run a state space search. This is the traditional search problem where
+    /// the search engine explores a state space, transitioning between states
+    /// via ground actions.
+    StateSpaceSearch {
+        #[arg(
+            value_enum,
+            help = "The heuristic evaluator to use",
+            long = "heuristic",
+            id = "HEURISTIC"
+        )]
+        heuristic_name: StateHeuristicNames,
+        #[arg(
+            help = "The saved model (as a path) to use for the heuristic \
+        evaluator, only needed for heuristics that require training.",
+            short = 'm',
+            long = "model",
+            id = "MODEL"
+        )]
+        saved_model: Option<PathBuf>,
+    },
+    /// Run a partial action search. This means the search engine explores a
+    /// graph of (state, partial action) pairs, transitioning between nodes
+    /// via gradually building up the partial action to a full action.
+    PartialActionSearch {
+        #[arg(
+            value_enum,
+            help = "The heuristic evaluator to use",
+            long = "heuristic",
+            id = "HEURISTIC"
+        )]
+        heuristic_name: PartialActionHeuristicNames,
+        #[arg(
+            help = "The saved model (as a path) to use for the heuristic \
+        evaluator, only needed for heuristics that require training.",
+            short = 'm',
+            long = "model",
+            id = "MODEL"
+        )]
+        saved_model: Option<PathBuf>,
+    },
+}
 
-    let level: tracing::Level = args.verbosity.into();
+fn main() {
+    let cli = Cli::parse();
+
+    let level: tracing::Level = cli.verbosity.into();
     tracing_subscriber::fmt()
         .with_max_level(level)
-        .with_ansi(args.colour)
+        .with_ansi(cli.colour)
         .with_line_number(true)
         .with_writer(std::io::stderr)
         .compact()
         .init();
 
-    let task = Task::from_path(&args.domain, &args.problem);
+    let task = Task::from_path(&cli.domain, &cli.problem);
 
     // Assume GIL is required
-    Python::with_gil(|_| plan(args, task));
+    Python::with_gil(|_| plan(cli, task));
 }
 
-fn plan(args: Args, task: Task) {
+fn plan(cli: Cli, task: Task) {
     let task = Rc::new(task);
-    let successor_generator = args.successor_generator_name.create(&task);
-    let heuristic = args.heuristic_name.create(&args.saved_model);
-    let problem = StateSpaceProblem::new(Rc::clone(&task), successor_generator, heuristic);
+    let successor_generator = cli.successor_generator_name.create(&task);
 
-    let result = args.search_engine_name.search(Box::new(problem));
+    let result = match cli.command {
+        Commands::StateSpaceSearch {
+            heuristic_name,
+            saved_model,
+        } => {
+            let heuristic = heuristic_name.create(&saved_model);
+            let problem = StateSpaceProblem::new(Rc::clone(&task), successor_generator, heuristic);
+            cli.search_engine_name.search(Box::new(problem))
+        }
+        Commands::PartialActionSearch {
+            heuristic_name,
+            saved_model,
+        } => {
+            let heuristic = heuristic_name.create(&saved_model);
+            let problem =
+                PartialActionProblem::new(Rc::clone(&task), successor_generator, heuristic);
+            cli.search_engine_name.search(Box::new(problem))
+        }
+    };
+
     match result {
         SearchResult::Success(plan) => {
             println!("Plan found:");

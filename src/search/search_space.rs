@@ -1,10 +1,12 @@
-use crate::search::{Action, PartialAction, SearchNode, Transition};
+use crate::search::{Action, SearchNode, Transition};
 use segvec::{Linear, SegVec};
 use std::{
     collections::HashMap,
     hash::{BuildHasher, Hash, RandomState},
     sync::atomic::AtomicUsize,
 };
+
+use super::PartialActionDiff;
 
 /// [`StateId`] are used to uniquely identify states in the search space.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -88,26 +90,32 @@ impl<S: Hash, T: Transition> SearchSpace<S, T> {
         }
     }
 
+    #[inline(always)]
     pub fn get_root_node(&self) -> &SearchNode<T> {
         self.get_node(self.root_state_id)
     }
 
+    #[inline(always)]
     pub fn get_root_node_mut(&mut self) -> &mut SearchNode<T> {
         self.get_node_mut(self.root_state_id)
     }
 
+    #[inline(always)]
     pub fn get_node(&self, state_id: StateId) -> &SearchNode<T> {
         self.nodes.get(state_id.0).expect("Invalid state id")
     }
 
+    #[inline(always)]
     pub fn get_node_mut(&mut self, state_id: StateId) -> &mut SearchNode<T> {
         self.nodes.get_mut(state_id.0).expect("Invalid state id")
     }
 
+    #[inline(always)]
     pub fn get_state(&self, state_id: StateId) -> &S {
         self.states.get(state_id.0).expect("Invalid state id")
     }
 
+    #[inline(always)]
     pub fn len(&self) -> usize {
         self.registered_states.len()
     }
@@ -126,8 +134,30 @@ impl<S: Hash> SearchSpace<S, Action> {
     }
 }
 
-impl<S: Hash> SearchSpace<S, PartialAction> {
-    pub fn extract_plan(&self, _goal_node: &SearchNode<PartialAction>) -> Vec<PartialAction> {
-        todo!("Implement this function")
+impl<S: Hash> SearchSpace<S, PartialActionDiff> {
+    pub fn extract_plan(&self, goal_node: &SearchNode<PartialActionDiff>) -> Vec<Action> {
+        let mut plan = vec![];
+        let mut current_node = goal_node;
+
+        while NO_STATE != current_node.get_parent_id() {
+            let mut instantiations = vec![];
+            while let PartialActionDiff::Instantiation(object_index) = current_node.get_transition()
+            {
+                instantiations.push(*object_index);
+                current_node = self.get_node(current_node.get_parent_id());
+            }
+            instantiations.reverse();
+
+            match current_node.get_transition() {
+                PartialActionDiff::Schema(schema_index) => {
+                    let action = Action::new(*schema_index, instantiations);
+                    plan.push(action);
+                }
+                _ => panic!("Invalid transition type"),
+            }
+            current_node = self.get_node(current_node.get_parent_id());
+        }
+
+        plan
     }
 }
