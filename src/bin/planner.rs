@@ -4,10 +4,11 @@ use lazylifted::search::{
     problem_formulations::{PartialActionProblem, StateSpaceProblem},
     search_engines::{SearchEngineName, SearchResult},
     successor_generators::SuccessorGeneratorName,
-    Task, Verbosity,
+    validate, Task, Verbosity,
 };
 use pyo3::Python;
 use std::{path::PathBuf, rc::Rc};
+use tracing::info;
 
 #[derive(Parser)]
 #[command(version)]
@@ -146,6 +147,17 @@ fn plan(cli: Cli, task: Task) {
 
     match result {
         SearchResult::Success(plan) => {
+            info!("validating plan");
+            let generator = cli.successor_generator_name.create(&task);
+            let validation_result = validate(&plan, &*generator, &task);
+            match validation_result {
+                Ok(()) => info!("plan is valid"),
+                Err(e) => {
+                    info!("plan is invalid: {}", e);
+                    return;
+                }
+            }
+
             println!("Plan found:");
             println!("{}", plan.to_string(&task));
             println!("Plan length: {}", plan.len());
