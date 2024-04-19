@@ -5,8 +5,9 @@ if [ $# -ne 2 ]; then
     exit 1
 fi
 
-planner_type=instrumented
+planner_type=wl_palg
 log_dir=planning_logs
+plan_dir=plans
 
 domain=$1
 instance=$2
@@ -21,13 +22,24 @@ then
 fi
 
 mkdir -p $log_dir
+mkdir -p $plan_dir/$domain
 
 source scripts/setup_dynamic_library.sh
-cargo build --release --bins
 
-cmd="./target/release/planner -s instrumented-gbfs -e wl-ilg -m trained_models/wl-ilg-gpr-$domain -p trained_models/wl-palg-lambdamart-$domain benchmarks/ipc23-learning/$domain/domain.pddl benchmarks/ipc23-learning/$domain/$instance.pddl"
+bin_location=""
+if [[ $(uname) == "Darwin" ]]; then
+    bin_location="./target/release/planner"
+elif [[ $(uname) == "Linux" ]]; then
+    bin_location="./planner"
+else
+    echo "Unsupported operating system"
+    exit 1
+fi
+
 instance_str=$(sed 's/\//_/g' <<< $instance)
+plan_file=$plan_dir/$domain/$instance_str.plan
+cmd="$bin_location benchmarks/ipc23-learning/$domain/domain.pddl benchmarks/ipc23-learning/$domain/$instance.pddl -o $plan_file partial-action-search --heuristic wl-palg --model trained_models/wl-palg-lambdamart-$domain "
 err_log=$log_dir/$planner_type-$domain-$instance_str.err
 out_log=$log_dir/$planner_type-$domain-$instance_str.out
-echo "Training model for domain $domain with command: $cmd, saving logs to $err_log and $out_log"
+echo "Planning for domain $domain with command: $cmd, saving logs to $err_log and $out_log and plan to $plan_file"
 $cmd 2> $err_log 1> $out_log

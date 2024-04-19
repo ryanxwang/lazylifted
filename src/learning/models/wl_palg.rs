@@ -258,7 +258,7 @@ impl Train for WlPalgModel {
             train_groups_count = train_groups.len(),
             val_groups_count = val_groups.len()
         );
-        info!("fitted model on training data");
+        info!("fitting model on training data");
         self.model.fit(&train_x, &train_y, &train_groups);
 
         let train_score_start = std::time::Instant::now();

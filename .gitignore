@@ -17,4 +17,5 @@ trained_models/
 training_logs/
 planning_logs/
 *.csv
+plans/
 *.plan

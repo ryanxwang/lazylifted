@@ -14,9 +14,9 @@ fi
 echo "Downloading release $tag to /tmp/$tag"
 gh release download $tag -p "*" --clobber -D /tmp/$tag
 
-gadi_dir="/home/444/rw8037/lazylifted"
+gadi_dir="/scratch/ar19/rw8037/lazylifted"
 
-echo "Removing existing $gadi_dir directory (if exists) on Gadi"
+echo "Removing existing $gadi_dir/$tag directory (if exists) on Gadi"
 ssh rw8037@gadi.nci.org.au "if [ -d $gadi_dir/$tag ]; then rm -r $gadi_dir/$tag; fi"
 
 echo "Uploading release $tag to Gadi at $gadi_dir"
