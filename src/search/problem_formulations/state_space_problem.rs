@@ -69,10 +69,10 @@ impl SearchProblem<SparsePackedState, Action> for StateSpaceProblem {
 
         let state = self.packer.unpack(self.search_space.get_state(state_id));
 
-        let (new_states, new_ids, existing_ids) = {
+        let (new_states, new_ids, ids_to_reopen) = {
             let mut new_states = Vec::new();
             let mut new_ids = Vec::new();
-            let mut existing_ids = Vec::new();
+            let mut ids_to_reopen = Vec::new();
 
             for action_schema in self.task.action_schemas() {
                 let actions = self.generator.get_applicable_actions(&state, action_schema);
@@ -83,7 +83,7 @@ impl SearchProblem<SparsePackedState, Action> for StateSpaceProblem {
                             .generate_successor(&state, action_schema, &action);
                     let child_node = self.search_space.insert_or_get_node(
                         self.packer.pack(&successor),
-                        action,
+                        action.clone(),
                         state_id,
                     );
 
@@ -95,12 +95,13 @@ impl SearchProblem<SparsePackedState, Action> for StateSpaceProblem {
                     if child_node.get_status() == SearchNodeStatus::New {
                         new_states.push(successor);
                         new_ids.push(child_node.get_state_id());
-                    } else {
-                        existing_ids.push(child_node.get_state_id());
+                    } else if g_value + 1. < child_node.get_g() {
+                        child_node.update_parent(state_id, action);
+                        ids_to_reopen.push(child_node.get_state_id());
                     }
                 }
             }
-            (new_states, new_ids, existing_ids)
+            (new_states, new_ids, ids_to_reopen)
         };
         self.statistics.increment_generated_nodes(new_ids.len());
 
@@ -110,16 +111,14 @@ impl SearchProblem<SparsePackedState, Action> for StateSpaceProblem {
             let child_node = self.search_space.get_node_mut(*child_node_id);
             child_node.open(g_value + 1., h_value);
         }
-        for child_node_id in existing_ids.iter() {
+        for child_node_id in ids_to_reopen.iter() {
             let child_node = self.search_space.get_node_mut(*child_node_id);
-            if g_value + 1. < child_node.get_g() {
-                self.statistics.increment_reopened_nodes();
-                child_node.open(g_value + 1., child_node.get_h());
-            }
+            self.statistics.increment_reopened_nodes();
+            child_node.open(g_value + 1., child_node.get_h());
         }
 
         let mut child_nodes: Vec<&SearchNode<Action>> = Vec::new();
-        for child_node_id in new_ids.into_iter().chain(existing_ids.into_iter()) {
+        for child_node_id in new_ids.into_iter().chain(ids_to_reopen.into_iter()) {
             child_nodes.push(self.search_space.get_node(child_node_id));
         }
 

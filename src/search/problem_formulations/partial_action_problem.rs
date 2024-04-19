@@ -56,8 +56,8 @@ impl PartialActionProblem {
                 self.generator.generate_successor(&state, schema, &action)
             };
 
-            // TODO this involves many redundant calls to generator actions,
-            // optimise by caching?
+            // This involves many redundant calls to generator actions,
+            // optimise by caching? Not sure how valuable this is though.
             self.task
                 .action_schemas()
                 .iter()
@@ -161,10 +161,10 @@ impl SearchProblem<(SparsePackedState, PartialAction), PartialActionDiff> for Pa
         self.statistics
             .increment_generated_actions(transitions.len());
 
-        let (new_states, new_ids, existing_ids) = {
+        let (new_states, new_ids, ids_to_reopen) = {
             let mut new_states = Vec::new();
             let mut new_ids = Vec::new();
-            let mut existing_ids = Vec::new();
+            let mut ids_to_reopen = Vec::new();
 
             for transition in transitions {
                 let (new_state, new_partial) = self.apply_transition(state_id, &transition);
@@ -177,12 +177,13 @@ impl SearchProblem<(SparsePackedState, PartialAction), PartialActionDiff> for Pa
                 if child_node.get_status() == SearchNodeStatus::New {
                     new_states.push((new_state, new_partial));
                     new_ids.push(child_node.get_state_id());
-                } else {
-                    existing_ids.push(child_node.get_state_id());
+                } else if g_value + 1. < child_node.get_g() {
+                    child_node.update_parent(state_id, transition);
+                    ids_to_reopen.push(child_node.get_state_id());
                 }
             }
 
-            (new_states, new_ids, existing_ids)
+            (new_states, new_ids, ids_to_reopen)
         };
         self.statistics.increment_generated_nodes(new_states.len());
 
@@ -192,17 +193,14 @@ impl SearchProblem<(SparsePackedState, PartialAction), PartialActionDiff> for Pa
             let child_node = self.search_space.get_node_mut(*child_node_id);
             child_node.open(g_value + 1., h_value);
         }
-        for child_node_id in existing_ids.iter() {
+        for child_node_id in ids_to_reopen.iter() {
             let child_node = self.search_space.get_node_mut(*child_node_id);
-            if g_value + 1. < child_node.get_g() {
-                self.statistics.increment_reopened_nodes();
-                child_node.open(g_value + 1., child_node.get_h());
-            }
+            self.statistics.increment_reopened_nodes();
+            child_node.open(g_value + 1., child_node.get_h());
         }
 
         let mut child_nodes = Vec::with_capacity(new_ids.len());
-        for child_node_id in new_ids.into_iter().chain(existing_ids.into_iter()) {
-            // for child_node_id in new_ids.into_iter() {
+        for child_node_id in new_ids.into_iter().chain(ids_to_reopen.into_iter()) {
             child_nodes.push(self.search_space.get_node(child_node_id));
         }
 

@@ -83,6 +83,11 @@ where
         self.is_preferred = is_preferred;
     }
 
+    pub fn update_parent(&mut self, parent_id: StateId, transition: T) {
+        self.parent_id = parent_id;
+        self.transition = transition;
+    }
+
     pub fn open(&mut self, g: HeuristicValue, h: HeuristicValue) {
         self.status = SearchNodeStatus::Open;
         self.g = g;
