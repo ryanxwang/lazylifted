@@ -37,14 +37,21 @@ pub enum StateHeuristicNames {
 }
 
 impl StateHeuristicNames {
-    pub fn create(&self, saved_model: &Option<PathBuf>) -> Box<dyn Heuristic<DBState>> {
+    pub fn create(
+        &self,
+        model_config: &Option<PathBuf>,
+        saved_model: &Option<PathBuf>,
+    ) -> Box<dyn Heuristic<DBState>> {
         match self {
             StateHeuristicNames::GoalCounting => Box::new(GoalCounting::new()),
             StateHeuristicNames::WlIlg => {
                 let saved_model = saved_model
                     .as_ref()
                     .expect("No saved model provided for WL-ILG heuristic");
-                Box::new(WlIlgHeuristic::load(saved_model))
+                let model_config = model_config
+                    .as_ref()
+                    .expect("No model config provided for WL-ILG heuristic");
+                Box::new(WlIlgHeuristic::load(model_config, saved_model))
             }
             StateHeuristicNames::ZeroHeuristic => Box::new(ZeroHeuristic::new()),
         }
@@ -66,6 +73,7 @@ pub enum PartialActionHeuristicNames {
 impl PartialActionHeuristicNames {
     pub fn create(
         &self,
+        config_path: &Option<PathBuf>,
         saved_model: &Option<PathBuf>,
     ) -> Box<dyn Heuristic<(DBState, PartialAction)>> {
         match self {
@@ -73,7 +81,10 @@ impl PartialActionHeuristicNames {
                 let saved_model = saved_model
                     .as_ref()
                     .expect("No saved model provided for WL-PALG heuristic");
-                Box::new(WlPalgHeuristic::load(saved_model))
+                let config_path = config_path
+                    .as_ref()
+                    .expect("No model config provided for WL-PALG heuristic");
+                Box::new(WlPalgHeuristic::load(config_path, saved_model))
             }
             PartialActionHeuristicNames::ZeroHeuristic => Box::new(ZeroHeuristic::new()),
         }

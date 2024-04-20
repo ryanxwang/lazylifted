@@ -1,8 +1,8 @@
 use crate::{
     learning::{
         graphs::{CGraph, PalgCompiler},
-        ml::{Ranker, RankerName},
-        models::{Evaluate, Train, TrainingInstance},
+        ml::{MlModel, MlModelName},
+        models::{Evaluate, ModelConfig, Train, TrainingInstance},
         WlKernel,
     },
     search::{successor_generators::SuccessorGeneratorName, Action, DBState, PartialAction, Task},
@@ -43,7 +43,7 @@ impl PartialEq for WlPalgState {
 /// to create the model.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct WlPalgConfig {
-    pub model: RankerName,
+    pub model: MlModelName,
     #[serde(alias = "successor-generator")]
     pub successor_generator: SuccessorGeneratorName,
     pub iters: usize,
@@ -52,7 +52,7 @@ pub struct WlPalgConfig {
 
 #[derive(Debug)]
 pub struct WlPalgModel {
-    model: Ranker<'static>,
+    model: MlModel<'static>,
     /// See also [`crate::learning::models::wl_ilg::WLILGModel::successor_generator_name`].
     successor_generator_name: SuccessorGeneratorName,
     wl: WlKernel,
@@ -71,7 +71,7 @@ struct SerialisableWlPalgModel {
 impl WlPalgModel {
     pub fn new(py: Python<'static>, config: WlPalgConfig) -> Self {
         Self {
-            model: Ranker::new(py, config.model),
+            model: MlModel::new(py, config.model),
             wl: WlKernel::new(config.iters),
             successor_generator_name: config.successor_generator,
             validate: config.validate,
@@ -79,11 +79,26 @@ impl WlPalgModel {
         }
     }
 
-    /// Prepare the data for training from some training instances. The resulting
-    /// tuple contains the compiled graphs, the target values (i.e. ranks), and
-    /// the groups of the training instances. The groups are used to indicate
-    /// the size of each group of data in the other two vectors.
-    fn prepare_data(
+    /// Prepare the data for training from some training instances. The
+    /// resulting tuple contains the compiled graphs, the target values (i.e.
+    /// ranks), and the groups of the training instances. The groups are used to
+    /// indicate the size of each group of data in the other two vectors.
+    ///
+    /// The groups are generated in various ways to encode the relations that we
+    /// would like the model to learn.
+    ///
+    /// We would like the model to learn to prefer the chosen partial actions
+    /// over the other applicable partial actions. This is encoded by creating a
+    /// group for each partial action, where the group contains all the
+    /// applicable partial actions for the same action schemaa at the same
+    /// partial depth.
+    ///
+    /// We would also like the model to learn to prefer (state, partial) action
+    /// pairs that are closer to the goal. For any subsection s_i to s_{i+1} via
+    /// a_i and s_{i+1} to s_{i+2} via a_{i+1}, where a_i and a_{i+1} are
+    /// partials on the way to the next state, we add a group showing (s_i, a_i)
+    /// to be preferred over (s_{i+1}, a_{i+1}).
+    fn prepare_ranking_data(
         &self,
         training_data: &[TrainingInstance],
     ) -> (Vec<CGraph>, Vec<f64>, Vec<usize>) {
@@ -97,13 +112,9 @@ impl WlPalgModel {
             let compiler = PalgCompiler::new(task);
 
             let mut cur_state = task.initial_state.clone();
+            let mut prev_partials = Vec::new();
+            let mut prev_state = None;
             for chosen_action in plan.steps() {
-                let next_state = successor_generator.generate_successor(
-                    &cur_state,
-                    &task.action_schemas()[chosen_action.index],
-                    chosen_action,
-                );
-
                 let applicable_actions: Vec<Action> = task
                     .action_schemas()
                     .iter()
@@ -112,34 +123,11 @@ impl WlPalgModel {
                     })
                     .collect();
 
-                for partial_depth in 0..chosen_action.instantiation.len() {
+                // Groups to prefer the chosen partial action over its siblings
+                for partial_depth in 0..(chosen_action.instantiation.len() + 1) {
                     let chosen_partial = PartialAction::from_action(chosen_action, partial_depth);
-
-                    // The siblings are all applicable partial actions that have
-                    // the same prefix as the chosen partial action for depth
-                    // partial_depth - 1.
-                    let siblings: HashSet<PartialAction> = if partial_depth == 0 {
-                        applicable_actions
-                            .iter()
-                            .map(|action| PartialAction::from_action(action, 0))
-                            .collect()
-                    } else {
-                        applicable_actions
-                            .iter()
-                            .filter_map(|action| {
-                                if action.index != chosen_partial.index() {
-                                    return None;
-                                }
-
-                                let partial = PartialAction::from_action(action, partial_depth - 1);
-                                if partial.is_superset_of(&chosen_partial) {
-                                    Some(PartialAction::from_action(action, partial_depth))
-                                } else {
-                                    None
-                                }
-                            })
-                            .collect()
-                    };
+                    let siblings: HashSet<PartialAction> =
+                        Self::get_siblings(&applicable_actions, &chosen_partial, partial_depth);
                     assert!(siblings.contains(&chosen_partial));
                     if siblings.len() == 1 {
                         continue;
@@ -153,14 +141,136 @@ impl WlPalgModel {
                     }
                 }
 
-                cur_state = next_state;
+                // Groups to prefer more specific partials over more general ones
+                let partials: Vec<PartialAction> = (0..(chosen_action.instantiation.len() + 1))
+                    .map(|depth| PartialAction::from_action(chosen_action, depth))
+                    .collect();
+                for i in 0..partials.len() - 1 {
+                    graphs.push(compiler.compile(&cur_state, &partials[i]));
+                    ranks.push(0.0);
+                    graphs.push(compiler.compile(&cur_state, &partials[i + 1]));
+                    ranks.push(1.0);
+                    groups.push(2);
+                }
+
+                // Groups to prefer ones closer to the goal
+                if let Some(ref prev_state) = prev_state {
+                    for previous in &prev_partials {
+                        for current in &partials {
+                            graphs.push(compiler.compile(prev_state, previous));
+                            ranks.push(0.0);
+                            graphs.push(compiler.compile(&cur_state, current));
+                            ranks.push(1.0);
+                            groups.push(2);
+                        }
+                    }
+                }
+
+                prev_partials = partials;
+                let next_state = successor_generator.generate_successor(
+                    &cur_state,
+                    &task.action_schemas()[chosen_action.index],
+                    chosen_action,
+                );
+                (prev_state, cur_state) = (Some(cur_state), next_state);
             }
         }
 
         (graphs, ranks, groups)
     }
 
-    fn score(&self, histograms: &[HashMap<i32, usize>], ranks: &[f64], group: &Vec<usize>) -> f64 {
+    fn prepare_regression_data(
+        &self,
+        training_data: &[TrainingInstance],
+    ) -> (Vec<CGraph>, Vec<f64>) {
+        let mut graphs = Vec::new();
+        let mut labels = Vec::new();
+        for instance in training_data {
+            let plan = &instance.plan;
+            let task = &instance.task;
+            let compiler = PalgCompiler::new(task);
+            let successor_generator = self.successor_generator_name.create(task);
+
+            let total_partial_steps = plan
+                .steps()
+                .iter()
+                .map(|a| a.instantiation.len() + 1)
+                .sum::<usize>() as f64;
+
+            let mut cur_state = task.initial_state.clone();
+            let mut cur_partial_step = 0.;
+            for chosen_action in plan.steps() {
+                for partial_depth in 0..(chosen_action.instantiation.len() + 1) {
+                    cur_partial_step += 1.;
+                    let partial = PartialAction::from_action(chosen_action, partial_depth);
+                    graphs.push(compiler.compile(&cur_state, &partial));
+                    labels.push(total_partial_steps - cur_partial_step);
+                }
+
+                cur_state = successor_generator.generate_successor(
+                    &cur_state,
+                    &task.action_schemas()[chosen_action.index],
+                    chosen_action,
+                );
+            }
+        }
+
+        (graphs, labels)
+    }
+
+    fn prepare_data(
+        &self,
+        training_data: &[TrainingInstance],
+    ) -> (Vec<CGraph>, Vec<f64>, Option<Vec<usize>>) {
+        match self.model {
+            MlModel::Regressor(_) => {
+                let (graphs, labels) = self.prepare_regression_data(training_data);
+                (graphs, labels, None)
+            }
+            MlModel::Ranker(_) => {
+                let (graphs, ranks, groups) = self.prepare_ranking_data(training_data);
+                (graphs, ranks, Some(groups))
+            }
+        }
+    }
+
+    fn get_siblings(
+        applicable_actions: &[Action],
+        chosen_partial: &PartialAction,
+        partial_depth: usize,
+    ) -> HashSet<PartialAction> {
+        // The siblings are all applicable partial actions that have the same
+        // prefix as the chosen partial action for depth partial_depth - 1.
+        if partial_depth == 0 {
+            applicable_actions
+                .iter()
+                .map(|action| PartialAction::from_action(action, 0))
+                .collect()
+        } else {
+            applicable_actions
+                .iter()
+                .filter_map(|action| {
+                    if action.index != chosen_partial.index() {
+                        return None;
+                    }
+
+                    let partial = PartialAction::from_action(action, partial_depth - 1);
+                    if partial.is_superset_of(chosen_partial) {
+                        Some(PartialAction::from_action(action, partial_depth))
+                    } else {
+                        None
+                    }
+                })
+                .collect()
+        }
+    }
+
+    fn score_ranking(
+        &self,
+        histograms: &[HashMap<i32, usize>],
+        ranks: &[f64],
+        group: &Vec<usize>,
+    ) -> f64 {
         let mut start = 0;
         let mut correct_count = 0;
         for &group_size in group {
@@ -193,10 +303,25 @@ impl WlPalgModel {
         correct_count as f64 / group.len() as f64
     }
 
+    fn score_regression(
+        &self,
+        histograms: &[HashMap<i32, usize>],
+        expected_y: &Bound<'static, PyArray1<f64>>,
+    ) -> f64 {
+        let x = self.wl.compute_x(self.py(), histograms);
+        let predicted_y = self.model.predict(&x);
+        let mean_squared_error = PyModule::import_bound(self.py(), "sklearn.metrics")
+            .unwrap()
+            .getattr("mean_squared_error")
+            .unwrap();
+        let mse = mean_squared_error.call1((expected_y, predicted_y)).unwrap();
+        mse.extract().unwrap()
+    }
+
     /// Compute what a baseline model would score for the given training data.
     /// Here baseline means "randomly picking an applicable action schema for
     /// each state"
-    fn compute_baseline_score(&self, groups: &Vec<usize>) -> f64 {
+    fn compute_ranking_baseline(&self, groups: &Vec<usize>) -> f64 {
         let mut baseline = 0.;
         let mut total = 0.;
         for group in groups {
@@ -255,32 +380,62 @@ impl Train for WlPalgModel {
             train_y_shape = format!("{:?}", train_y.shape()),
             val_x_shape = format!("{:?}", val_x.shape()),
             val_y_shape = format!("{:?}", val_y.shape()),
-            train_groups_count = train_groups.len(),
-            val_groups_count = val_groups.len()
+            train_groups_count = match &train_groups {
+                Some(groups) => groups.len(),
+                None => 0,
+            },
+            val_groups_count = match &val_groups {
+                Some(groups) => groups.len(),
+                None => 0,
+            }
         );
         info!("fitting model on training data");
         self.model.fit(&train_x, &train_y, &train_groups);
 
         let train_score_start = std::time::Instant::now();
-        let train_score = self.score(&train_histograms, &train_ranks, &train_groups);
+        let train_score = match &self.model {
+            MlModel::Regressor(_) => self.score_regression(&train_histograms, &train_y),
+            MlModel::Ranker(_) => {
+                let train_groups = train_groups.as_ref().unwrap();
+                self.score_ranking(&train_histograms, &train_ranks, train_groups)
+            }
+        };
         info!(train_score_time = train_score_start.elapsed().as_secs_f64());
-        let train_baseline = self.compute_baseline_score(&train_groups);
-        info!(
-            train_score = train_score,
-            train_baseline = train_baseline,
-            train_improvement = train_score - train_baseline
-        );
+        match &self.model {
+            MlModel::Regressor(_) => info!(train_mse = train_score),
+            MlModel::Ranker(_) => {
+                let train_groups = train_groups.as_ref().unwrap();
+                let train_baseline = self.compute_ranking_baseline(train_groups);
+                info!(
+                    train_score = train_score,
+                    train_baseline = train_baseline,
+                    train_improvement = train_score - train_baseline
+                );
+            }
+        }
 
         if self.validate {
             let val_score_start = std::time::Instant::now();
-            let val_score = self.score(&val_histograms, &val_ranks, &val_groups);
+            let val_score = match &self.model {
+                MlModel::Regressor(_) => self.score_regression(&val_histograms, &val_y),
+                MlModel::Ranker(_) => {
+                    let val_groups = val_groups.as_ref().unwrap();
+                    self.score_ranking(&val_histograms, &val_ranks, val_groups)
+                }
+            };
             info!(val_score_time = val_score_start.elapsed().as_secs_f64());
-            let val_baseline = self.compute_baseline_score(&val_groups);
-            info!(
-                val_score = val_score,
-                val_baseline = val_baseline,
-                val_improvement = val_score - val_baseline
-            );
+            match &self.model {
+                MlModel::Regressor(_) => info!(val_mse = val_score),
+                MlModel::Ranker(_) => {
+                    let val_groups = val_groups.as_ref().unwrap();
+                    let val_baseline = self.compute_ranking_baseline(val_groups);
+                    info!(
+                        val_score = val_score,
+                        val_baseline = val_baseline,
+                        val_improvement = val_score - val_baseline
+                    );
+                }
+            }
         }
 
         self.state = WlPalgState::Trained;
@@ -349,9 +504,14 @@ impl Evaluate for WlPalgModel {
         y
     }
 
-    fn load(py: Python<'static>, path: &Path) -> Self {
+    fn load(py: Python<'static>, config_path: &Path, path: &Path) -> Self {
+        let config = match ModelConfig::from_path(config_path) {
+            ModelConfig::WLPALG(config) => config,
+            _ => panic!("Wrong model config, expecing WL-PALG"),
+        };
+
         let pickle_path = path.with_extension("pkl");
-        let model = Ranker::unpickle(py, &pickle_path);
+        let model = MlModel::unpickle(config.model, py, &pickle_path);
 
         let ron_path = path.with_extension("ron");
         let file = std::fs::File::open(ron_path).expect("Failed to open model file");

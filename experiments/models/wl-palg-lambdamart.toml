@@ -1,5 +1,7 @@
 [wl-palg]
-model = "lambdamart"
 successor-generator = "full-reducer"
 iters = 2
-validate = true
+validate = false
+
+[wl-palg.model]
+ranker-name = "lambdamart"

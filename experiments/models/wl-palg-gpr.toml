@@ -1,0 +1,7 @@
+[wl-palg]
+successor_generator = "full-reducer"
+iters = 2
+validate = false
+
+[wl-palg.model]
+regressor-name = "gpr"

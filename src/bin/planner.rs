@@ -47,6 +47,21 @@ struct Cli {
     )]
     successor_generator_name: SuccessorGeneratorName,
     #[arg(
+        help = "The saved model (as a path) to use for the heuristic \
+        evaluator, only needed for heuristics that require training.",
+        short = 'm',
+        long = "model",
+        id = "MODEL"
+    )]
+    saved_model: Option<PathBuf>,
+    #[arg(
+        help = "The saved model (as a path) to use for the heuristic \
+        evaluator, only needed for heuristics that require training.",
+        long = "model-config",
+        id = "MODEL_CONFIG"
+    )]
+    model_config: Option<PathBuf>,
+    #[arg(
         value_enum,
         help = "The verbosity level",
         short = 'v',
@@ -72,14 +87,6 @@ enum Commands {
             id = "HEURISTIC"
         )]
         heuristic_name: StateHeuristicNames,
-        #[arg(
-            help = "The saved model (as a path) to use for the heuristic \
-        evaluator, only needed for heuristics that require training.",
-            short = 'm',
-            long = "model",
-            id = "MODEL"
-        )]
-        saved_model: Option<PathBuf>,
     },
     /// Run a partial action search. This means the search engine explores a
     /// graph of (state, partial action) pairs, transitioning between nodes
@@ -92,14 +99,6 @@ enum Commands {
             id = "HEURISTIC"
         )]
         heuristic_name: PartialActionHeuristicNames,
-        #[arg(
-            help = "The saved model (as a path) to use for the heuristic \
-        evaluator, only needed for heuristics that require training.",
-            short = 'm',
-            long = "model",
-            id = "MODEL"
-        )]
-        saved_model: Option<PathBuf>,
     },
 }
 
@@ -126,19 +125,13 @@ fn plan(cli: Cli, task: Task) {
     let successor_generator = cli.successor_generator_name.create(&task);
 
     let result = match cli.command {
-        Commands::StateSpaceSearch {
-            heuristic_name,
-            saved_model,
-        } => {
-            let heuristic = heuristic_name.create(&saved_model);
+        Commands::StateSpaceSearch { heuristic_name } => {
+            let heuristic = heuristic_name.create(&cli.model_config, &cli.saved_model);
             let problem = StateSpaceProblem::new(Rc::clone(&task), successor_generator, heuristic);
             cli.search_engine_name.search(Box::new(problem))
         }
-        Commands::PartialActionSearch {
-            heuristic_name,
-            saved_model,
-        } => {
-            let heuristic = heuristic_name.create(&saved_model);
+        Commands::PartialActionSearch { heuristic_name } => {
+            let heuristic = heuristic_name.create(&cli.model_config, &cli.saved_model);
             let problem =
                 PartialActionProblem::new(Rc::clone(&task), successor_generator, heuristic);
             cli.search_engine_name.search(Box::new(problem))

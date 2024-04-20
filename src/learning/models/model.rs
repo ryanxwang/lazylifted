@@ -11,7 +11,6 @@ use std::path::Path;
 
 pub trait Evaluate {
     type EvaluatedType<'a>;
-
     /// Set the task that is currently being evaluated. After the first call to
     /// this method, further calls should be ignored.
     fn set_evaluating_task(&mut self, task: &Task);
@@ -20,7 +19,7 @@ pub trait Evaluate {
 
     fn evaluate_batch(&mut self, ts: &[Self::EvaluatedType<'_>]) -> Vec<f64>;
 
-    fn load(py: Python<'static>, path: &Path) -> Self;
+    fn load(py: Python<'static>, config: &Path, path: &Path) -> Self;
 }
 
 /// A training instance is a pair of a plan and a task.
@@ -51,17 +50,48 @@ pub enum ModelConfig {
 }
 
 impl ModelConfig {
-    pub fn load(path: &Path) -> Box<dyn Train> {
-        let py = unsafe { Python::assume_gil_acquired() };
+    pub fn from_path(path: &Path) -> Self {
         let config: ModelConfig = toml::from_str(
             &std::fs::read_to_string(path)
                 .expect("Failed to read model config, does the file exist?"),
         )
         .expect("Failed to parse model config, is it valid?");
+        config
+    }
 
-        match config {
+    pub fn trainer_from_config(self) -> Box<dyn Train> {
+        let py = unsafe { Python::assume_gil_acquired() };
+
+        match self {
             ModelConfig::WLILG(config) => Box::new(WlIlgModel::new(py, config)),
             ModelConfig::WLPALG(config) => Box::new(WlPalgModel::new(py, config)),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{
+        learning::{
+            ml::{MlModelName, RegressorName},
+            models::wl_palg::WlPalgConfig,
+        },
+        search::successor_generators::SuccessorGeneratorName,
+    };
+
+    // This is not really a test, but more a helper piece of code to make
+    // serialised model configs
+    #[test]
+    fn serialise_sample_model_config() {
+        let config = ModelConfig::WLPALG(WlPalgConfig {
+            model: MlModelName::RegressorName(RegressorName::GaussianProcessRegressor),
+            iters: 2,
+            validate: true,
+            successor_generator: SuccessorGeneratorName::FullReducer,
+        });
+
+        let serialised = toml::to_string(&config).unwrap();
+        println!("{}", serialised);
     }
 }

@@ -90,7 +90,7 @@ fn main() {
         // acquired. This is so that we don't have to pass the Python token
         // around everywhere. The catch is that we need to make sure everything
         // is actually wrapped in a `Python::with_gil` block.
-        let mut model = ModelConfig::load(&args.model_config);
+        let mut model = ModelConfig::from_path(&args.model_config).trainer_from_config();
         model.train(&training_data);
         model.save(&args.save_path);
     });

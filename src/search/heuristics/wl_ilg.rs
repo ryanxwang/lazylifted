@@ -15,9 +15,9 @@ pub struct WlIlgHeuristic {
 
 /// A heuristic that uses the WL-ILG model to evaluate states.
 impl WlIlgHeuristic {
-    pub fn load(saved_model: &Path) -> Self {
+    pub fn load(config: &Path, saved_model: &Path) -> Self {
         let py = unsafe { Python::assume_gil_acquired() };
-        let model = WlIlgModel::load(py, saved_model);
+        let model = WlIlgModel::load(py, config, saved_model);
         Self { model }
     }
 }
