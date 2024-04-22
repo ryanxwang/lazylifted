@@ -32,7 +32,7 @@ impl<'py> Ranker<'py> {
         &self,
         x: &Bound<'py, PyArray2<f64>>,
         y: &Bound<'py, PyArray1<f64>>,
-        group: &Vec<usize>,
+        group: &[usize],
     ) {
         let start_time = std::time::Instant::now();
         let py = self.model.py();

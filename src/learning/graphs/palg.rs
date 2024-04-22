@@ -36,7 +36,7 @@ impl PalgCompiler {
             predicate_index_to_node_index: HashMap::new(),
             goal_atom_to_node_index: HashMap::new(),
             schema_pred_types: vec![],
-            action_schemas: task.action_schemas().clone(),
+            action_schemas: task.action_schemas().to_owned(),
         };
 
         compiler.precompile(task);

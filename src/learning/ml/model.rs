@@ -30,7 +30,7 @@ impl<'py> MlModel<'py> {
         &self,
         x: &Bound<'py, PyArray2<f64>>,
         y: &Bound<'py, PyArray1<f64>>,
-        group: &Option<Vec<usize>>,
+        group: Option<&[usize]>,
     ) {
         match self {
             MlModel::Regressor(regressor) => regressor.fit(x, y),

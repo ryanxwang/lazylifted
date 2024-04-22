@@ -269,7 +269,7 @@ impl WlPalgModel {
         &self,
         histograms: &[HashMap<i32, usize>],
         ranks: &[f64],
-        group: &Vec<usize>,
+        group: &[usize],
     ) -> f64 {
         let mut start = 0;
         let mut correct_count = 0;
@@ -321,7 +321,7 @@ impl WlPalgModel {
     /// Compute what a baseline model would score for the given training data.
     /// Here baseline means "randomly picking an applicable action schema for
     /// each state"
-    fn compute_ranking_baseline(&self, groups: &Vec<usize>) -> f64 {
+    fn compute_ranking_baseline(&self, groups: &[usize]) -> f64 {
         let mut baseline = 0.;
         let mut total = 0.;
         for group in groups {
@@ -390,7 +390,7 @@ impl Train for WlPalgModel {
             }
         );
         info!("fitting model on training data");
-        self.model.fit(&train_x, &train_y, &train_groups);
+        self.model.fit(&train_x, &train_y, train_groups.as_deref());
 
         let train_score_start = std::time::Instant::now();
         let train_score = match &self.model {

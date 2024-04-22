@@ -141,8 +141,8 @@ impl Task {
         &self.problem_name
     }
 
-    pub fn action_schemas(&self) -> &Vec<ActionSchema> {
-        &self.action_schemas
+    pub fn action_schemas(&self) -> &[ActionSchema] {
+        self.action_schemas.as_slice()
     }
 }
 

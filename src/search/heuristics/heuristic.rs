@@ -5,7 +5,7 @@ use crate::search::heuristics::zero_heuristic::ZeroHeuristic;
 use crate::search::{DBState, PartialAction, Task};
 use ordered_float::OrderedFloat;
 use std::fmt::Debug;
-use std::path::PathBuf;
+use std::path::Path;
 
 pub type HeuristicValue = OrderedFloat<f64>;
 
@@ -39,8 +39,8 @@ pub enum StateHeuristicNames {
 impl StateHeuristicNames {
     pub fn create(
         &self,
-        model_config: &Option<PathBuf>,
-        saved_model: &Option<PathBuf>,
+        model_config: Option<&Path>,
+        saved_model: Option<&Path>,
     ) -> Box<dyn Heuristic<DBState>> {
         match self {
             StateHeuristicNames::GoalCounting => Box::new(GoalCounting::new()),
@@ -73,8 +73,8 @@ pub enum PartialActionHeuristicNames {
 impl PartialActionHeuristicNames {
     pub fn create(
         &self,
-        config_path: &Option<PathBuf>,
-        saved_model: &Option<PathBuf>,
+        config_path: Option<&Path>,
+        saved_model: Option<&Path>,
     ) -> Box<dyn Heuristic<(DBState, PartialAction)>> {
         match self {
             PartialActionHeuristicNames::WlPalg => {

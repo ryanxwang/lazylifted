@@ -42,8 +42,8 @@ impl PartialAction {
         self.index
     }
 
-    pub fn partial_instantiation(&self) -> &Vec<usize> {
-        &self.partial_instantiation
+    pub fn partial_instantiation(&self) -> &[usize] {
+        self.partial_instantiation.as_slice()
     }
 
     pub fn is_complete(&self, task: &Task) -> bool {

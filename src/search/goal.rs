@@ -52,7 +52,7 @@ pub struct Goal {
 impl Goal {
     /// Creates a new goal.
     pub fn new(
-        goal: &Vec<NameLiteral>,
+        goal: &[NameLiteral],
         predicate_table: &HashMap<Name, usize>,
         object_table: &HashMap<Name, usize>,
     ) -> Self {
@@ -76,12 +76,7 @@ impl Goal {
                     positive_nullary_goals.push(pred_index);
                 }
             } else {
-                atoms.push(GoalAtom::new(
-                    atom,
-                    negated,
-                    predicate_table,
-                    object_table,
-                ));
+                atoms.push(GoalAtom::new(atom, negated, predicate_table, object_table));
             }
         }
 
