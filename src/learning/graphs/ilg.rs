@@ -19,10 +19,12 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use strum::EnumCount;
+use strum_macros::EnumCount as EnumCountMacro;
 
 /// Colours of atom nodes in the ILG.
 #[allow(clippy::enum_variant_names)]
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, EnumCountMacro)]
 #[repr(i32)]
 enum AtomNodeType {
     /// The node is a goal node but not in the current state.
@@ -32,7 +34,6 @@ enum AtomNodeType {
     /// The node is not a goal node, but is in the current state.
     NonGoal,
 }
-const NUM_ATOM_NODE_TYPES: i32 = 3;
 
 /// A compiler to convert states to ILGs.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -60,7 +61,7 @@ impl IlgCompiler {
     }
 
     fn get_atom_colour(predicate_index: usize, atom_type: AtomNodeType) -> i32 {
-        1 + predicate_index as i32 * NUM_ATOM_NODE_TYPES + atom_type as i32
+        1 + predicate_index as i32 * AtomNodeType::COUNT as i32 + atom_type as i32
     }
 
     pub fn compile(&self, state: &DBState) -> CGraph {

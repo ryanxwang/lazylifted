@@ -11,6 +11,8 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use strum::EnumCount;
+use strum_macros::EnumCount as EnumCountMacro;
 
 #[derive(Debug, Clone)]
 pub struct PalgCompiler {
@@ -242,25 +244,25 @@ impl PalgCompiler {
     }
 
     fn get_schema_pred_colour(schema_pred_type: SchemaPredNodeType) -> i32 {
-        const START: i32 = 1 + NUM_ATOM_NODE_TYPES;
+        const START: i32 = 1 + AtomNodeType::COUNT as i32;
         START + schema_pred_type as i32
     }
 
     fn get_param_colour(_param: &SchemaParameter) -> i32 {
-        const START: i32 = 1 + NUM_ATOM_NODE_TYPES + NUM_SCHEMA_PRED_NODE_TYPES;
+        const START: i32 = 1 + AtomNodeType::COUNT as i32 + SchemaPredNodeType::COUNT as i32;
         START
     }
 
     // The number of predicate colours is dependent on the domain, so for
     // simplicity we leave it last
     fn get_predicate_colour(pred: &Predicate) -> i32 {
-        const START: i32 = 2 + NUM_ATOM_NODE_TYPES + NUM_SCHEMA_PRED_NODE_TYPES;
+        const START: i32 = 2 + AtomNodeType::COUNT as i32 + SchemaPredNodeType::COUNT as i32;
         START + pred.index as i32
     }
 }
 
 #[allow(clippy::enum_variant_names)]
-#[derive(Debug, Clone, PartialEq, Eq, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Copy, Serialize, Deserialize, EnumCountMacro)]
 #[repr(i32)]
 enum AtomNodeType {
     /// The node is a goal node but not in the current state.
@@ -270,9 +272,8 @@ enum AtomNodeType {
     /// The node is not a goal node, but is in the current state.
     NonGoal,
 }
-const NUM_ATOM_NODE_TYPES: i32 = 3;
 
-#[derive(Debug, Clone, PartialEq, Eq, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Copy, Serialize, Deserialize, EnumCountMacro)]
 #[repr(i32)]
 enum SchemaPredNodeType {
     // This schema predicate is in the add list.
@@ -286,7 +287,6 @@ enum SchemaPredNodeType {
     // the state by the precondition.
     RequiredFalse,
 }
-const NUM_SCHEMA_PRED_NODE_TYPES: i32 = 4;
 
 #[cfg(test)]
 mod tests {
