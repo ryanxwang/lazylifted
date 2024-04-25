@@ -2,7 +2,7 @@ use crate::search::states::GroundAtom;
 use crate::search::successor_generators::{
     JoinAlgorithm, PrecompiledActionData, SuccessorGenerator,
 };
-use crate::search::{Action, ActionSchema, DBState, SchemaAtom, Task};
+use crate::search::{Action, ActionSchema, AtomSchema, DBState, Negatable, Task};
 use std::fmt::Debug;
 
 #[derive(Debug)]
@@ -43,7 +43,7 @@ where
         if action.is_ground() {
             if is_ground_action_applicable(action, state) {
                 return vec![Action {
-                    index: action.index,
+                    index: action.index(),
                     instantiation: vec![],
                 }];
             } else {
@@ -53,7 +53,7 @@ where
 
         let instantiations = self
             .join_algorithm
-            .instantiate(state, &self.action_data[action.index]);
+            .instantiate(state, &self.action_data[action.index()]);
 
         if instantiations.tuples.is_empty() {
             return vec![];
@@ -78,7 +78,7 @@ where
                     ordered_tuple[free_var_indices[i]] = tuple[map_indices_to_position[i]];
                 }
                 Action {
-                    index: action.index,
+                    index: action.index(),
                     instantiation: ordered_tuple,
                 }
             })
@@ -92,13 +92,15 @@ where
         action: &Action,
     ) -> DBState {
         let mut new_state = state.clone();
-        for i in 0..action_schema.positive_nullary_effects().len() {
-            if action_schema.positive_nullary_effect(i) {
-                new_state.nullary_atoms[i] = true;
+
+        for effect in action_schema.effects() {
+            if !effect.is_nullary() {
+                // dealt later
+                continue;
             }
-            if action_schema.negative_nullary_effect(i) {
-                new_state.nullary_atoms[i] = false;
-            }
+
+            let index = effect.predicate_index();
+            new_state.nullary_atoms[index] = !effect.is_negated();
         }
 
         debug_assert!(action_schema
@@ -109,6 +111,9 @@ where
 
         if action_schema.is_ground() {
             for effect in action_schema.effects() {
+                if effect.is_nullary() {
+                    continue;
+                }
                 let atom = effect
                     .arguments()
                     .iter()
@@ -130,6 +135,9 @@ where
             }
         } else {
             for effect in action_schema.effects() {
+                if effect.is_nullary() {
+                    continue;
+                }
                 let atom = instantiate_effect(effect, action);
                 if effect.is_negated() {
                     new_state.relations[effect.predicate_index()]
@@ -161,7 +169,7 @@ fn precompile_action_data(action_schema: &ActionSchema) -> PrecompiledActionData
         .collect();
 
     PrecompiledActionData {
-        action_index: action_schema.index,
+        action_index: action_schema.index(),
         is_ground: action_schema.is_ground(),
         relevant_precondition_atoms,
     }
@@ -191,21 +199,24 @@ fn is_ground_action_applicable(action: &ActionSchema, state: &DBState) -> bool {
 }
 
 fn is_trivially_inapplicable(action: &ActionSchema, state: &DBState) -> bool {
-    let positive_precond = action.positive_nullary_preconditions();
-    let negative_precond = action.negative_nullary_preconditions();
-    let nullary_atoms = &state.nullary_atoms;
-    for i in 0..positive_precond.len() {
-        if positive_precond[i] && !nullary_atoms[i] {
+    for precond in action.preconditions() {
+        if !precond.is_nullary() {
+            continue;
+        }
+
+        let index = precond.predicate_index();
+        if precond.is_negated() && state.nullary_atoms[index] {
             return true;
         }
-        if negative_precond[i] && nullary_atoms[i] {
+        if !precond.is_negated() && !state.nullary_atoms[index] {
             return true;
         }
     }
+
     false
 }
 
-fn instantiate_effect(effect: &SchemaAtom, action: &Action) -> GroundAtom {
+fn instantiate_effect(effect: &Negatable<AtomSchema>, action: &Action) -> GroundAtom {
     effect
         .arguments()
         .iter()

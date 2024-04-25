@@ -1,8 +1,11 @@
 mod action;
 mod action_schema;
+mod atom;
+mod atom_schema;
 pub mod database;
 mod goal;
 pub mod heuristics;
+mod negatable;
 mod object;
 mod partial_action;
 mod plan;
@@ -20,9 +23,12 @@ mod validate;
 mod verbosity;
 
 pub use action::Action;
-pub use action_schema::{ActionSchema, SchemaArgument, SchemaAtom, SchemaParameter};
-pub use goal::{Goal, GoalAtom};
+pub use action_schema::{ActionSchema, SchemaParameter};
+pub use atom::Atom;
+pub use atom_schema::{AtomSchema, SchemaArgument};
+pub use goal::Goal;
 pub use heuristics::{Heuristic, HeuristicValue};
+pub use negatable::Negatable;
 pub use object::Object;
 pub(crate) use partial_action::{PartialAction, PartialActionDiff, NO_PARTIAL};
 pub use plan::Plan;

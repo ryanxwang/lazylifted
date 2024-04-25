@@ -1,26 +1,25 @@
-use crate::search::{Action, ActionSchema, Task, Transition};
+use crate::search::{Action, ActionSchema, AtomSchema, Negatable, Task, Transition};
 
 /// Struct that represents a partially instantiated action schema.
 /// [`PartialAction`] can be viewed as a representation of a set of actions, and
 /// hence induce the natural subset relation.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PartialAction {
-    /// The action schema index.
-    index: usize,
+    schema_index: usize,
     partial_instantiation: Vec<usize>,
 }
 
 /// This should only be used as the action associated with the initial node of
 /// the search space.
 pub const NO_PARTIAL: PartialAction = PartialAction {
-    index: usize::MAX,
+    schema_index: usize::MAX,
     partial_instantiation: vec![],
 };
 
 impl PartialAction {
     pub fn new(index: usize, partial_instantiation: Vec<usize>) -> Self {
         Self {
-            index,
+            schema_index: index,
             partial_instantiation,
         }
     }
@@ -28,7 +27,7 @@ impl PartialAction {
     pub fn from_action(action: &Action, partial_depth: usize) -> Self {
         assert!(partial_depth <= action.instantiation.len());
         Self {
-            index: action.index,
+            schema_index: action.index,
             partial_instantiation: action
                 .instantiation
                 .iter()
@@ -38,20 +37,23 @@ impl PartialAction {
         }
     }
 
-    pub fn index(&self) -> usize {
-        self.index
+    #[inline(always)]
+    pub fn schema_index(&self) -> usize {
+        self.schema_index
     }
 
+    #[inline(always)]
     pub fn partial_instantiation(&self) -> &[usize] {
         self.partial_instantiation.as_slice()
     }
 
     pub fn is_complete(&self, task: &Task) -> bool {
-        self.partial_instantiation.len() == task.action_schemas()[self.index].parameters().len()
+        self.partial_instantiation.len()
+            == task.action_schemas()[self.schema_index].parameters().len()
     }
 
     pub fn is_superset_of(&self, other: &PartialAction) -> bool {
-        self.index == other.index
+        self.schema_index == other.schema_index
             && self
                 .partial_instantiation
                 .iter()
@@ -69,16 +71,20 @@ impl PartialAction {
         let mut new_instantiation = self.partial_instantiation.clone();
         new_instantiation.push(object_index);
         Self {
-            index: self.index,
+            schema_index: self.schema_index,
             partial_instantiation: new_instantiation,
         }
+    }
+
+    pub fn partial_effects(&self, _schema: &ActionSchema) -> Vec<Negatable<AtomSchema>> {
+        todo!("Implement partial_effects")
     }
 }
 
 impl From<Action> for PartialAction {
     fn from(action: Action) -> Self {
         Self {
-            index: action.index,
+            schema_index: action.index,
             partial_instantiation: action.instantiation,
         }
     }
@@ -87,7 +93,7 @@ impl From<Action> for PartialAction {
 impl From<ActionSchema> for PartialAction {
     fn from(action_schema: ActionSchema) -> Self {
         Self {
-            index: action_schema.index,
+            schema_index: action_schema.index(),
             partial_instantiation: vec![],
         }
     }
@@ -119,22 +125,22 @@ mod tests {
 
         // depth 0
         let partial_action = PartialAction::from_action(&action, 0);
-        assert_eq!(partial_action.index(), 0);
+        assert_eq!(partial_action.schema_index(), 0);
         assert_eq!(*partial_action.partial_instantiation(), vec![]);
 
         // depth 1
         let partial_action = PartialAction::from_action(&action, 1);
-        assert_eq!(partial_action.index(), 0);
+        assert_eq!(partial_action.schema_index(), 0);
         assert_eq!(*partial_action.partial_instantiation(), vec![1]);
 
         // depth 2
         let partial_action = PartialAction::from_action(&action, 2);
-        assert_eq!(partial_action.index(), 0);
+        assert_eq!(partial_action.schema_index(), 0);
         assert_eq!(*partial_action.partial_instantiation(), vec![1, 2]);
 
         // depth 3
         let partial_action = PartialAction::from_action(&action, 3);
-        assert_eq!(partial_action.index(), 0);
+        assert_eq!(partial_action.schema_index(), 0);
         assert_eq!(*partial_action.partial_instantiation(), vec![1, 2, 3]);
     }
 

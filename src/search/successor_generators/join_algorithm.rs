@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use crate::search::database::{hash_join, Table};
 use crate::search::states::GroundAtom;
-use crate::search::{DBState, SchemaArgument, SchemaAtom};
+use crate::search::{AtomSchema, DBState, Negatable, SchemaArgument};
 
 #[derive(Debug)]
 pub struct PrecompiledActionData {
@@ -10,7 +10,7 @@ pub struct PrecompiledActionData {
     pub action_index: usize,
     /// Whether the action is ground (i.e. has no variables)
     pub is_ground: bool,
-    pub relevant_precondition_atoms: Vec<SchemaAtom>,
+    pub relevant_precondition_atoms: Vec<Negatable<AtomSchema>>,
 }
 
 pub trait JoinAlgorithm {
@@ -61,7 +61,7 @@ pub trait JoinAlgorithm {
 }
 
 fn get_indices_and_constants_in_precondition(
-    atom: &SchemaAtom,
+    atom: &Negatable<AtomSchema>,
     indices: &mut Vec<i32>,
     constants: &mut Vec<usize>,
 ) {
@@ -81,7 +81,11 @@ fn get_indices_and_constants_in_precondition(
 
 /// Select only the tuples that match the constants of a partially grouneded
 /// precondition.
-fn select_tuples(state: &DBState, atom: &SchemaAtom, constants: &[usize]) -> Vec<GroundAtom> {
+fn select_tuples(
+    state: &DBState,
+    atom: &Negatable<AtomSchema>,
+    constants: &[usize],
+) -> Vec<GroundAtom> {
     let mut tuples = Vec::new();
 
     for tuple in &state.relations[atom.predicate_index()].tuples {

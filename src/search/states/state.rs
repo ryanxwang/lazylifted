@@ -6,12 +6,12 @@
 //!
 //! The implementation is based on that of powerlifted.
 
+use crate::parsed_types::{Literal, Name};
+use crate::search::{Atom, Negatable};
 use std::{
     collections::{BTreeSet, HashMap},
     fmt::{self, Display, Formatter},
 };
-
-use crate::parsed_types::{Literal, Name};
 
 /// A ground atom is a vector of object indices. It only makes sense in the
 /// context of a specific predicate, see [`Relation`].
@@ -74,16 +74,50 @@ impl DBState {
             } else {
                 let mut args = Vec::with_capacity(atom.values().len());
                 for arg in atom.values() {
-                    args.push(
-                        *object_table.get(arg).unwrap_or_else(|| panic!("Object {} not found in object table {:?}",
-                                arg, object_table)),
-                    );
+                    args.push(*object_table.get(arg).unwrap_or_else(|| {
+                        panic!(
+                            "Object {} not found in object table {:?}",
+                            arg, object_table
+                        )
+                    }));
                 }
                 state.insert_tuple_in_relation(args, predicate_symbol);
             }
         }
 
         state
+    }
+
+    pub fn satisfied(&self, atom: &Negatable<Atom>) -> bool {
+        let goal_predicate = atom.predicate_index();
+        let in_state = if atom.arguments().is_empty() {
+            self.nullary_atoms[goal_predicate]
+        } else {
+            let relations = &self.relations[goal_predicate];
+            debug_assert!(relations.predicate_symbol == goal_predicate);
+            relations.tuples.contains(atom.arguments())
+        };
+
+        in_state != atom.is_negated()
+    }
+
+    pub fn atoms(&self) -> Vec<Atom> {
+        let mut atoms = vec![];
+
+        for relation in &self.relations {
+            let pred = relation.predicate_symbol;
+            for tuple in &relation.tuples {
+                atoms.push(Atom::new(pred, tuple.clone()));
+            }
+        }
+
+        for (i, &nullary) in self.nullary_atoms.iter().enumerate() {
+            if nullary {
+                atoms.push(Atom::new(i, vec![]));
+            }
+        }
+
+        atoms
     }
 }
 
@@ -101,5 +135,25 @@ impl Display for DBState {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        search::Task,
+        test_utils::{BLOCKSWORLD_DOMAIN_TEXT, BLOCKSWORLD_PROBLEM13_TEXT},
+    };
+
+    use super::*;
+
+    #[test]
+    fn test_satisfied() {
+        let task = Task::from_text(BLOCKSWORLD_DOMAIN_TEXT, BLOCKSWORLD_PROBLEM13_TEXT);
+
+        let on_b1_b2 = Negatable::Positive(Atom::new(4, vec![0, 1]));
+        let not_on_b1_b2 = Negatable::Negative(on_b1_b2.underlying().clone());
+        assert!(task.initial_state.satisfied(&on_b1_b2));
+        assert!(!task.initial_state.satisfied(&not_on_b1_b2));
     }
 }

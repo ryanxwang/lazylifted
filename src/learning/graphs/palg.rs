@@ -1,12 +1,9 @@
 //! The Partial Action Learning Graph
 use crate::{
-    learning::graphs::{
-        utils::{atoms_of_goal, atoms_of_state, Atom, SchemaPred},
-        CGraph, NodeID,
-    },
+    learning::graphs::{utils::SchemaPred, CGraph, NodeID},
     search::{
-        ActionSchema, DBState, Object, PartialAction, Predicate, SchemaArgument, SchemaParameter,
-        Task,
+        ActionSchema, Atom, DBState, Negatable, Object, PartialAction, Predicate, SchemaArgument,
+        SchemaParameter, Task,
     },
 };
 use serde::{Deserialize, Serialize};
@@ -47,14 +44,14 @@ impl PalgCompiler {
     }
 
     pub fn compile(&self, state: &DBState, partial_action: &PartialAction) -> CGraph {
-        let action_schema = &self.action_schemas[partial_action.index()];
+        let action_schema = &self.action_schemas[partial_action.schema_index()];
         let mut graph = self
             .base_graph
             .as_ref()
             .expect("Must precompile before compiling")
             .clone();
 
-        for atom in atoms_of_state(state) {
+        for atom in state.atoms() {
             match self.goal_atom_to_node_index.get(&atom) {
                 Some(&node_id) => {
                     graph[node_id] = Self::get_atom_colour(AtomNodeType::AchievedGoal);
@@ -74,7 +71,8 @@ impl PalgCompiler {
                 .insert(param.index(), graph.add_node(Self::get_param_colour(param)));
         }
 
-        for (schema_pred, &schema_pred_type) in self.schema_pred_types[action_schema.index].iter() {
+        for (schema_pred, &schema_pred_type) in self.schema_pred_types[action_schema.index()].iter()
+        {
             let node_id = graph.add_node(Self::get_schema_pred_colour(schema_pred_type));
 
             for (arg_index, &arg) in schema_pred.arguments().iter().enumerate() {
@@ -131,9 +129,13 @@ impl PalgCompiler {
         }
 
         // Goal atoms
-        for atom in atoms_of_goal(&task.goal) {
-            let node_id = self.create_atom_node(&mut graph, &atom, AtomNodeType::UnachievedGoal);
-            self.goal_atom_to_node_index.insert(atom, node_id);
+        for atom in task.goal.atoms() {
+            let atom = match atom {
+                Negatable::Negative(_) => panic!("PALG does not support negative goal atoms"),
+                Negatable::Positive(atom) => atom,
+            };
+            let node_id = self.create_atom_node(&mut graph, atom, AtomNodeType::UnachievedGoal);
+            self.goal_atom_to_node_index.insert(atom.clone(), node_id);
         }
 
         self.base_graph = Some(graph);
@@ -158,26 +160,6 @@ impl PalgCompiler {
                 schema_pred_types.insert(schema_pred, SchemaPredNodeType::Added);
             }
         }
-        for pred_index in action_schema
-            .positive_nullary_effects()
-            .iter()
-            .enumerate()
-            .filter_map(|(index, &pred)| if pred { Some(index) } else { None })
-        {
-            let schema_pred: SchemaPred = SchemaPred::new(pred_index, vec![]);
-            assert!(!schema_pred_types.contains_key(&schema_pred));
-            schema_pred_types.insert(schema_pred, SchemaPredNodeType::Added);
-        }
-        for pred_index in action_schema
-            .negative_nullary_effects()
-            .iter()
-            .enumerate()
-            .filter_map(|(index, &pred)| if pred { Some(index) } else { None })
-        {
-            let schema_pred: SchemaPred = SchemaPred::new(pred_index, vec![]);
-            assert!(!schema_pred_types.contains_key(&schema_pred));
-            schema_pred_types.insert(schema_pred, SchemaPredNodeType::Removed);
-        }
 
         // Then deal with the preconditions not in the effects
         for schema_atom in action_schema.preconditions() {
@@ -194,60 +176,40 @@ impl PalgCompiler {
                 schema_pred_types.insert(schema_pred, SchemaPredNodeType::RequiredTrue);
             }
         }
-        for pred_index in action_schema
-            .positive_nullary_preconditions()
-            .iter()
-            .enumerate()
-            .filter_map(|(index, &pred)| if pred { Some(index) } else { None })
-        {
-            let schema_pred: SchemaPred = SchemaPred::new(pred_index, vec![]);
-            if schema_pred_types.contains_key(&schema_pred) {
-                continue;
-            }
-            schema_pred_types.insert(schema_pred, SchemaPredNodeType::RequiredTrue);
-        }
-        for pred_index in action_schema
-            .negative_nullary_preconditions()
-            .iter()
-            .enumerate()
-            .filter_map(|(index, &pred)| if pred { Some(index) } else { None })
-        {
-            let schema_pred: SchemaPred = SchemaPred::new(pred_index, vec![]);
-            if schema_pred_types.contains_key(&schema_pred) {
-                continue;
-            }
-            schema_pred_types.insert(schema_pred, SchemaPredNodeType::RequiredFalse);
-        }
 
         schema_pred_types
     }
 
     fn create_atom_node(&self, graph: &mut CGraph, atom: &Atom, atom_type: AtomNodeType) -> NodeID {
         let node_id = graph.add_node(Self::get_atom_colour(atom_type));
-        for (arg_index, object_index) in atom.1.iter().enumerate() {
+        for (arg_index, object_index) in atom.arguments().iter().enumerate() {
             let object_node_id = self.object_index_to_node_index[&object_index];
             graph.add_edge(node_id, object_node_id, arg_index as i32);
         }
-        let pred_node_id = self.predicate_index_to_node_index[&atom.0];
+        let pred_node_id = self.predicate_index_to_node_index[&atom.predicate_index()];
         graph.add_edge(node_id, pred_node_id, 0);
         node_id
     }
 
+    #[inline(always)]
     fn get_object_colour(_object: &Object) -> i32 {
         const START: i32 = 0;
         START
     }
 
+    #[inline(always)]
     fn get_atom_colour(atom_type: AtomNodeType) -> i32 {
         const START: i32 = 1;
         START + atom_type as i32
     }
 
+    #[inline(always)]
     fn get_schema_pred_colour(schema_pred_type: SchemaPredNodeType) -> i32 {
         const START: i32 = 1 + AtomNodeType::COUNT as i32;
         START + schema_pred_type as i32
     }
 
+    #[inline(always)]
     fn get_param_colour(_param: &SchemaParameter) -> i32 {
         const START: i32 = 1 + AtomNodeType::COUNT as i32 + SchemaPredNodeType::COUNT as i32;
         START
@@ -311,8 +273,12 @@ mod tests {
                 PalgCompiler::get_object_colour(object)
             );
         }
-        for atom in atoms_of_goal(&task.goal) {
-            assert!(compiler.goal_atom_to_node_index.contains_key(&atom));
+        for atom in task.goal.atoms() {
+            let atom = match atom {
+                Negatable::Negative(_) => panic!("PALG does not support negative goal atoms"),
+                Negatable::Positive(atom) => atom,
+            };
+            assert!(compiler.goal_atom_to_node_index.contains_key(atom));
             assert_eq!(
                 graph[compiler.goal_atom_to_node_index[&atom]],
                 PalgCompiler::get_atom_colour(AtomNodeType::UnachievedGoal)

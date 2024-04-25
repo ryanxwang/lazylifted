@@ -66,13 +66,13 @@ impl PartialActionProblem {
                     if actions.is_empty() {
                         None
                     } else {
-                        Some(PartialActionDiff::Schema(schema.index))
+                        Some(PartialActionDiff::Schema(schema.index()))
                     }
                 })
                 .collect()
         } else {
             let state = self.packer.unpack(state);
-            let schema = &self.task.action_schemas()[partial.index()];
+            let schema = &self.task.action_schemas()[partial.schema_index()];
             let actions = self.generator.get_applicable_actions(&state, schema);
 
             let current_depth = partial.partial_instantiation().len();

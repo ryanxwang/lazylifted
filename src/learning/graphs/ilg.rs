@@ -9,13 +9,10 @@
 //! This implementation is based on the original Python implementation at
 //! https://github.com/DillonZChen/goose
 
-use crate::search::{Object, Task};
+use crate::search::{Negatable, Object, Task};
 use crate::{
-    learning::graphs::{
-        utils::{atoms_of_goal, atoms_of_state, Atom},
-        CGraph, NodeID,
-    },
-    search::DBState,
+    learning::graphs::{CGraph, NodeID},
+    search::{Atom, DBState},
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -56,12 +53,16 @@ impl IlgCompiler {
         compiler
     }
 
+    #[inline(always)]
     fn get_object_colour(_object: &Object) -> i32 {
-        0
+        const START: i32 = 0;
+        START
     }
 
+    #[inline(always)]
     fn get_atom_colour(predicate_index: usize, atom_type: AtomNodeType) -> i32 {
-        1 + predicate_index as i32 * AtomNodeType::COUNT as i32 + atom_type as i32
+        const START: i32 = 1;
+        START + predicate_index as i32 * AtomNodeType::COUNT as i32 + atom_type as i32
     }
 
     pub fn compile(&self, state: &DBState) -> CGraph {
@@ -71,16 +72,18 @@ impl IlgCompiler {
             .expect("Must precompile before compiling")
             .clone();
 
-        let atoms = atoms_of_state(state);
-        for atom in atoms {
+        for atom in state.atoms() {
             match self.goal_atom_to_node_index.get(&atom) {
                 Some(node_id) => {
-                    graph[*node_id] = Self::get_atom_colour(atom.0, AtomNodeType::AchievedGoal)
+                    graph[*node_id] =
+                        Self::get_atom_colour(atom.predicate_index(), AtomNodeType::AchievedGoal)
                 }
                 None => {
-                    let node_id =
-                        graph.add_node(Self::get_atom_colour(atom.0, AtomNodeType::NonGoal));
-                    for (arg_index, object_index) in atom.1.iter().enumerate() {
+                    let node_id = graph.add_node(Self::get_atom_colour(
+                        atom.predicate_index(),
+                        AtomNodeType::NonGoal,
+                    ));
+                    for (arg_index, object_index) in atom.arguments().iter().enumerate() {
                         let object_node_id = self.object_index_to_node_index[&object_index];
                         graph.add_edge(node_id, object_node_id, arg_index as i32);
                     }
@@ -103,14 +106,21 @@ impl IlgCompiler {
             );
         }
 
-        for atom in atoms_of_goal(&task.goal) {
-            let node_id =
-                graph.add_node(Self::get_atom_colour(atom.0, AtomNodeType::UnachievedGoal));
-            for (arg_index, object_index) in atom.1.iter().enumerate() {
+        for atom in task.goal.atoms() {
+            let atom = match atom {
+                Negatable::Positive(atom) => atom,
+                Negatable::Negative(_) => panic!("Negative goal atoms are not supported in ILG"),
+            };
+
+            let node_id = graph.add_node(Self::get_atom_colour(
+                atom.predicate_index(),
+                AtomNodeType::UnachievedGoal,
+            ));
+            for (arg_index, object_index) in atom.arguments().iter().enumerate() {
                 let object_node_id = self.object_index_to_node_index[&object_index];
                 graph.add_edge(node_id, object_node_id, arg_index as i32);
             }
-            self.goal_atom_to_node_index.insert(atom, node_id);
+            self.goal_atom_to_node_index.insert(atom.clone(), node_id);
         }
 
         self.base_graph = Some(graph);
@@ -168,12 +178,20 @@ mod tests {
                 IlgCompiler::get_object_colour(object)
             );
         }
-        for atom in atoms_of_goal(&task.goal) {
-            assert!(compiler.goal_atom_to_node_index.contains_key(&atom));
-            assert_eq!(
-                graph[compiler.goal_atom_to_node_index[&atom]],
-                IlgCompiler::get_atom_colour(atom.0, AtomNodeType::UnachievedGoal)
-            );
+        for atom in task.goal.atoms() {
+            match atom {
+                Negatable::Negative(_) => panic!("Negative goal atoms are not supported in ILG"),
+                Negatable::Positive(atom) => {
+                    assert!(compiler.goal_atom_to_node_index.contains_key(atom));
+                    assert_eq!(
+                        graph[compiler.goal_atom_to_node_index[&atom]],
+                        IlgCompiler::get_atom_colour(
+                            atom.predicate_index(),
+                            AtomNodeType::UnachievedGoal
+                        )
+                    );
+                }
+            }
         }
     }
 
@@ -186,18 +204,28 @@ mod tests {
 
         assert_eq!(graph.node_count(), 14);
         assert_eq!(graph.edge_count(), 14);
-        for atom in atoms_of_goal(&task.goal) {
-            assert!(compiler.goal_atom_to_node_index.contains_key(&atom));
-            if atom.0 == 4 && atom.1 == vec![1, 2] {
+        for atom in task.goal.atoms() {
+            let atom = match atom {
+                Negatable::Negative(_) => panic!("Negative goal atoms are not supported in ILG"),
+                Negatable::Positive(atom) => atom,
+            };
+            assert!(compiler.goal_atom_to_node_index.contains_key(atom));
+            if atom.predicate_index() == 4 && atom.arguments() == vec![1, 2] {
                 // (on b2 b3) is an achieved goal
                 assert_eq!(
                     graph[compiler.goal_atom_to_node_index[&atom]],
-                    IlgCompiler::get_atom_colour(atom.0, AtomNodeType::AchievedGoal)
+                    IlgCompiler::get_atom_colour(
+                        atom.predicate_index(),
+                        AtomNodeType::AchievedGoal
+                    )
                 )
             } else {
                 assert_eq!(
                     graph[compiler.goal_atom_to_node_index[&atom]],
-                    IlgCompiler::get_atom_colour(atom.0, AtomNodeType::UnachievedGoal)
+                    IlgCompiler::get_atom_colour(
+                        atom.predicate_index(),
+                        AtomNodeType::UnachievedGoal
+                    )
                 )
             }
         }

@@ -33,7 +33,7 @@ impl FullReducer {
 
             if hypergraph.hyperedges.len() <= 1 {
                 if !hypergraph.hyperedges.is_empty() {
-                    full_join_order[action_schema.index].push(0);
+                    full_join_order[action_schema.index()].push(0);
                 }
                 continue;
             }
@@ -67,9 +67,9 @@ impl FullReducer {
                         removed[i] = true;
                         let i_precond = hypergraph.edges_to_preconds[&i];
                         let j_precond = hypergraph.edges_to_preconds[&j];
-                        full_reducer_program[action_schema.index].push((i_precond, j_precond));
+                        full_reducer_program[action_schema.index()].push((i_precond, j_precond));
                         full_reducer_back.push((j_precond, i_precond));
-                        full_join_order[action_schema.index].push(i_precond);
+                        full_join_order[action_schema.index()].push(i_precond);
                         break;
                     }
                 }
@@ -80,15 +80,15 @@ impl FullReducer {
             }
 
             while let Some((i_precond, j_precond)) = full_reducer_back.pop() {
-                full_reducer_program[action_schema.index].push((i_precond, j_precond));
+                full_reducer_program[action_schema.index()].push((i_precond, j_precond));
             }
 
             // Add all missing preconditions to the join order
             for &i in &hypergraph.missing_preconds {
-                full_join_order[action_schema.index].push(i);
+                full_join_order[action_schema.index()].push(i);
             }
 
-            full_join_order[action_schema.index].reverse();
+            full_join_order[action_schema.index()].reverse();
 
             // Add all hyperedges that were not removed to the join. If the
             // action schema is acyclic, then there should be only one left.
@@ -98,11 +98,11 @@ impl FullReducer {
                 .filter_map(|(i, &b)| if b { None } else { Some(i) })
                 .collect();
             if remaining.len() == 1 {
-                full_join_order[action_schema.index]
+                full_join_order[action_schema.index()]
                     .push(hypergraph.edges_to_preconds[&remaining[0]]);
             } else {
                 let mut q = PriorityQueue::new();
-                full_join_order[action_schema.index] = Vec::with_capacity(
+                full_join_order[action_schema.index()] = Vec::with_capacity(
                     hypergraph.hyperedges.len() + hypergraph.missing_preconds.len(),
                 );
                 for i in 0..hypergraph.hyperedges.len() {
@@ -118,7 +118,7 @@ impl FullReducer {
                     );
                 }
                 while let Some((precond, _)) = q.pop() {
-                    full_join_order[action_schema.index].push(precond);
+                    full_join_order[action_schema.index()].push(precond);
                 }
             }
         }

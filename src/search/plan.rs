@@ -35,7 +35,7 @@ impl Plan {
             .action_schemas()
             .iter()
             .enumerate()
-            .map(|(index, action_schema)| (action_schema.name.clone(), index))
+            .map(|(index, action_schema)| (action_schema.name().clone(), index))
             .collect();
 
         let object_table: HashMap<Name, usize> = task

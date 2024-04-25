@@ -1,6 +1,6 @@
 use crate::search::{
     heuristics::{Heuristic, HeuristicValue},
-    DBState, GoalAtom, Task,
+    DBState, Task,
 };
 
 #[derive(Debug)]
@@ -15,30 +15,13 @@ impl GoalCounting {
 impl Heuristic<DBState> for GoalCounting {
     fn evaluate(&mut self, state: &DBState, task: &Task) -> HeuristicValue {
         let mut unsatisfied_goal_count = 0;
-        for goal_atom in &task.goal.atoms {
-            if !is_goal_atom_satisfied(goal_atom, state) {
-                unsatisfied_goal_count += 1;
-            }
-        }
-        for &pred in &task.goal.positive_nullary_goals {
-            if !state.nullary_atoms[pred] {
-                unsatisfied_goal_count += 1;
-            }
-        }
-        for &pred in &task.goal.negative_nullary_goals {
-            if state.nullary_atoms[pred] {
+        for goal_atom in task.goal.atoms() {
+            if !state.satisfied(goal_atom) {
                 unsatisfied_goal_count += 1;
             }
         }
         unsatisfied_goal_count.into()
     }
-}
-
-fn is_goal_atom_satisfied(goal_atom: &GoalAtom, state: &DBState) -> bool {
-    let achieved = state.relations[goal_atom.predicate_index]
-        .tuples
-        .contains(&goal_atom.arguments);
-    (achieved && !goal_atom.negated) || (!achieved && goal_atom.negated)
 }
 
 #[cfg(test)]

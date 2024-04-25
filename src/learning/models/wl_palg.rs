@@ -250,7 +250,7 @@ impl WlPalgModel {
             applicable_actions
                 .iter()
                 .filter_map(|action| {
-                    if action.index != chosen_partial.index() {
+                    if action.index != chosen_partial.schema_index() {
                         return None;
                     }
 

@@ -18,19 +18,19 @@ impl Action {
     }
 
     pub fn from_partial(partial: &PartialAction, task: &Task) -> Option<Self> {
-        let schema = &task.action_schemas()[partial.index()];
+        let schema = &task.action_schemas()[partial.schema_index()];
         if partial.partial_instantiation().len() != schema.parameters().len() {
             return None;
         }
 
         Some(Self {
-            index: partial.index(),
+            index: partial.schema_index(),
             instantiation: partial.partial_instantiation().to_vec(),
         })
     }
 
     pub fn to_string(&self, task: &Task) -> String {
-        let schema_name: &str = task.action_schemas()[self.index].name.as_ref();
+        let schema_name: &str = task.action_schemas()[self.index].name().as_ref();
         let objects: Vec<&str> = self
             .instantiation
             .iter()
