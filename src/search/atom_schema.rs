@@ -1,5 +1,5 @@
 use crate::parsed_types::{Atom as ParsedAtom, Name, Term};
-use crate::search::Negatable;
+use crate::search::{Atom, Negatable};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -77,6 +77,7 @@ impl AtomSchema {
         }
     }
 
+    #[inline(always)]
     pub fn is_nullary(&self) -> bool {
         self.arguments.is_empty()
     }
@@ -94,6 +95,39 @@ impl AtomSchema {
     #[inline(always)]
     pub fn argument(&self, index: usize) -> &SchemaArgument {
         &self.arguments[index]
+    }
+
+    /// Returns a new AtomSchema with the given arguments partially grounded.
+    /// The i-th element of the [`object_indices`] slice contains the index of
+    /// object used to ground the schema parameter with index i.
+    pub fn partially_ground(&self, object_indices: &[usize]) -> Self {
+        Self {
+            predicate_index: self.predicate_index,
+            arguments: self
+                .arguments
+                .iter()
+                .map(|arg| match arg {
+                    SchemaArgument::Constant(index) => SchemaArgument::Constant(*index),
+                    SchemaArgument::Free(index) => match object_indices.get(*index) {
+                        Some(object_index) => SchemaArgument::Constant(*object_index),
+                        None => SchemaArgument::Free(*index),
+                    },
+                })
+                .collect(),
+        }
+    }
+
+    pub fn includes(&self, atom: &Atom) -> bool {
+        self.predicate_index == atom.predicate_index()
+            && self.arguments.len() == atom.arguments().len()
+            && self
+                .arguments
+                .iter()
+                .zip(atom.arguments())
+                .all(|(schema_arg, atom_arg)| match schema_arg {
+                    SchemaArgument::Constant(index) => *index == *atom_arg,
+                    SchemaArgument::Free(_) => true,
+                })
     }
 }
 
@@ -129,5 +163,16 @@ impl Negatable<AtomSchema> {
     #[inline(always)]
     pub fn argument(&self, index: usize) -> &SchemaArgument {
         self.underlying().argument(index)
+    }
+
+    pub fn partially_ground(&self, object_indices: &[usize]) -> Self {
+        Negatable::new(
+            self.is_negated(),
+            self.underlying().partially_ground(object_indices),
+        )
+    }
+
+    pub fn includes(&self, atom: &Atom) -> bool {
+        self.underlying().includes(atom)
     }
 }

@@ -1,4 +1,4 @@
-use crate::search::{Action, ActionSchema, AtomSchema, Negatable, Task, Transition};
+use crate::search::{Action, ActionSchema, Task, Transition};
 
 /// Struct that represents a partially instantiated action schema.
 /// [`PartialAction`] can be viewed as a representation of a set of actions, and
@@ -74,10 +74,6 @@ impl PartialAction {
             schema_index: self.schema_index,
             partial_instantiation: new_instantiation,
         }
-    }
-
-    pub fn partial_effects(&self, _schema: &ActionSchema) -> Vec<Negatable<AtomSchema>> {
-        todo!("Implement partial_effects")
     }
 }
 
