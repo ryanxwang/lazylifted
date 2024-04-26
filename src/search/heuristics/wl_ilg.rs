@@ -3,21 +3,21 @@
 //! result in worse performance (10x), possibly due to worse cache locality.
 // TODO investigate cache performance
 
-use crate::learning::models::{Evaluate, WlIlgModel};
+use crate::learning::models::{Evaluate, StateSpaceModel};
 use crate::search::{DBState, Heuristic, HeuristicValue, Task};
 use pyo3::Python;
 use std::path::Path;
 
 #[derive(Debug)]
 pub struct WlIlgHeuristic {
-    model: WlIlgModel,
+    model: StateSpaceModel,
 }
 
 /// A heuristic that uses the WL-ILG model to evaluate states.
 impl WlIlgHeuristic {
     pub fn load(config: &Path, saved_model: &Path) -> Self {
         let py = unsafe { Python::assume_gil_acquired() };
-        let model = WlIlgModel::load(py, config, saved_model);
+        let model = StateSpaceModel::load(py, config, saved_model);
         Self { model }
     }
 }

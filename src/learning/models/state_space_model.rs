@@ -17,7 +17,7 @@ use std::{io::Write, path::Path, time};
 use tracing::info;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-enum WlIlgState {
+enum ModelState {
     /// The model has been created but not trained.
     New,
     /// Trained but not ready for evaluating.
@@ -26,13 +26,13 @@ enum WlIlgState {
     Evaluating(IlgCompiler),
 }
 
-impl PartialEq for WlIlgState {
+impl PartialEq for ModelState {
     fn eq(&self, other: &Self) -> bool {
         matches!(
             (self, other),
-            (WlIlgState::New, WlIlgState::New)
-                | (WlIlgState::Trained, WlIlgState::Trained)
-                | (WlIlgState::Evaluating(_), WlIlgState::Evaluating(_))
+            (ModelState::New, ModelState::New)
+                | (ModelState::Trained, ModelState::Trained)
+                | (ModelState::Evaluating(_), ModelState::Evaluating(_))
         )
     }
 }
@@ -40,16 +40,16 @@ impl PartialEq for WlIlgState {
 /// Configuration for the WL-ILG model. This is the format used by the trainer
 /// to create the model.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct WlIlgConfig {
+#[serde(rename_all = "kebab-case")]
+pub struct StateSpaceModelConfig {
     pub model: RegressorName,
-    #[serde(alias = "successor-generator")]
     pub successor_generator: SuccessorGeneratorName,
     pub iters: usize,
     pub validate: bool,
 }
 
 #[derive(Debug)]
-pub struct WlIlgModel {
+pub struct StateSpaceModel {
     model: Regressor<'static>,
     /// The successor generator to use for generating successor states when
     /// training. It might appear weird we store the name of the successor
@@ -59,26 +59,26 @@ pub struct WlIlgModel {
     successor_generator_name: SuccessorGeneratorName,
     wl: WlKernel,
     validate: bool,
-    state: WlIlgState,
+    state: ModelState,
 }
 
 /// Dummy struct to allow serialising/deserialising the model to disk.
 #[derive(Debug, Serialize, Deserialize)]
-struct SerialisableWlIlgModel {
+struct SerialisableStateSpaceModel {
     successor_generator_name: SuccessorGeneratorName,
     wl: WlKernel,
     validate: bool,
-    state: WlIlgState,
+    state: ModelState,
 }
 
-impl WlIlgModel {
-    pub fn new(py: Python<'static>, config: WlIlgConfig) -> Self {
+impl StateSpaceModel {
+    pub fn new(py: Python<'static>, config: StateSpaceModelConfig) -> Self {
         Self {
             model: Regressor::new(py, config.model),
             wl: WlKernel::new(config.iters),
             successor_generator_name: config.successor_generator,
             validate: config.validate,
-            state: WlIlgState::New,
+            state: ModelState::New,
         }
     }
 
@@ -127,10 +127,10 @@ impl WlIlgModel {
     }
 }
 
-impl Train for WlIlgModel {
+impl Train for StateSpaceModel {
     fn train(&mut self, training_data: &[TrainingInstance]) {
         let py = self.py();
-        assert_eq!(self.state, WlIlgState::New);
+        assert_eq!(self.state, ModelState::New);
         if self.validate {
             info!("splitting training data into training and validation sets");
         } else {
@@ -188,16 +188,16 @@ impl Train for WlIlgModel {
             info!(val_score = val_score);
         }
 
-        self.state = WlIlgState::Trained;
+        self.state = ModelState::Trained;
     }
 
     fn save(&self, path: &Path) {
-        assert_eq!(self.state, WlIlgState::Trained);
+        assert_eq!(self.state, ModelState::Trained);
         let pickle_path = path.with_extension("pkl");
         self.model.pickle(&pickle_path);
 
         let ron_path = path.with_extension("ron");
-        let serialisable = SerialisableWlIlgModel {
+        let serialisable = SerialisableStateSpaceModel {
             successor_generator_name: self.successor_generator_name,
             wl: self.wl.clone(),
             validate: self.validate,
@@ -212,22 +212,22 @@ impl Train for WlIlgModel {
     }
 }
 
-impl Evaluate for WlIlgModel {
+impl Evaluate for StateSpaceModel {
     type EvaluatedType<'a> = DBState;
 
     fn set_evaluating_task(&mut self, task: &Task) {
         match &self.state {
-            WlIlgState::New => {
+            ModelState::New => {
                 panic!("Model not trained yet, cannot set evaluating task");
             }
-            WlIlgState::Trained => self.state = WlIlgState::Evaluating(IlgCompiler::new(task)),
-            WlIlgState::Evaluating(_) => {}
+            ModelState::Trained => self.state = ModelState::Evaluating(IlgCompiler::new(task)),
+            ModelState::Evaluating(_) => {}
         }
     }
 
     fn evaluate(&mut self, state: &DBState) -> f64 {
         let compiler = match &self.state {
-            WlIlgState::Evaluating(compiler) => compiler,
+            ModelState::Evaluating(compiler) => compiler,
             _ => panic!("Model not ready for evaluation"),
         };
         let graph = compiler.compile(state);
@@ -240,7 +240,7 @@ impl Evaluate for WlIlgModel {
 
     fn evaluate_batch(&mut self, states: &[DBState]) -> Vec<f64> {
         let compiler = match &self.state {
-            WlIlgState::Evaluating(compiler) => compiler,
+            ModelState::Evaluating(compiler) => compiler,
             _ => panic!("Model not ready for evaluation"),
         };
         // when evaluating in batch, we still do it sequentially for better
@@ -261,9 +261,9 @@ impl Evaluate for WlIlgModel {
 
         let ron_path = path.with_extension("ron");
         let data = std::fs::read_to_string(ron_path).expect("Failed to read model data");
-        let serialisable: SerialisableWlIlgModel =
+        let serialisable: SerialisableStateSpaceModel =
             ron::from_str(&data).expect("Failed to deserialise model data");
-        assert_eq!(serialisable.state, WlIlgState::Trained);
+        assert_eq!(serialisable.state, ModelState::Trained);
         Self {
             model,
             successor_generator_name: serialisable.successor_generator_name,

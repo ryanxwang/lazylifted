@@ -1,8 +1,8 @@
 //! This module contains traits and structs for training and evaluating models.
 
 use crate::learning::models::{
-    wl_ilg::{WlIlgConfig, WlIlgModel},
-    wl_palg::{WlPalgConfig, WlPalgModel},
+    partial_action_model::{PartialActionModel, PartialActionModelConfig},
+    state_space_model::{StateSpaceModel, StateSpaceModelConfig},
 };
 use crate::search::{Plan, Task};
 use pyo3::Python;
@@ -42,11 +42,10 @@ pub trait Train {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case")]
 pub enum ModelConfig {
-    #[serde(alias = "wl-ilg")]
-    WLILG(WlIlgConfig),
-    #[serde(alias = "wl-palg")]
-    WLPALG(WlPalgConfig),
+    StateSpaceModel(StateSpaceModelConfig),
+    PartialActionModel(PartialActionModelConfig),
 }
 
 impl ModelConfig {
@@ -63,8 +62,10 @@ impl ModelConfig {
         let py = unsafe { Python::assume_gil_acquired() };
 
         match self {
-            ModelConfig::WLILG(config) => Box::new(WlIlgModel::new(py, config)),
-            ModelConfig::WLPALG(config) => Box::new(WlPalgModel::new(py, config)),
+            ModelConfig::StateSpaceModel(config) => Box::new(StateSpaceModel::new(py, config)),
+            ModelConfig::PartialActionModel(config) => {
+                Box::new(PartialActionModel::new(py, config))
+            }
         }
     }
 }
@@ -74,8 +75,9 @@ mod tests {
     use super::*;
     use crate::{
         learning::{
-            ml::{MlModelName, RegressorName},
-            models::wl_palg::WlPalgConfig,
+            graphs::PartialActionCompilerName,
+            ml::{MlModelName, RankerName},
+            models::partial_action_model::PartialActionModelConfig,
         },
         search::successor_generators::SuccessorGeneratorName,
     };
@@ -84,8 +86,9 @@ mod tests {
     // serialised model configs
     #[test]
     fn serialise_sample_model_config() {
-        let config = ModelConfig::WLPALG(WlPalgConfig {
-            model: MlModelName::RegressorName(RegressorName::GaussianProcessRegressor),
+        let config = ModelConfig::PartialActionModel(PartialActionModelConfig {
+            model: MlModelName::RankerName(RankerName::LambdaMart),
+            graph_compiler: PartialActionCompilerName::Palg,
             iters: 2,
             validate: true,
             successor_generator: SuccessorGeneratorName::FullReducer,

@@ -1,6 +1,6 @@
 //! The State Change Learning Graph
 use crate::{
-    learning::graphs::{CGraph, NodeID},
+    learning::graphs::{CGraph, Compiler2, NodeID},
     search::{ActionSchema, Atom, DBState, Negatable, Object, PartialAction, Task},
 };
 use serde::{Deserialize, Serialize};
@@ -152,6 +152,12 @@ impl SclgCompiler {
     fn get_atom_type(colour: i32) -> AtomNodeType {
         const START: i32 = 1;
         AtomNodeType::from_repr((colour - START) % AtomNodeType::COUNT as i32).unwrap()
+    }
+}
+
+impl Compiler2<DBState, PartialAction> for SclgCompiler {
+    fn compile(&self, state: &DBState, partial_action: &PartialAction) -> CGraph {
+        self.compile(state, partial_action)
     }
 }
 

@@ -9,9 +9,9 @@ use tracing::info;
 
 #[derive(Debug, Clone, Eq, PartialEq, Deserialize, Serialize)]
 pub enum RegressorName {
-    #[serde(alias = "linear-regression")]
+    #[serde(rename = "lr")]
     LinearRegressor,
-    #[serde(alias = "gpr")]
+    #[serde(rename = "gpr")]
     GaussianProcessRegressor,
 }
 

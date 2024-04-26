@@ -1,17 +1,17 @@
-use crate::learning::models::{Evaluate, WlPalgModel};
+use crate::learning::models::{Evaluate, PartialActionModel};
 use crate::search::{DBState, Heuristic, HeuristicValue, PartialAction, Task};
 use pyo3::Python;
 use std::path::Path;
 
 #[derive(Debug)]
 pub struct WlPalgHeuristic {
-    model: WlPalgModel,
+    model: PartialActionModel,
 }
 
 impl WlPalgHeuristic {
     pub fn load(config: &Path, saved_model: &Path) -> Self {
         let py = unsafe { Python::assume_gil_acquired() };
-        let model = WlPalgModel::load(py, config, saved_model);
+        let model = PartialActionModel::load(py, config, saved_model);
         Self { model }
     }
 }

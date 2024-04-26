@@ -11,7 +11,7 @@
 
 use crate::search::{Negatable, Object, Task};
 use crate::{
-    learning::graphs::{CGraph, NodeID},
+    learning::graphs::{CGraph, Compiler, NodeID},
     search::{Atom, DBState},
 };
 use serde::{Deserialize, Serialize};
@@ -124,6 +124,12 @@ impl IlgCompiler {
         }
 
         self.base_graph = Some(graph);
+    }
+}
+
+impl Compiler<DBState> for IlgCompiler {
+    fn compile(&self, state: &DBState) -> CGraph {
+        self.compile(state)
     }
 }
 

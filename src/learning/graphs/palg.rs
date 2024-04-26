@@ -1,6 +1,6 @@
 //! The Partial Action Learning Graph
 use crate::{
-    learning::graphs::{utils::SchemaPred, CGraph, NodeID},
+    learning::graphs::{utils::SchemaPred, CGraph, Compiler2, NodeID},
     search::{
         ActionSchema, Atom, DBState, Negatable, Object, PartialAction, Predicate, SchemaArgument,
         SchemaParameter, Task,
@@ -223,7 +223,15 @@ impl PalgCompiler {
     }
 }
 
-#[allow(clippy::enum_variant_names)]
+// Instead of placing the implementation in the trait, we just wrap the trait
+// around them so that they are accessible even without the trait in scope.
+impl Compiler2<DBState, PartialAction> for PalgCompiler {
+    fn compile(&self, state: &DBState, partial_action: &PartialAction) -> CGraph {
+        self.compile(state, partial_action)
+    }
+}
+
+#[allow(clippy::enum_variant_names)] // clippy complains the common suffix
 #[derive(Debug, Clone, PartialEq, Eq, Copy, Serialize, Deserialize, EnumCountMacro)]
 #[repr(i32)]
 enum AtomNodeType {

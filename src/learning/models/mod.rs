@@ -1,7 +1,7 @@
 mod model;
-mod wl_ilg;
-mod wl_palg;
+mod partial_action_model;
+mod state_space_model;
 
 pub use model::{Evaluate, ModelConfig, Train, TrainingInstance};
-pub use wl_ilg::WlIlgModel;
-pub use wl_palg::WlPalgModel;
+pub use partial_action_model::PartialActionModel;
+pub use state_space_model::StateSpaceModel;

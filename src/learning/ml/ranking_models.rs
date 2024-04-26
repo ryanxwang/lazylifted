@@ -8,9 +8,9 @@ use tracing::info;
 
 #[derive(Debug, Clone, Eq, PartialEq, Deserialize, Serialize)]
 pub enum RankerName {
-    #[serde(alias = "ranksvm")]
+    #[serde(rename = "ranksvm")]
     RankSVM,
-    #[serde(alias = "lambdamart")]
+    #[serde(rename = "lambdamart")]
     LambdaMart,
 }
 

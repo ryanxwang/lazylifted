@@ -18,10 +18,9 @@ pub trait SuccessorGenerator: Debug {
 
 #[derive(clap::ValueEnum, Debug, Clone, Copy, Deserialize, Serialize)]
 #[clap(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case")]
 pub enum SuccessorGeneratorName {
-    #[serde(alias = "naive")]
     Naive,
-    #[serde(alias = "full-reducer")]
     FullReducer,
 }
 
