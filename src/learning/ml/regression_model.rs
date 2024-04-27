@@ -7,7 +7,7 @@ use std::path::Path;
 use std::time;
 use tracing::info;
 
-#[derive(Debug, Clone, Eq, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Deserialize, Serialize)]
 pub enum RegressorName {
     #[serde(rename = "lr")]
     LinearRegressor,
@@ -75,6 +75,23 @@ impl<'py> Regressor<'py> {
             }
         }
     }
+
+    pub fn get_weights(&self, regressor_name: &RegressorName) -> Vec<f64> {
+        let py = self.py();
+        match regressor_name {
+            RegressorName::LinearRegressor => {
+                self.model.getattr("coef_").unwrap().extract().unwrap()
+            }
+            RegressorName::GaussianProcessRegressor => {
+                let locals = [("model", &self.model)].into_py_dict_bound(py);
+                py.eval_bound("model.alpha_ @ model.X_train_", None, Some(&locals))
+                    .unwrap()
+                    .extract()
+                    .unwrap()
+            }
+        }
+    }
+
     pub fn pickle(&self, pickle_path: &Path) {
         py_utils::pickle(self.py(), &self.model, pickle_path);
     }
@@ -91,6 +108,7 @@ impl<'py> Regressor<'py> {
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
     use assert_approx_eq::assert_approx_eq;
     use numpy::PyArrayMethods;
@@ -119,6 +137,11 @@ mod tests {
             let y = y.to_vec().unwrap();
             assert_approx_eq!(y[0], 3.0, 1e-5);
             assert_approx_eq!(y[1], 4.0, 1e-5);
+
+            // make sure we can get weights
+            let weights = regressor.get_weights(&RegressorName::GaussianProcessRegressor);
+            assert_approx_eq!(weights[0], 0.0, 1e-5);
+            assert_approx_eq!(weights[1], 0.5, 1e-5);
         });
     }
 
@@ -136,6 +159,10 @@ mod tests {
             let y = y.to_vec().unwrap();
             assert_approx_eq!(y[0], 3.0, 1e-5);
             assert_approx_eq!(y[1], 4.0, 1e-5);
+
+            let weights = regressor.get_weights(&RegressorName::LinearRegressor);
+            assert_approx_eq!(weights[0], 0.25, 1e-5);
+            assert_approx_eq!(weights[1], 0.25, 1e-5);
         });
     }
 }

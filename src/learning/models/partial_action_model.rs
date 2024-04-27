@@ -65,6 +65,9 @@ pub struct PartialActionModel {
     wl: WlKernel,
     validate: bool,
     state: PartialActionModelState,
+    /// The configuration used to create the model, saved for later use such as
+    /// deserialisation
+    config: PartialActionModelConfig,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -74,6 +77,7 @@ struct SerialisablePartialActionModel {
     wl: WlKernel,
     validate: bool,
     state: PartialActionModelState,
+    config: PartialActionModelConfig,
 }
 
 impl PartialActionModel {
@@ -85,6 +89,7 @@ impl PartialActionModel {
             wl: WlKernel::new(config.iters),
             validate: config.validate,
             state: PartialActionModelState::New,
+            config: config.clone(),
         }
     }
 
@@ -401,6 +406,15 @@ impl Train for PartialActionModel {
         info!("fitting model on training data");
         self.model.fit(&train_x, &train_y, train_groups.as_deref());
 
+        let weights = self.model.get_weights(self.config.model);
+        const THRESHOLD: f64 = 1e-2;
+        let non_zero_weights = weights.iter().filter(|w| w.abs() > THRESHOLD).count();
+        info!(
+            non_zero_weights = non_zero_weights,
+            total_weights = weights.len(),
+            sparsity = non_zero_weights as f64 / weights.len() as f64
+        );
+
         let train_score_start = std::time::Instant::now();
         let train_score = match &self.model {
             MlModel::Regressor(_) => self.score_regression(&train_histograms, &train_y),
@@ -462,6 +476,7 @@ impl Train for PartialActionModel {
             wl: self.wl.clone(),
             validate: self.validate,
             state: PartialActionModelState::Trained,
+            config: self.config.clone(),
         };
         let serialised = ron::ser::to_string(&serialisable).expect("Failed to serialise model");
 
@@ -536,6 +551,7 @@ impl Evaluate for PartialActionModel {
             wl: serialisable.wl,
             validate: serialisable.validate,
             state: serialisable.state,
+            config: serialisable.config,
         }
     }
 }

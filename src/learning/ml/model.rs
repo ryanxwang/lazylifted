@@ -5,7 +5,7 @@ use numpy::{PyArray1, PyArray2};
 use pyo3::{Bound, Python};
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, Copy)]
 #[serde(rename_all = "kebab-case")]
 pub enum MlModelName {
     RegressorName(RegressorName),
@@ -47,6 +47,21 @@ impl<'py> MlModel<'py> {
         match self {
             MlModel::Regressor(regressor) => regressor.predict(x),
             MlModel::Ranker(ranker) => ranker.predict(x),
+        }
+    }
+
+    pub fn get_weights(&self, model_name: MlModelName) -> Vec<f64> {
+        match model_name {
+            MlModelName::RegressorName(regressor_name) => {
+                let regressor = match self {
+                    MlModel::Regressor(regressor) => regressor,
+                    _ => panic!("Model does not match provided model name"),
+                };
+                regressor.get_weights(&regressor_name)
+            }
+            MlModelName::RankerName(_ranker_name) => {
+                todo!("Implement get_weights for ranker")
+            }
         }
     }
 

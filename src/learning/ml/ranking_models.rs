@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 use tracing::info;
 
-#[derive(Debug, Clone, Eq, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Deserialize, Serialize)]
 pub enum RankerName {
     #[serde(rename = "ranksvm")]
     RankSVM,
@@ -23,7 +23,7 @@ pub struct Ranker<'py> {
 impl<'py> Ranker<'py> {
     pub fn new(py: Python<'py>, name: RankerName) -> Self {
         Self {
-            name: name.clone(),
+            name,
             model: Self::construct_ranker(py, name),
         }
     }
