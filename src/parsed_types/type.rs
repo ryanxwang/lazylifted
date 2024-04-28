@@ -28,7 +28,7 @@ impl PrimitiveType {
 pub enum Type {
     /// The type is exactly this named type.
     Exactly(PrimitiveType),
-    /// The type is either of these named types..
+    /// The type is either of these named types.
     EitherOf(Vec<PrimitiveType>),
 }
 

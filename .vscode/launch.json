@@ -49,6 +49,34 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Debug executable 'planner' for spanner",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=planner",
+                    "--package=lazylifted"
+                ],
+                "filter": {
+                    "name": "planner",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "--model",
+                "${workspaceFolder}/trained_models/wl-sclg-gpr-spanner",
+                "--model-config",
+                "${workspaceFolder}/experiments/models/wl-sclg-gpr.toml",
+                "${workspaceFolder}/benchmarks/ipc23-learning/spanner/domain.pddl",
+                "${workspaceFolder}/benchmarks/ipc23-learning/spanner/testing/easy/p10.pddl",
+                "partial-action-search",
+                "--heuristic",
+                "wl-palg",
+            ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Debug unit tests in executable 'planner'",
             "cargo": {
                 "args": [

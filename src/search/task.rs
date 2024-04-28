@@ -16,6 +16,7 @@ pub struct Task {
     action_schemas: Vec<ActionSchema>,
     pub predicates: Vec<Predicate>,
     pub nullary_predicates: HashSet<usize>,
+    type_table: HashMap<Name, usize>,
 }
 
 impl Task {
@@ -118,15 +119,34 @@ impl Task {
             predicates,
             nullary_predicates,
             action_schemas,
+            type_table,
         }
     }
 
-    pub fn objects_per_type(&self) -> Vec<Vec<usize>> {
-        let mut objects_per_type = vec![vec![]; self.types.values().len()];
+    pub fn parent_type(&self, type_index: usize) -> Option<usize> {
+        let parent = self
+            .types
+            .get(type_index)?
+            .type_()
+            .get_primitive()
+            .expect("Multiple parent types for a type are not supported")
+            .name();
+        self.type_table.get(parent).copied()
+    }
+
+    pub fn objects_per_type(&self) -> Vec<HashSet<usize>> {
+        let mut objects_per_type = vec![HashSet::new(); self.types.values().len()];
 
         for object in &self.objects {
             for &type_index in &object.types {
-                objects_per_type[type_index].push(object.index);
+                let mut type_index = type_index;
+                loop {
+                    objects_per_type[type_index].insert(object.index);
+                    type_index = match self.parent_type(type_index) {
+                        Some(parent) => parent,
+                        None => break,
+                    };
+                }
             }
         }
 
