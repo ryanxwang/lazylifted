@@ -16,7 +16,7 @@ pub struct Task {
     action_schemas: Vec<ActionSchema>,
     pub predicates: Vec<Predicate>,
     pub nullary_predicates: HashSet<usize>,
-    type_table: HashMap<Name, usize>,
+    objects_per_type: Vec<HashSet<usize>>,
 }
 
 impl Task {
@@ -109,6 +109,9 @@ impl Task {
 
         let goal = Goal::new(problem.goals(), &predicate_table, &object_table);
 
+        let objects_per_type =
+            Self::compute_objects_per_type(&type_table, domain.types(), &objects);
+
         Self {
             domain_name: domain.name().clone(),
             problem_name: problem.name().clone(),
@@ -119,31 +122,43 @@ impl Task {
             predicates,
             nullary_predicates,
             action_schemas,
-            type_table,
+            objects_per_type,
         }
     }
 
-    pub fn parent_type(&self, type_index: usize) -> Option<usize> {
-        let parent = self
-            .types
+    fn parent_type(
+        type_table: &HashMap<Name, usize>,
+        types: &Types,
+        type_index: usize,
+    ) -> Option<usize> {
+        let parent = types
             .get(type_index)?
             .type_()
             .get_primitive()
             .expect("Multiple parent types for a type are not supported")
             .name();
-        self.type_table.get(parent).copied()
+        type_table.get(parent).copied()
     }
 
-    pub fn objects_per_type(&self) -> Vec<HashSet<usize>> {
-        let mut objects_per_type = vec![HashSet::new(); self.types.values().len()];
+    fn compute_objects_per_type(
+        type_table: &HashMap<Name, usize>,
+        types: &Types,
+        objects: &[Object],
+    ) -> Vec<HashSet<usize>> {
+        let mut objects_per_type = vec![HashSet::new(); types.values().len()];
 
-        for object in &self.objects {
+        for object in objects {
             for &type_index in &object.types {
                 let mut type_index = type_index;
                 loop {
                     objects_per_type[type_index].insert(object.index);
-                    type_index = match self.parent_type(type_index) {
-                        Some(parent) => parent,
+                    type_index = match Self::parent_type(type_table, types, type_index) {
+                        Some(parent) => {
+                            if parent == type_index {
+                                break;
+                            }
+                            parent
+                        }
                         None => break,
                     };
                 }
@@ -163,6 +178,10 @@ impl Task {
 
     pub fn action_schemas(&self) -> &[ActionSchema] {
         self.action_schemas.as_slice()
+    }
+
+    pub fn objects_per_type(&self) -> &[HashSet<usize>] {
+        self.objects_per_type.as_slice()
     }
 }
 

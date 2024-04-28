@@ -22,7 +22,7 @@ where
         let action_data = task
             .action_schemas()
             .iter()
-            .map(precompile_action_data)
+            .map(|action_schema| precompile_action_data(task, action_schema))
             .collect();
 
         Self {
@@ -155,7 +155,7 @@ where
     }
 }
 
-fn precompile_action_data(action_schema: &ActionSchema) -> PrecompiledActionData {
+fn precompile_action_data(task: &Task, action_schema: &ActionSchema) -> PrecompiledActionData {
     let relevant_precondition_atoms = action_schema
         .preconditions()
         .iter()
@@ -168,10 +168,22 @@ fn precompile_action_data(action_schema: &ActionSchema) -> PrecompiledActionData
         })
         .collect();
 
+    let objects_per_param = action_schema
+        .parameters()
+        .iter()
+        .map(|param| {
+            task.objects_per_type()
+                .get(param.type_index())
+                .unwrap()
+                .clone()
+        })
+        .collect();
+
     PrecompiledActionData {
         action_index: action_schema.index(),
         is_ground: action_schema.is_ground(),
         relevant_precondition_atoms,
+        objects_per_param,
     }
 }
 
@@ -239,9 +251,10 @@ mod tests {
     fn test_precompile_action_data() {
         let task = Task::from_text(BLOCKSWORLD_DOMAIN_TEXT, BLOCKSWORLD_PROBLEM13_TEXT);
         // should be the pickup action
-        let action_data = precompile_action_data(&task.action_schemas()[0]);
+        let action_data = precompile_action_data(&task, &task.action_schemas()[0]);
 
         assert!(!action_data.is_ground);
         assert_eq!(action_data.relevant_precondition_atoms.len(), 2); // number of non-nullary preconditions
+        assert_eq!(action_data.objects_per_param.len(), 1); // number of parameters
     }
 }

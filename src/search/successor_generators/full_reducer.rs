@@ -176,6 +176,7 @@ impl JoinAlgorithm for FullReducer {
 }
 #[cfg(test)]
 mod tests {
+
     use super::*;
     use crate::search::{
         successor_generators::{JoinSuccessorGenerator, SuccessorGenerator},
@@ -392,5 +393,25 @@ mod tests {
             format!("{}", states[10]),
             "(0 [3])(1 [0])(4 [1, 2])(4 [2, 0])(4 [3, 1])(2)"
         );
+    }
+
+    #[test]
+    fn applicable_actions_in_spanner_init() {
+        let task = Task::from_text(SPANNER_DOMAIN_TEXT, SPANNER_PROBLEM10_TEXT);
+        let generator = JoinSuccessorGenerator::new(FullReducer::new(&task), &task);
+
+        let state = &task.initial_state;
+
+        // (walk shed location1 bob)
+        let actions = generator.get_applicable_actions(state, &task.action_schemas()[0]);
+        assert_eq!(actions.len(), 1);
+
+        // pickup_spanner is not applicable in the initial state
+        let actions = generator.get_applicable_actions(state, &task.action_schemas()[1]);
+        assert_eq!(actions.len(), 0);
+
+        // tighten_nut is not applicable in the initial state
+        let actions = generator.get_applicable_actions(state, &task.action_schemas()[2]);
+        assert_eq!(actions.len(), 0);
     }
 }

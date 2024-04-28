@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 
 use crate::search::database::{hash_join, Table};
 use crate::search::states::GroundAtom;
@@ -11,6 +11,9 @@ pub struct PrecompiledActionData {
     /// Whether the action is ground (i.e. has no variables)
     pub is_ground: bool,
     pub relevant_precondition_atoms: Vec<Negatable<AtomSchema>>,
+    // [`objects_per_param[i]`] is the set of objects in for the type of the
+    // `i`-th parameter of the action schema.
+    pub objects_per_param: Vec<HashSet<usize>>,
 }
 
 pub trait JoinAlgorithm {
@@ -48,8 +51,20 @@ pub trait JoinAlgorithm {
         for schema_atom in &data.relevant_precondition_atoms {
             let mut indices = Vec::new();
             let mut constants = Vec::new();
-            get_indices_and_constants_in_precondition(schema_atom, &mut indices, &mut constants);
-            let tuples = select_tuples(state, schema_atom, &constants);
+            let mut free_and_param_index = Vec::new();
+            get_indices_and_constants_in_precondition(
+                schema_atom,
+                &mut indices,
+                &mut constants,
+                &mut free_and_param_index,
+            );
+            let tuples = select_tuples(
+                state,
+                schema_atom,
+                &constants,
+                &free_and_param_index,
+                &data.objects_per_param,
+            );
             if tuples.is_empty() {
                 return None;
             }
@@ -64,17 +79,22 @@ fn get_indices_and_constants_in_precondition(
     atom: &Negatable<AtomSchema>,
     indices: &mut Vec<i32>,
     constants: &mut Vec<usize>,
+    free_and_param_index: &mut Vec<(usize, usize)>,
 ) {
     debug_assert!(indices.is_empty());
     debug_assert!(constants.is_empty());
+    debug_assert!(free_and_param_index.is_empty());
 
     for (i, arg) in atom.arguments().iter().enumerate() {
         match arg {
             SchemaArgument::Constant(index) => {
                 indices.push(-(*index as i32 + 1));
-                constants.push(i)
+                constants.push(i);
             }
-            SchemaArgument::Free(index) => indices.push(*index as i32),
+            SchemaArgument::Free(index) => {
+                free_and_param_index.push((i, *index));
+                indices.push(*index as i32);
+            }
         }
     }
 }
@@ -85,21 +105,40 @@ fn select_tuples(
     state: &DBState,
     atom: &Negatable<AtomSchema>,
     constants: &[usize],
+    free_and_param_index: &[(usize, usize)],
+    objects_per_param: &[HashSet<usize>],
 ) -> Vec<GroundAtom> {
     let mut tuples = Vec::new();
 
     for tuple in &state.relations[atom.predicate_index()].tuples {
-        let mut match_constants = true;
+        // the tuple matches the atom if
+        // 1. when the atom is a constant, the tuple has the same value
+        // 2. when the atom is a free variable, the type of the tuple is a
+        //    subtype of the free variable
+        let mut matches = true;
         for &constant in constants {
             debug_assert!(atom.argument(constant).is_constant());
             if tuple[constant] != atom.argument(constant).get_index() {
-                match_constants = false;
+                matches = false;
                 break;
             }
         }
-        if match_constants {
-            tuples.push(tuple.clone());
+        if !matches {
+            continue;
         }
+
+        for &(free_index, param_index) in free_and_param_index {
+            let object_index = tuple[free_index];
+            if !objects_per_param[param_index].contains(&object_index) {
+                matches = false;
+                break;
+            }
+        }
+        if !matches {
+            continue;
+        }
+
+        tuples.push(tuple.clone());
     }
 
     tuples
@@ -334,5 +373,25 @@ mod tests {
             format!("{}", states[10]),
             "(0 [3])(1 [0])(4 [1, 2])(4 [2, 0])(4 [3, 1])(2)"
         );
+    }
+
+    #[test]
+    fn applicable_actions_in_spanner_init() {
+        let task = Task::from_text(SPANNER_DOMAIN_TEXT, SPANNER_PROBLEM10_TEXT);
+        let generator = JoinSuccessorGenerator::new(NaiveJoinAlgorithm::new(), &task);
+
+        let state = &task.initial_state;
+
+        // (walk shed location1 bob)
+        let actions = generator.get_applicable_actions(state, &task.action_schemas()[0]);
+        assert_eq!(actions.len(), 1);
+
+        // pickup_spanner is not applicable in the initial state
+        let actions = generator.get_applicable_actions(state, &task.action_schemas()[1]);
+        assert_eq!(actions.len(), 0);
+
+        // tighten_nut is not applicable in the initial state
+        let actions = generator.get_applicable_actions(state, &task.action_schemas()[2]);
+        assert_eq!(actions.len(), 0);
     }
 }
