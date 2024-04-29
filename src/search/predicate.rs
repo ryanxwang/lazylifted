@@ -9,6 +9,7 @@ pub struct Predicate {
     pub index: usize,
     pub arity: usize,
     pub types: Vec<usize>,
+    pub is_static: bool,
 }
 
 impl Predicate {
@@ -37,6 +38,11 @@ impl Predicate {
             index,
             arity: predicate_definition.variables().len(),
             types,
+            is_static: false,
         }
+    }
+
+    pub fn mark_as_static(&mut self) {
+        self.is_static = true;
     }
 }

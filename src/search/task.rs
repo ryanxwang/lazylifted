@@ -112,7 +112,7 @@ impl Task {
         let objects_per_type =
             Self::compute_objects_per_type(&type_table, domain.types(), &objects);
 
-        Self {
+        let mut result = Self {
             domain_name: domain.name().clone(),
             problem_name: problem.name().clone(),
             types: domain.types().clone(),
@@ -123,7 +123,10 @@ impl Task {
             nullary_predicates,
             action_schemas,
             objects_per_type,
-        }
+        };
+        result.mark_static_predicates();
+
+        result
     }
 
     fn parent_type(
@@ -168,11 +171,26 @@ impl Task {
         objects_per_type
     }
 
-    pub fn domain_name(&self) -> &Name {
+    fn mark_static_predicates(&mut self) {
+        // basic determination of static predicates by simply checking if they
+        // are used in any effect
+        for predicate in &mut self.predicates {
+            if !self.action_schemas.iter().any(|action| {
+                action
+                    .effects()
+                    .iter()
+                    .any(|atom| atom.predicate_index() == predicate.index)
+            }) {
+                predicate.mark_as_static();
+            }
+        }
+    }
+
+    pub fn domain_name(&self) -> &str {
         &self.domain_name
     }
 
-    pub fn problem_name(&self) -> &Name {
+    pub fn problem_name(&self) -> &str {
         &self.problem_name
     }
 
@@ -190,15 +208,55 @@ mod tests {
     use super::*;
     use crate::test_utils::*;
 
-    /// Test to make sure any change to the task translation is noticed.
     #[test]
     fn blocksworld() {
         let task = Task::from_text(BLOCKSWORLD_DOMAIN_TEXT, BLOCKSWORLD_PROBLEM13_TEXT);
-        // human readable debug output
-        // println!("{:#?}", task);
+
+        assert_eq!(task.domain_name, "blocksworld");
+        assert_eq!(task.problem_name, "blocksworld-13");
+        assert_eq!(task.types.len(), 1);
+        assert_eq!(task.objects.len(), 4);
+        assert_eq!(task.goal.atoms().len(), 5);
+        assert_eq!(task.initial_state.atoms().len(), 6);
+        assert_eq!(task.action_schemas.len(), 4);
+        assert_eq!(task.predicates.len(), 5);
+        assert_eq!(task.nullary_predicates.len(), 1);
+        assert_eq!(task.objects_per_type.len(), 1);
+    }
+
+    #[test]
+    fn objects_per_type_spanner() {
+        let task = Task::from_text(SPANNER_DOMAIN_TEXT, SPANNER_PROBLEM10_TEXT);
+
+        assert_eq!(task.objects_per_type.len(), 5);
+        // locations
         assert_eq!(
-            format!("{:?}", task),
-            r#"Task { domain_name: Name(blocksworld), problem_name: Name(blocksworld-13), types: Types(TypedList([Typed(Name(object), Exactly(PrimitiveType(Name(object))))])), objects: [Object { name: Name(b1), index: 0, types: [0] }, Object { name: Name(b2), index: 1, types: [0] }, Object { name: Name(b3), index: 2, types: [0] }, Object { name: Name(b4), index: 3, types: [0] }], goal: Goal { atoms: [Positive(Atom { predicate_index: 0, arguments: [3] }), Positive(Atom { predicate_index: 4, arguments: [3, 1] }), Positive(Atom { predicate_index: 4, arguments: [1, 2] }), Positive(Atom { predicate_index: 4, arguments: [2, 0] }), Positive(Atom { predicate_index: 1, arguments: [0] })] }, initial_state: DBState { relations: [Relation { predicate_symbol: 0, tuples: {[0]} }, Relation { predicate_symbol: 1, tuples: {[3]} }, Relation { predicate_symbol: 2, tuples: {} }, Relation { predicate_symbol: 3, tuples: {} }, Relation { predicate_symbol: 4, tuples: {[0, 1], [1, 2], [2, 3]} }], nullary_atoms: [false, false, true, false, false] }, action_schemas: [ActionSchema { name: ActionName(Name(pickup)), index: 0, parameters: [SchemaParameter { index: 0, type_index: 0 }], preconditions: [Positive(AtomSchema { predicate_index: 0, arguments: [Free(0)] }), Positive(AtomSchema { predicate_index: 1, arguments: [Free(0)] }), Positive(AtomSchema { predicate_index: 2, arguments: [] })], effects: [Positive(AtomSchema { predicate_index: 3, arguments: [Free(0)] }), Negative(AtomSchema { predicate_index: 0, arguments: [Free(0)] }), Negative(AtomSchema { predicate_index: 1, arguments: [Free(0)] }), Negative(AtomSchema { predicate_index: 2, arguments: [] })] }, ActionSchema { name: ActionName(Name(putdown)), index: 1, parameters: [SchemaParameter { index: 0, type_index: 0 }], preconditions: [Positive(AtomSchema { predicate_index: 3, arguments: [Free(0)] })], effects: [Positive(AtomSchema { predicate_index: 0, arguments: [Free(0)] }), Positive(AtomSchema { predicate_index: 2, arguments: [] }), Positive(AtomSchema { predicate_index: 1, arguments: [Free(0)] }), Negative(AtomSchema { predicate_index: 3, arguments: [Free(0)] })] }, ActionSchema { name: ActionName(Name(stack)), index: 2, parameters: [SchemaParameter { index: 0, type_index: 0 }, SchemaParameter { index: 1, type_index: 0 }], preconditions: [Positive(AtomSchema { predicate_index: 0, arguments: [Free(1)] }), Positive(AtomSchema { predicate_index: 3, arguments: [Free(0)] })], effects: [Positive(AtomSchema { predicate_index: 2, arguments: [] }), Positive(AtomSchema { predicate_index: 0, arguments: [Free(0)] }), Positive(AtomSchema { predicate_index: 4, arguments: [Free(0), Free(1)] }), Negative(AtomSchema { predicate_index: 0, arguments: [Free(1)] }), Negative(AtomSchema { predicate_index: 3, arguments: [Free(0)] })] }, ActionSchema { name: ActionName(Name(unstack)), index: 3, parameters: [SchemaParameter { index: 0, type_index: 0 }, SchemaParameter { index: 1, type_index: 0 }], preconditions: [Positive(AtomSchema { predicate_index: 4, arguments: [Free(0), Free(1)] }), Positive(AtomSchema { predicate_index: 0, arguments: [Free(0)] }), Positive(AtomSchema { predicate_index: 2, arguments: [] })], effects: [Positive(AtomSchema { predicate_index: 3, arguments: [Free(0)] }), Positive(AtomSchema { predicate_index: 0, arguments: [Free(1)] }), Negative(AtomSchema { predicate_index: 4, arguments: [Free(0), Free(1)] }), Negative(AtomSchema { predicate_index: 0, arguments: [Free(0)] }), Negative(AtomSchema { predicate_index: 2, arguments: [] })] }], predicates: [Predicate { name: Name(clear), index: 0, arity: 1, types: [0] }, Predicate { name: Name(on-table), index: 1, arity: 1, types: [0] }, Predicate { name: Name(arm-empty), index: 2, arity: 0, types: [] }, Predicate { name: Name(holding), index: 3, arity: 1, types: [0] }, Predicate { name: Name(on), index: 4, arity: 2, types: [0, 0] }], nullary_predicates: {2} }"#
+            task.objects_per_type[0],
+            HashSet::from([7, 8, 9, 10, 11, 12, 13, 14])
         );
+        // locatables
+        assert_eq!(
+            task.objects_per_type[1],
+            HashSet::from([0, 1, 2, 3, 4, 5, 6])
+        );
+        // man
+        assert_eq!(task.objects_per_type[2], HashSet::from([0]));
+        // nut
+        assert_eq!(task.objects_per_type[3], HashSet::from([5, 6]));
+        // spanner
+        assert_eq!(task.objects_per_type[4], HashSet::from([1, 2, 3, 4]));
+    }
+
+    #[test]
+    fn static_predicate_detection() {
+        let task = Task::from_text(SPANNER_DOMAIN_TEXT, SPANNER_PROBLEM10_TEXT);
+
+        assert_eq!(task.predicates.len(), 6);
+        assert!(!task.predicates[0].is_static); // at, not static
+        assert!(!task.predicates[1].is_static); // carrying, not static
+        assert!(!task.predicates[2].is_static); // usable, not static
+        assert!(task.predicates[3].is_static); // link, static
+        assert!(!task.predicates[4].is_static); // tightened, not static
+        assert!(!task.predicates[5].is_static); // loose, not static
     }
 }
