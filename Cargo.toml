@@ -21,7 +21,7 @@ priority-queue = "2.0.2"
 pyo3 = { version = "0.21.2", features = ["auto-initialize", "serde"] }
 ron = "0.8.1"
 segvec = "0.2.0"
-serde = { version = "1.0.198", features = ["derive"] }
+serde = { version = "1.0.199", features = ["derive"] }
 strum = "0.26.2"
 strum_macros = "0.26.2"
 thiserror = "1.0.59"
