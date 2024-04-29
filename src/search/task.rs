@@ -201,6 +201,14 @@ impl Task {
     pub fn objects_per_type(&self) -> &[HashSet<usize>] {
         self.objects_per_type.as_slice()
     }
+
+    pub fn static_predicates(&self) -> HashSet<usize> {
+        self.predicates
+            .iter()
+            .filter(|predicate| predicate.is_static)
+            .map(|predicate| predicate.index)
+            .collect()
+    }
 }
 
 #[cfg(test)]

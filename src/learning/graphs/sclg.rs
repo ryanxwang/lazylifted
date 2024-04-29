@@ -8,6 +8,11 @@ use std::collections::{HashMap, HashSet};
 use strum::EnumCount;
 use strum_macros::{EnumCount as EnumCountMacro, FromRepr};
 
+// TODO: like felipe said, static information is still helpful. Instead of just
+// ignoring them for performance, we should find a way to take advantage of
+// them, or perhaps increase wl iteration number
+const NO_STATIC_PREDICATES: bool = true;
+
 #[derive(Debug, Clone)]
 pub struct SclgCompiler {
     /// A precompiled graph for the task.
@@ -20,6 +25,8 @@ pub struct SclgCompiler {
     goal_atom_to_node_index: HashMap<Atom, NodeID>,
     /// A copy of the action schemas of the task
     action_schemas: Vec<ActionSchema>,
+    /// The static predicates of the task
+    static_predicates: HashSet<usize>,
 }
 
 impl SclgCompiler {
@@ -30,6 +37,7 @@ impl SclgCompiler {
             predicate_index_to_node_index: HashMap::new(),
             goal_atom_to_node_index: HashMap::new(),
             action_schemas: task.action_schemas().to_owned(),
+            static_predicates: task.static_predicates(),
         };
 
         compiler.precompile(task);
@@ -44,6 +52,9 @@ impl SclgCompiler {
 
         let mut seen_nodes = HashSet::new();
         for atom in state.atoms() {
+            if NO_STATIC_PREDICATES && self.static_predicates.contains(&atom.predicate_index()) {
+                continue;
+            }
             let node_id = match self.goal_atom_to_node_index.get(&atom) {
                 Some(node_id) => {
                     graph[*node_id] =
@@ -123,6 +134,9 @@ impl SclgCompiler {
                 Negatable::Positive(atom) => atom,
                 Negatable::Negative(_) => panic!("Negative goal atoms are not supported"),
             };
+            if NO_STATIC_PREDICATES && self.static_predicates.contains(&atom.predicate_index()) {
+                continue;
+            }
             let node_id = graph.add_node(Self::get_atom_colour(
                 atom.predicate_index(),
                 AtomNodeType::UnachievedGoal,
