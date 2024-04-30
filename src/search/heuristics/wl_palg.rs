@@ -9,9 +9,9 @@ pub struct WlPalgHeuristic {
 }
 
 impl WlPalgHeuristic {
-    pub fn load(config: &Path, saved_model: &Path) -> Self {
+    pub fn load(saved_model: &Path) -> Self {
         let py = unsafe { Python::assume_gil_acquired() };
-        let model = PartialActionModel::load(py, config, saved_model);
+        let model = PartialActionModel::load(py, saved_model);
         Self { model }
     }
 }

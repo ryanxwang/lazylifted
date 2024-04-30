@@ -55,13 +55,6 @@ struct Cli {
     )]
     saved_model: Option<PathBuf>,
     #[arg(
-        help = "The saved model (as a path) to use for the heuristic \
-        evaluator, only needed for heuristics that require training.",
-        long = "model-config",
-        id = "MODEL_CONFIG"
-    )]
-    model_config: Option<PathBuf>,
-    #[arg(
         value_enum,
         help = "The verbosity level",
         short = 'v',
@@ -126,14 +119,12 @@ fn plan(cli: Cli, task: Task) {
 
     let result = match cli.command {
         Commands::StateSpaceSearch { heuristic_name } => {
-            let heuristic =
-                heuristic_name.create(cli.model_config.as_deref(), cli.saved_model.as_deref());
+            let heuristic = heuristic_name.create(cli.saved_model.as_deref());
             let problem = StateSpaceProblem::new(Rc::clone(&task), successor_generator, heuristic);
             cli.search_engine_name.search(Box::new(problem))
         }
         Commands::PartialActionSearch { heuristic_name } => {
-            let heuristic =
-                heuristic_name.create(cli.model_config.as_deref(), cli.saved_model.as_deref());
+            let heuristic = heuristic_name.create(cli.saved_model.as_deref());
             let problem =
                 PartialActionProblem::new(Rc::clone(&task), successor_generator, heuristic);
             cli.search_engine_name.search(Box::new(problem))

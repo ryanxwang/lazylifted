@@ -255,7 +255,7 @@ impl Evaluate for StateSpaceModel {
         y.extract().unwrap()
     }
 
-    fn load(py: Python<'static>, _config_path: &Path, path: &Path) -> Self {
+    fn load(py: Python<'static>, path: &Path) -> Self {
         let pickle_path = path.with_extension("pkl");
         let model = Regressor::unpickle(py, &pickle_path);
 

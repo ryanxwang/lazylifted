@@ -2,7 +2,7 @@ use crate::{
     learning::{
         graphs::{CGraph, Compiler2, PartialActionCompilerName},
         ml::{MlModel, MlModelName},
-        models::{Evaluate, ModelConfig, Train, TrainingInstance},
+        models::{Evaluate, Train, TrainingInstance},
         WlKernel,
     },
     search::{successor_generators::SuccessorGeneratorName, Action, DBState, PartialAction, Task},
@@ -530,20 +530,16 @@ impl Evaluate for PartialActionModel {
         y
     }
 
-    fn load(py: Python<'static>, config_path: &Path, path: &Path) -> Self {
-        let config = match ModelConfig::from_path(config_path) {
-            ModelConfig::PartialActionModel(config) => config,
-            _ => panic!("Wrong model config, expecing WL-PALG"),
-        };
-
-        let pickle_path = path.with_extension("pkl");
-        let model = MlModel::unpickle(config.model, py, &pickle_path);
-
+    fn load(py: Python<'static>, path: &Path) -> Self {
         let ron_path = path.with_extension("ron");
         let file = std::fs::File::open(ron_path).expect("Failed to open model file");
         let serialisable: SerialisablePartialActionModel =
             ron::de::from_reader(file).expect("Failed to deserialise model");
         assert_eq!(serialisable.state, PartialActionModelState::Trained);
+
+        let pickle_path = path.with_extension("pkl");
+        let model = MlModel::unpickle(serialisable.config.model, py, &pickle_path);
+
         Self {
             model,
             successor_generator_name: serialisable.successor_generator_name,

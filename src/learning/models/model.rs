@@ -19,7 +19,7 @@ pub trait Evaluate {
 
     fn evaluate_batch(&mut self, ts: &[Self::EvaluatedType<'_>]) -> Vec<f64>;
 
-    fn load(py: Python<'static>, config: &Path, path: &Path) -> Self;
+    fn load(py: Python<'static>, path: &Path) -> Self;
 }
 
 /// A training instance is a pair of a plan and a task.
