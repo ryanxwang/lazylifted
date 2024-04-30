@@ -45,10 +45,10 @@ pub struct WlKernel {
     hashes: HashMap<Neighbourhood, i32>,
     /// In evaluation, the number of times we generate a colour and it was
     /// seen in training before.
-    hit_colours: i32,
+    hit_colours: i64,
     /// In evaluation, the number of times we generate a colour but it was not
     /// seen during training, forcing us to discard it.
-    missed_colours: i32,
+    missed_colours: i64,
 }
 
 impl WlKernel {
