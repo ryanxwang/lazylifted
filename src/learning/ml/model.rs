@@ -52,12 +52,12 @@ impl<'py> MlModel<'py> {
 
     pub fn get_weights(&self, model_name: MlModelName) -> Vec<f64> {
         match model_name {
-            MlModelName::RegressorName(regressor_name) => {
+            MlModelName::RegressorName(_regressor_name) => {
                 let regressor = match self {
                     MlModel::Regressor(regressor) => regressor,
                     _ => panic!("Model does not match provided model name"),
                 };
-                regressor.get_weights(&regressor_name)
+                regressor.get_weights()
             }
             MlModelName::RankerName(_ranker_name) => {
                 todo!("Implement get_weights for ranker")
@@ -73,7 +73,6 @@ impl<'py> MlModel<'py> {
     }
 
     pub fn unpickle(model_name: MlModelName, py: Python<'py>, path: &Path) -> Self {
-        // TODO the constructors should take in [`_name`]
         match model_name {
             MlModelName::RegressorName(_name) => MlModel::Regressor(Regressor::unpickle(py, path)),
             MlModelName::RankerName(_name) => MlModel::Ranker(Ranker::unpickle(py, path)),

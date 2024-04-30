@@ -1,7 +1,7 @@
 //! Wrapper around some sklearn regression models
 use crate::learning::ml::py_utils;
 use numpy::{PyArray1, PyArray2};
-use pyo3::{prelude::*, types::IntoPyDict};
+use pyo3::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::time;
@@ -15,6 +15,15 @@ pub enum RegressorName {
     GaussianProcessRegressor,
 }
 
+impl RegressorName {
+    pub fn to_model_str(self) -> &'static str {
+        match self {
+            RegressorName::LinearRegressor => "lr",
+            RegressorName::GaussianProcessRegressor => "gpr",
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Regressor<'py> {
     model: Bound<'py, PyAny>,
@@ -22,8 +31,17 @@ pub struct Regressor<'py> {
 
 impl<'py> Regressor<'py> {
     pub fn new(py: Python<'py>, name: RegressorName) -> Self {
+        let code = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/src/learning/ml/python/regression_model.py"
+        ));
+        let py_model = PyModule::from_code_bound(py, code, "regression_model", "regression_model")
+            .unwrap()
+            .getattr("RegressionModel")
+            .unwrap();
+
         Self {
-            model: Self::construct_sklearn_regressor(py, name),
+            model: py_model.call1((name.to_model_str(),)).unwrap(),
         }
     }
 
@@ -45,51 +63,14 @@ impl<'py> Regressor<'py> {
         y
     }
 
-    fn construct_sklearn_regressor(py: Python<'py>, name: RegressorName) -> Bound<'py, PyAny> {
-        match name {
-            RegressorName::LinearRegressor => {
-                let linear_model = py.import_bound("sklearn.linear_model").unwrap();
-                linear_model
-                    .getattr("LinearRegression")
-                    .unwrap()
-                    .call0()
-                    .unwrap()
-            }
-            RegressorName::GaussianProcessRegressor => {
-                let gaussian_process =
-                    PyModule::import_bound(py, "sklearn.gaussian_process").unwrap();
-                let dot_product = PyModule::import_bound(py, "sklearn.gaussian_process.kernels")
-                    .unwrap()
-                    .getattr("DotProduct")
-                    .unwrap()
-                    .call0()
-                    .unwrap();
-                let kwargs = [("kernel", dot_product)].into_py_dict_bound(py);
-                kwargs.set_item("alpha", 1e-7).unwrap();
-
-                gaussian_process
-                    .getattr("GaussianProcessRegressor")
-                    .unwrap()
-                    .call((), Some(&kwargs))
-                    .unwrap()
-            }
-        }
-    }
-
-    pub fn get_weights(&self, regressor_name: &RegressorName) -> Vec<f64> {
-        let py = self.py();
-        match regressor_name {
-            RegressorName::LinearRegressor => {
-                self.model.getattr("coef_").unwrap().extract().unwrap()
-            }
-            RegressorName::GaussianProcessRegressor => {
-                let locals = [("model", &self.model)].into_py_dict_bound(py);
-                py.eval_bound("model.alpha_ @ model.X_train_", None, Some(&locals))
-                    .unwrap()
-                    .extract()
-                    .unwrap()
-            }
-        }
+    pub fn get_weights(&self) -> Vec<f64> {
+        self.model
+            .getattr("get_weights")
+            .unwrap()
+            .call0()
+            .unwrap()
+            .extract()
+            .unwrap()
     }
 
     pub fn pickle(&self, pickle_path: &Path) {
@@ -139,7 +120,7 @@ mod tests {
             assert_approx_eq!(y[1], 4.0, 1e-5);
 
             // make sure we can get weights
-            let weights = regressor.get_weights(&RegressorName::GaussianProcessRegressor);
+            let weights = regressor.get_weights();
             assert_approx_eq!(weights[0], 0.0, 1e-5);
             assert_approx_eq!(weights[1], 0.5, 1e-5);
         });
@@ -160,7 +141,7 @@ mod tests {
             assert_approx_eq!(y[0], 3.0, 1e-5);
             assert_approx_eq!(y[1], 4.0, 1e-5);
 
-            let weights = regressor.get_weights(&RegressorName::LinearRegressor);
+            let weights = regressor.get_weights();
             assert_approx_eq!(weights[0], 0.25, 1e-5);
             assert_approx_eq!(weights[1], 0.25, 1e-5);
         });

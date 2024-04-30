@@ -1,7 +1,7 @@
 //! Wrapper around various Python learning-to-rank models
 use crate::learning::ml::py_utils;
-use numpy::{PyArray1, PyArray2, PyArrayMethods};
-use pyo3::{prelude::*, types::PyDict};
+use numpy::{PyArray1, PyArray2};
+use pyo3::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use tracing::info;
@@ -14,17 +14,33 @@ pub enum RankerName {
     LambdaMart,
 }
 
+impl RankerName {
+    pub fn to_model_str(self) -> &'static str {
+        match self {
+            RankerName::RankSVM => "ranksvm",
+            RankerName::LambdaMart => "lambdamart",
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Ranker<'py> {
-    name: RankerName,
     model: Bound<'py, PyAny>,
 }
 
 impl<'py> Ranker<'py> {
     pub fn new(py: Python<'py>, name: RankerName) -> Self {
+        let code = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/src/learning/ml/python/ranking_model.py"
+        ));
+        let py_model = PyModule::from_code_bound(py, code, "ranking_model", "ranking_model")
+            .unwrap()
+            .getattr("RankingModel")
+            .unwrap();
+
         Self {
-            name,
-            model: Self::construct_ranker(py, name),
+            model: py_model.call1((name.to_model_str(),)).unwrap(),
         }
     }
 
@@ -35,67 +51,22 @@ impl<'py> Ranker<'py> {
         group: &[usize],
     ) {
         let start_time = std::time::Instant::now();
-        let py = self.model.py();
-        match self.name {
-            RankerName::RankSVM => {
-                todo!("RankSVM not implemented yet")
-            }
-            RankerName::LambdaMart => {
-                let kwargs = PyDict::new_bound(py);
-                kwargs.set_item("group", group).unwrap();
-                self.model
-                    .getattr("fit")
-                    .unwrap()
-                    .call((x, y), Some(&kwargs))
-                    .unwrap();
-            }
-        }
+        self.model
+            .getattr("fit")
+            .unwrap()
+            .call1((x, y, PyArray1::from_slice_bound(self.py(), group)))
+            .unwrap();
         info!(fitting_time = start_time.elapsed().as_secs_f64());
     }
 
     pub fn predict(&self, x: &Bound<'py, PyArray2<f64>>) -> Bound<'py, PyArray1<f64>> {
-        match self.name {
-            RankerName::RankSVM => {
-                todo!("RankSVM not implemented yet")
-            }
-            RankerName::LambdaMart => {
-                let result = self.model.getattr("predict").unwrap().call1((x,)).unwrap();
-                let f32_result = result.downcast_into::<PyArray1<f32>>().unwrap();
-                f32_result.cast(false).unwrap()
-            }
-        }
-    }
-
-    fn construct_ranker(py: Python<'py>, name: RankerName) -> Bound<'py, PyAny> {
-        match name {
-            RankerName::RankSVM => {
-                let svm = py.import_bound("sklearn.svm").unwrap();
-                let kwargs = PyDict::new_bound(py);
-                kwargs.set_item("C", 1e-6).unwrap();
-                kwargs.set_item("loss", "hinge").unwrap();
-                kwargs.set_item("max_iter", 9999999).unwrap();
-                kwargs.set_item("dual", "auto").unwrap();
-                kwargs.set_item("fit_intercept", false).unwrap();
-
-                svm.getattr("LinearSVC")
-                    .unwrap()
-                    .call((), Some(&kwargs))
-                    .unwrap()
-            }
-            RankerName::LambdaMart => {
-                let xgboost = py.import_bound("xgboost").unwrap();
-                let kwargs = PyDict::new_bound(py);
-                kwargs.set_item("tree_method", "hist").unwrap();
-                kwargs.set_item("objective", "rank:ndcg").unwrap();
-                kwargs.set_item("lambdarank_pair_method", "mean").unwrap();
-
-                xgboost
-                    .getattr("XGBRanker")
-                    .unwrap()
-                    .call((), Some(&kwargs))
-                    .unwrap()
-            }
-        }
+        self.model
+            .getattr("predict")
+            .unwrap()
+            .call1((x,))
+            .unwrap()
+            .extract()
+            .unwrap()
     }
 
     pub fn pickle(&self, pickle_path: &Path) {
@@ -104,10 +75,7 @@ impl<'py> Ranker<'py> {
 
     pub fn unpickle(py: Python<'py>, pickle_path: &Path) -> Self {
         let model = py_utils::unpickle(py, pickle_path);
-        Self {
-            name: RankerName::LambdaMart,
-            model,
-        }
+        Self { model }
     }
 
     pub fn py(&self) -> Python<'py> {
