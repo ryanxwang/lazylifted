@@ -1,11 +1,11 @@
 #!/bin/bash
 if [ $# -ne 3 ]; then
-    echo "Usage: $0 <model> <model-type> <domain>, e.g. $0 wl-ilg-gpr partial-space blocksworld"
+    echo "Usage: $0 <model-type> <model> <domain>, e.g. $0 wl-ilg-gpr partial-space blocksworld"
     exit 1
 fi
 
-model=$1
-model_type=$2
+model_type=$1
+model=$2
 domain=$3
 
 model_dir=experiments/models

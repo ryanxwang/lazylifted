@@ -41,7 +41,17 @@ fi
 
 instance_str=$(sed 's/\//_/g' <<< $instance)
 plan_file=$plan_dir/$domain/$instance_str.plan
-cmd="$bin_location benchmarks/ipc23-learning/$domain/domain.pddl benchmarks/ipc23-learning/$domain/$instance.pddl -o $plan_file --model trained_models/$model_type-$model-$domain partial-action-search --heuristic wl"
+
+if [ "$model_type" == "partial-space" ]; then
+    subcommand="partial-action-search"
+elif [ "$model_type" == "state-space" ]; then
+    subcommand="state-space-search"
+else
+    echo "Unsupported model type"
+    exit 1
+fi
+
+cmd="$bin_location benchmarks/ipc23-learning/$domain/domain.pddl benchmarks/ipc23-learning/$domain/$instance.pddl -o $plan_file --model trained_models/$model_type-$model-$domain $subcommand --heuristic wl"
 err_log=$log_dir/$model_str-$domain-$instance_str.err
 out_log=$log_dir/$model_str-$domain-$instance_str.out
 echo "Planning for domain $domain with command: $cmd, saving logs to $err_log and $out_log and plan to $plan_file"
