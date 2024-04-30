@@ -1,0 +1,5 @@
+[state-space-model]
+model = "gpr"
+successor-generator = "full-reducer"
+iters = 4
+validate = false

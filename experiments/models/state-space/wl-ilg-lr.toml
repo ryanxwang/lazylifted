@@ -1,0 +1,5 @@
+[state-space-model]
+model = "lr"
+successor-generator = "full-reducer"
+iters = 4
+validate = false
