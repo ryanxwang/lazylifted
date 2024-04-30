@@ -1,6 +1,6 @@
 use crate::search::heuristics::goal_counting::GoalCounting;
-use crate::search::heuristics::wl_ilg::WlIlgHeuristic;
-use crate::search::heuristics::wl_palg::WlPalgHeuristic;
+use crate::search::heuristics::wl_partial::WlPartialHeuristic;
+use crate::search::heuristics::wl_state::WlStateHeuristic;
 use crate::search::heuristics::zero_heuristic::ZeroHeuristic;
 use crate::search::{DBState, PartialAction, Task};
 use ordered_float::OrderedFloat;
@@ -28,8 +28,11 @@ pub trait Heuristic<T>: Debug {
 #[derive(clap::ValueEnum, Debug, Clone, Copy)]
 #[clap(rename_all = "kebab-case")]
 pub enum StateHeuristicNames {
-    #[clap(name = "wl-ilg", help = "The WL-ILG heuristic, requires a model file.")]
-    WlIlg,
+    #[clap(
+        name = "wl",
+        help = "The WL heuristic, requires a model file with a trained state space model."
+    )]
+    Wl,
     #[clap(help = "The goal counting heuristic.")]
     GoalCounting,
     #[clap(name = "zero", help = "The zero heuristic.")]
@@ -40,11 +43,11 @@ impl StateHeuristicNames {
     pub fn create(&self, saved_model: Option<&Path>) -> Box<dyn Heuristic<DBState>> {
         match self {
             StateHeuristicNames::GoalCounting => Box::new(GoalCounting::new()),
-            StateHeuristicNames::WlIlg => {
+            StateHeuristicNames::Wl => {
                 let saved_model = saved_model
                     .as_ref()
                     .expect("No saved model provided for WL-ILG heuristic");
-                Box::new(WlIlgHeuristic::load(saved_model))
+                Box::new(WlStateHeuristic::load(saved_model))
             }
             StateHeuristicNames::ZeroHeuristic => Box::new(ZeroHeuristic::new()),
         }
@@ -55,10 +58,10 @@ impl StateHeuristicNames {
 #[clap(rename_all = "kebab-case")]
 pub enum PartialActionHeuristicNames {
     #[clap(
-        name = "wl-palg",
-        help = "The WL-PALG heuristic, requires a model file."
+        name = "wl",
+        help = "Run an WL based heuristic, requires a model file with a trained partial action model."
     )]
-    WlPalg,
+    Wl,
     #[clap(name = "zero", help = "The zero heuristic.")]
     ZeroHeuristic,
 }
@@ -69,11 +72,11 @@ impl PartialActionHeuristicNames {
         saved_model: Option<&Path>,
     ) -> Box<dyn Heuristic<(DBState, PartialAction)>> {
         match self {
-            PartialActionHeuristicNames::WlPalg => {
+            PartialActionHeuristicNames::Wl => {
                 let saved_model = saved_model
                     .as_ref()
                     .expect("No saved model provided for WL-PALG heuristic");
-                Box::new(WlPalgHeuristic::load(saved_model))
+                Box::new(WlPartialHeuristic::load(saved_model))
             }
             PartialActionHeuristicNames::ZeroHeuristic => Box::new(ZeroHeuristic::new()),
         }

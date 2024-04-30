@@ -5,7 +5,8 @@ if [ $# -ne 2 ]; then
     exit 1
 fi
 
-planner_type=wl_palg
+planner_type=wl_sclg_gpr
+heuristic=$(sed 's/_/-/g' <<< $planner_type)
 log_dir=planning_logs
 plan_dir=plans
 
@@ -38,7 +39,7 @@ fi
 
 instance_str=$(sed 's/\//_/g' <<< $instance)
 plan_file=$plan_dir/$domain/$instance_str.plan
-cmd="$bin_location benchmarks/ipc23-learning/$domain/domain.pddl benchmarks/ipc23-learning/$domain/$instance.pddl -o $plan_file partial-action-search --heuristic wl-palg --model trained_models/wl-palg-lambdamart-$domain "
+cmd="$bin_location benchmarks/ipc23-learning/$domain/domain.pddl benchmarks/ipc23-learning/$domain/$instance.pddl -o $plan_file --model trained_models/$heuristic-$domain partial-action-search --heuristic wl"
 err_log=$log_dir/$planner_type-$domain-$instance_str.err
 out_log=$log_dir/$planner_type-$domain-$instance_str.out
 echo "Planning for domain $domain with command: $cmd, saving logs to $err_log and $out_log and plan to $plan_file"

@@ -9,12 +9,12 @@ use pyo3::Python;
 use std::path::Path;
 
 #[derive(Debug)]
-pub struct WlIlgHeuristic {
+pub struct WlStateHeuristic {
     model: StateSpaceModel,
 }
 
 /// A heuristic that uses the WL-ILG model to evaluate states.
-impl WlIlgHeuristic {
+impl WlStateHeuristic {
     pub fn load(saved_model: &Path) -> Self {
         let py = unsafe { Python::assume_gil_acquired() };
         let model = StateSpaceModel::load(py, saved_model);
@@ -22,7 +22,7 @@ impl WlIlgHeuristic {
     }
 }
 
-impl Heuristic<DBState> for WlIlgHeuristic {
+impl Heuristic<DBState> for WlStateHeuristic {
     fn evaluate(&mut self, state: &DBState, task: &Task) -> HeuristicValue {
         self.model.set_evaluating_task(task);
         self.model.evaluate(state).into()
