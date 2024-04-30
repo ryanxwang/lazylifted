@@ -11,7 +11,7 @@
 
 use crate::search::{Negatable, Object, Task};
 use crate::{
-    learning::graphs::{CGraph, Compiler, NodeID},
+    learning::graphs::{CGraph, Compiler, Compiler2, NodeID},
     search::{Atom, DBState},
 };
 use serde::{Deserialize, Serialize};
@@ -129,6 +129,15 @@ impl IlgCompiler {
 
 impl Compiler<DBState> for IlgCompiler {
     fn compile(&self, state: &DBState) -> CGraph {
+        self.compile(state)
+    }
+}
+
+/// We implement the [`Compiler2`] trait for [`IlgCompiler`] to allow it to be
+/// used in also for [`crate::learning::models::PartialActionModel`], this
+/// implementation ignores the partial action completely.
+impl<T> Compiler2<DBState, T> for IlgCompiler {
+    fn compile(&self, state: &DBState, _: &T) -> CGraph {
         self.compile(state)
     }
 }

@@ -1,8 +1,0 @@
-[partial-action-model]
-successor-generator = "full-reducer"
-graph-compiler = "sclg"
-iters = 3
-validate = false
-
-[partial-action-model.model]
-regressor-name = "gpr"

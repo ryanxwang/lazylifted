@@ -1,17 +1,19 @@
 #!/bin/bash
 
-if [ $# -ne 2 ]; then
-    echo "Usage: $0 <domain> <instance>"
+if [ $# -ne 4 ]; then
+    echo "Usage: $0 <model_type> <model> <domain> <instance>"
     exit 1
 fi
 
-planner_type=wl_sclg_gpr
-heuristic=$(sed 's/_/-/g' <<< $planner_type)
+model_type=$1
+model=$2
+domain=$3
+instance=$4
+
+model_str=$(sed 's/-/_/g' <<< $model_type)-$(sed 's/-/_/g' <<< $model)
 log_dir=planning_logs
 plan_dir=plans
 
-domain=$1
-instance=$2
 
 # https://stackoverflow.com/questions/1885525/how-do-i-prompt-a-user-for-confirmation-in-bash-script
 echo "This script will overwrite previous logs for the same experiment at $log_dir"
@@ -39,8 +41,8 @@ fi
 
 instance_str=$(sed 's/\//_/g' <<< $instance)
 plan_file=$plan_dir/$domain/$instance_str.plan
-cmd="$bin_location benchmarks/ipc23-learning/$domain/domain.pddl benchmarks/ipc23-learning/$domain/$instance.pddl -o $plan_file --model trained_models/$heuristic-$domain partial-action-search --heuristic wl"
-err_log=$log_dir/$planner_type-$domain-$instance_str.err
-out_log=$log_dir/$planner_type-$domain-$instance_str.out
+cmd="$bin_location benchmarks/ipc23-learning/$domain/domain.pddl benchmarks/ipc23-learning/$domain/$instance.pddl -o $plan_file --model trained_models/$model_type-$model-$domain partial-action-search --heuristic wl"
+err_log=$log_dir/$model_str-$domain-$instance_str.err
+out_log=$log_dir/$model_str-$domain-$instance_str.out
 echo "Planning for domain $domain with command: $cmd, saving logs to $err_log and $out_log and plan to $plan_file"
 $cmd 2> $err_log 1> $out_log

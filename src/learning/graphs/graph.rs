@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use crate::learning::graphs::{PalgCompiler, SclgCompiler};
+use crate::learning::graphs::{IlgCompiler, PalgCompiler, SclgCompiler};
 use crate::search::{DBState, PartialAction, Task};
 use petgraph::{graph::Graph, Undirected};
 use serde::{Deserialize, Serialize};
@@ -21,6 +21,7 @@ pub trait Compiler2<T, U>: Debug {
 pub enum PartialActionCompilerName {
     Sclg,
     Palg,
+    Ilg,
 }
 
 impl PartialActionCompilerName {
@@ -28,6 +29,7 @@ impl PartialActionCompilerName {
         match self {
             PartialActionCompilerName::Sclg => Box::new(SclgCompiler::new(task)),
             PartialActionCompilerName::Palg => Box::new(PalgCompiler::new(task)),
+            PartialActionCompilerName::Ilg => Box::new(IlgCompiler::new(task)),
         }
     }
 }
