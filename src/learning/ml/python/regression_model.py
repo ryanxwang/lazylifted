@@ -15,12 +15,21 @@ class RegressionModel:
 
     def fit(self, X, y):
         self.model.fit(X, y)
+        self.weights = self.get_weights()
 
     def predict(self, X):
+        if (
+            self.model_str == "gpr"
+            and hasattr(self, "weights")
+            and self.weights is not None
+        ):
+            # for efficiency (especially for GPR), use the weights if available
+            return X @ self.weights.T
         return self.model.predict(X)
 
     def get_weights(self):
         if self.model_str == "lr":
             return self.model.coef_
         elif self.model_str == "gpr":
+            # this only works for GPR with DotProduct kernel
             return self.model.alpha_ @ self.model.X_train_

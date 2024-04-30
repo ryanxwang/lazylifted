@@ -31,15 +31,7 @@ pub struct Regressor<'py> {
 
 impl<'py> Regressor<'py> {
     pub fn new(py: Python<'py>, name: RegressorName) -> Self {
-        let code = include_str!(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/src/learning/ml/python/regression_model.py"
-        ));
-        let py_model = PyModule::from_code_bound(py, code, "regression_model", "regression_model")
-            .unwrap()
-            .getattr("RegressionModel")
-            .unwrap();
-
+        let py_model = py_utils::get_regression_model(py);
         Self {
             model: py_model.call1((name.to_model_str(),)).unwrap(),
         }

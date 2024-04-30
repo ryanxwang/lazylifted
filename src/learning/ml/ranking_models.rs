@@ -30,15 +30,7 @@ pub struct Ranker<'py> {
 
 impl<'py> Ranker<'py> {
     pub fn new(py: Python<'py>, name: RankerName) -> Self {
-        let code = include_str!(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/src/learning/ml/python/ranking_model.py"
-        ));
-        let py_model = PyModule::from_code_bound(py, code, "ranking_model", "ranking_model")
-            .unwrap()
-            .getattr("RankingModel")
-            .unwrap();
-
+        let py_model = py_utils::get_ranking_model(py);
         Self {
             model: py_model.call1((name.to_model_str(),)).unwrap(),
         }
