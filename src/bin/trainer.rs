@@ -43,6 +43,9 @@ struct DataConfig {
     domain_pddl: PathBuf,
     problems_dir: PathBuf,
     plans_dir: PathBuf,
+    /// Training related settings that are used to override settings with the
+    /// same name in the model config
+    iters: Option<usize>,
 }
 
 fn load_data(data_config: &DataConfig) -> Vec<TrainingInstance> {
@@ -90,7 +93,8 @@ fn main() {
         // acquired. This is so that we don't have to pass the Python token
         // around everywhere. The catch is that we need to make sure everything
         // is actually wrapped in a `Python::with_gil` block.
-        let mut model = ModelConfig::from_path(&args.model_config).trainer_from_config();
+        let mut model =
+            ModelConfig::from_path(&args.model_config).trainer_from_config(data_config.iters);
         model.train(&training_data);
         model.save(&args.save_path);
     });

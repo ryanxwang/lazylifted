@@ -58,12 +58,24 @@ impl ModelConfig {
         config
     }
 
-    pub fn trainer_from_config(self) -> Box<dyn Train> {
+    pub fn trainer_from_config(self, iters: Option<usize>) -> Box<dyn Train> {
         let py = unsafe { Python::assume_gil_acquired() };
 
         match self {
-            ModelConfig::StateSpaceModel(config) => Box::new(StateSpaceModel::new(py, config)),
+            ModelConfig::StateSpaceModel(config) => {
+                let config = if let Some(iters) = iters {
+                    StateSpaceModelConfig { iters, ..config }
+                } else {
+                    config
+                };
+                Box::new(StateSpaceModel::new(py, config))
+            }
             ModelConfig::PartialActionModel(config) => {
+                let config = if let Some(iters) = iters {
+                    PartialActionModelConfig { iters, ..config }
+                } else {
+                    config
+                };
                 Box::new(PartialActionModel::new(py, config))
             }
         }

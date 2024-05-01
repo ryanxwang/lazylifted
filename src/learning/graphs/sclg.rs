@@ -11,7 +11,7 @@ use strum_macros::{EnumCount as EnumCountMacro, FromRepr};
 // TODO: like felipe said, static information is still helpful. Instead of just
 // ignoring them for performance, we should find a way to take advantage of
 // them, or perhaps increase wl iteration number
-const NO_STATIC_PREDICATES: bool = true;
+const NO_STATIC_PREDICATES: bool = false;
 
 #[derive(Debug, Clone)]
 pub struct SclgCompiler {
