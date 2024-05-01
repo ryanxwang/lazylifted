@@ -194,13 +194,13 @@ mod tests {
         test_applicable_actions_in_spanner_init(SuccessorGeneratorName::FullReducer);
     }
 
-    // #[test]
-    // fn applicable_actions_in_ferry_init() {
-    //     test_applicable_actions_in_ferry_init(SuccessorGeneratorName::FullReducer);
-    // }
+    #[test]
+    fn applicable_actions_in_ferry_init() {
+        test_applicable_actions_in_ferry_init(SuccessorGeneratorName::FullReducer);
+    }
 
-    // #[test]
-    // fn successor_generation_in_ferry() {
-    //     test_successor_generation_in_ferry(SuccessorGeneratorName::FullReducer);
-    // }
+    #[test]
+    fn successor_generation_in_ferry() {
+        test_successor_generation_in_ferry(SuccessorGeneratorName::FullReducer);
+    }
 }

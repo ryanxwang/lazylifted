@@ -35,16 +35,13 @@ impl Hypergraph {
         let mut missing_preconds = Vec::new();
 
         for (i, precond) in action_schema.preconditions().iter().enumerate() {
-            if precond.is_nullary() || precond.is_negated() {
+            if precond.is_nullary() {
                 continue;
-            }
-            if precond.is_negated() {
-                panic!("Negated preconditions are not supported");
             }
 
             let mut free_variables = HashSet::new();
             for arg in precond.arguments() {
-                // We parse contants to negative numbers, so we don't treat them
+                // We parse constants to negative numbers, so we don't treat them
                 // here.
                 if arg.is_constant() {
                     continue;
