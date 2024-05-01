@@ -15,9 +15,11 @@ use crate::{
     search::{Atom, DBState},
 };
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use strum::EnumCount;
 use strum_macros::EnumCount as EnumCountMacro;
+
+const NO_STATIC_PREDICATES: bool = true;
 
 /// Colours of atom nodes in the ILG.
 #[allow(clippy::enum_variant_names)]
@@ -38,6 +40,7 @@ pub struct IlgCompiler {
     base_graph: Option<CGraph>,
     object_index_to_node_index: HashMap<usize, NodeID>,
     goal_atom_to_node_index: HashMap<Atom, NodeID>,
+    static_predicates: HashSet<usize>,
 }
 
 impl IlgCompiler {
@@ -46,6 +49,7 @@ impl IlgCompiler {
             base_graph: None,
             object_index_to_node_index: HashMap::new(),
             goal_atom_to_node_index: HashMap::new(),
+            static_predicates: task.static_predicates(),
         };
 
         compiler.precompile(task);
@@ -73,6 +77,9 @@ impl IlgCompiler {
             .clone();
 
         for atom in state.atoms() {
+            if NO_STATIC_PREDICATES && self.static_predicates.contains(&atom.predicate_index()) {
+                continue;
+            }
             match self.goal_atom_to_node_index.get(&atom) {
                 Some(node_id) => {
                     graph[*node_id] =
@@ -107,6 +114,9 @@ impl IlgCompiler {
         }
 
         for atom in task.goal.atoms() {
+            if NO_STATIC_PREDICATES && self.static_predicates.contains(&atom.predicate_index()) {
+                continue;
+            }
             let atom = match atom {
                 Negatable::Positive(atom) => atom,
                 Negatable::Negative(_) => panic!("Negative goal atoms are not supported in ILG"),
