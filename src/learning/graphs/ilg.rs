@@ -19,7 +19,7 @@ use std::collections::{HashMap, HashSet};
 use strum::EnumCount;
 use strum_macros::EnumCount as EnumCountMacro;
 
-const NO_STATIC_PREDICATES: bool = true;
+const NO_STATIC_PREDICATES: bool = false;
 
 /// Colours of atom nodes in the ILG.
 #[allow(clippy::enum_variant_names)]
