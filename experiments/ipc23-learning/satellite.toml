@@ -1,0 +1,4 @@
+domain_pddl = "benchmarks/ipc23-learning/satellite/domain.pddl"
+problems_dir = "benchmarks/ipc23-learning/satellite/training/easy"
+plans_dir = "benchmarks/ipc23-learning/satellite/training_plans"
+iters = 3
