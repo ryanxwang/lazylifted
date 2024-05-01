@@ -17,3 +17,13 @@ pub const SPANNER_PROBLEM10_TEXT: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/benchmarks/ipc23-learning/spanner/testing/easy/p10.pddl"
 ));
+
+pub const FERRY_DOMAIN_TEXT: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/benchmarks/ipc23-learning/ferry/domain.pddl"
+));
+
+pub const FERRY_PROBLEM10_TEXT: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/benchmarks/ipc23-learning/ferry/training/easy/p10.pddl"
+));

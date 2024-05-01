@@ -3,7 +3,7 @@ use crate::search::{Atom, DBState, Negatable};
 use std::collections::HashMap;
 
 /// The goal of a task.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Goal {
     atoms: Vec<Negatable<Atom>>,
 }

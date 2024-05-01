@@ -69,7 +69,8 @@ where
             }
         }
 
-        instantiations
+        // applicable actions, ignoring negative preconditions
+        let actions = instantiations
             .tuples
             .iter()
             .map(|tuple| {
@@ -82,7 +83,9 @@ where
                     instantiation: ordered_tuple,
                 }
             })
-            .collect()
+            .collect();
+
+        actions
     }
 
     fn generate_successor(

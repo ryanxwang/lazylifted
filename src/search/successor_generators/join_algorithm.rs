@@ -108,9 +108,7 @@ fn select_tuples(
     free_and_param_index: &[(usize, usize)],
     objects_per_param: &[HashSet<usize>],
 ) -> Vec<GroundAtom> {
-    let mut tuples = Vec::new();
-
-    for tuple in &state.relations[atom.predicate_index()].tuples {
+    let tuple_matches = |tuple: &Vec<usize>| -> bool {
         // the tuple matches the atom if
         // 1. when the atom is a constant, the tuple has the same value
         // 2. when the atom is a free variable, the type of the tuple is a
@@ -124,7 +122,7 @@ fn select_tuples(
             }
         }
         if !matches {
-            continue;
+            return false;
         }
 
         for &(free_index, param_index) in free_and_param_index {
@@ -134,11 +132,60 @@ fn select_tuples(
                 break;
             }
         }
-        if !matches {
-            continue;
+        matches
+    };
+
+    let mut tuples = Vec::new();
+
+    if !atom.is_negated() {
+        for tuple in &state.relations[atom.predicate_index()].tuples {
+            if tuple_matches(tuple) {
+                tuples.push(tuple.clone());
+            }
+        }
+    } else {
+        // For negative preconditions, we generate all the tuples that match the
+        // the atom on constants and satisfy type requirements on free
+        // variables. We then remove those tuples that are present in the
+        // state.
+
+        // TODO: plenty of low-hanging optimisation fruits here
+        fn product(l: &HashSet<Vec<usize>>, r: HashSet<usize>) -> HashSet<Vec<usize>> {
+            l.iter()
+                .flat_map(|x| {
+                    r.iter().map(move |y| {
+                        let mut z = x.clone();
+                        z.push(*y);
+                        z
+                    })
+                })
+                .collect()
+        }
+        let get_relevant_objects = |index: usize| -> HashSet<usize> {
+            if constants.contains(&index) {
+                HashSet::from([atom.argument(index).get_index()])
+            } else {
+                objects_per_param[index].clone()
+            }
+        };
+        let mut all_tuples = get_relevant_objects(0)
+            .iter()
+            .map(|&x| vec![x])
+            .collect::<HashSet<Vec<usize>>>();
+        for param_index in 1..atom.arguments().len() {
+            all_tuples = product(&all_tuples, get_relevant_objects(param_index));
         }
 
-        tuples.push(tuple.clone());
+        for tuple in all_tuples {
+            debug_assert!(tuple_matches(&tuple));
+            if state.relations[atom.predicate_index()]
+                .tuples
+                .contains(&tuple)
+            {
+                continue;
+            }
+            tuples.push(tuple);
+        }
     }
 
     tuples
@@ -157,241 +204,30 @@ impl JoinAlgorithm for NaiveJoinAlgorithm {}
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::search::{
-        successor_generators::{JoinSuccessorGenerator, SuccessorGenerator},
-        Action, Task,
-    };
-    use crate::test_utils::*;
+    use crate::search::successor_generators::{join_algorithm_tests::*, SuccessorGeneratorName};
 
     #[test]
     fn applicable_actions_in_blocksworld_init() {
-        let task = Task::from_text(BLOCKSWORLD_DOMAIN_TEXT, BLOCKSWORLD_PROBLEM13_TEXT);
-        let generator = JoinSuccessorGenerator::new(NaiveJoinAlgorithm::new(), &task);
-
-        let state = &task.initial_state;
-
-        // pickup is not applicable in the initial state
-        let actions = generator.get_applicable_actions(state, &task.action_schemas()[0]);
-        assert_eq!(actions.len(), 0);
-
-        // putdown is not applicable in the initial state
-        let actions = generator.get_applicable_actions(state, &task.action_schemas()[1]);
-        assert_eq!(actions.len(), 0);
-
-        // stack is not applicable in the initial state
-        let actions = generator.get_applicable_actions(state, &task.action_schemas()[2]);
-        assert_eq!(actions.len(), 0);
-
-        // unstack is the only applicable action in the initial state
-        let actions = generator.get_applicable_actions(state, &task.action_schemas()[3]);
-        assert_eq!(actions.len(), 1);
-        assert_eq!(actions[0].index, 3);
-        assert_eq!(actions[0].instantiation, vec![0, 1]);
+        test_applicable_actions_in_blocksworld_init(SuccessorGeneratorName::Naive);
     }
 
     #[test]
     fn successor_generation_in_blocksworld() {
-        let task = Task::from_text(BLOCKSWORLD_DOMAIN_TEXT, BLOCKSWORLD_PROBLEM13_TEXT);
-        let generator = JoinSuccessorGenerator::new(NaiveJoinAlgorithm::new(), &task);
-
-        let mut states = Vec::new();
-        states.push(task.initial_state.clone());
-
-        // action: (unstack b1 b2)
-        let actions = generator.get_applicable_actions(&states[0], &task.action_schemas()[3]);
-        assert_eq!(actions.len(), 1);
-        states.push(generator.generate_successor(
-            &states[0],
-            &task.action_schemas()[3],
-            &actions[0],
-        ));
-
-        // state: (clear b2, on-table b4, holding b1, on b2 b3, on b3 b4)
-        assert_eq!(
-            format!("{}", states[1]),
-            "(0 [1])(1 [3])(3 [0])(4 [1, 2])(4 [2, 3])"
-        );
-
-        // action: (putdown b1)
-        let actions = generator.get_applicable_actions(&states[1], &task.action_schemas()[1]);
-        assert_eq!(actions.len(), 1);
-        states.push(generator.generate_successor(
-            &states[1],
-            &task.action_schemas()[1],
-            &actions[0],
-        ));
-
-        // state: (clear b1, clear b2, on-table b1, on-table b4, arm-empty, on b2 b3, on b3 b4)
-        assert_eq!(
-            format!("{}", states[2]),
-            "(0 [0])(0 [1])(1 [0])(1 [3])(4 [1, 2])(4 [2, 3])(2)"
-        );
-
-        // action: (unstack b2 b3)
-        let actions = generator.get_applicable_actions(&states[2], &task.action_schemas()[3]);
-        assert_eq!(actions.len(), 1);
-        states.push(generator.generate_successor(
-            &states[2],
-            &task.action_schemas()[3],
-            &actions[0],
-        ));
-
-        // state: (clear b1, clear b3, on-table b1, on-table b4, holding b2, on b3 b4)
-        assert_eq!(
-            format!("{}", states[3]),
-            "(0 [0])(0 [2])(1 [0])(1 [3])(3 [1])(4 [2, 3])"
-        );
-
-        // action: (putdown b2)
-        let actions = generator.get_applicable_actions(&states[3], &task.action_schemas()[1]);
-        assert_eq!(actions.len(), 1);
-        states.push(generator.generate_successor(
-            &states[3],
-            &task.action_schemas()[1],
-            &actions[0],
-        ));
-
-        // state: (clear b1, clear b2, clear b3, on-table b1, on-table b2, on-table b4, arm-empty, on b3 b4)
-        assert_eq!(
-            format!("{}", states[4]),
-            "(0 [0])(0 [1])(0 [2])(1 [0])(1 [1])(1 [3])(4 [2, 3])(2)"
-        );
-
-        // action: (unstack b3 b4)
-        let actions = generator.get_applicable_actions(&states[4], &task.action_schemas()[3]);
-        assert_eq!(actions.len(), 1);
-        states.push(generator.generate_successor(
-            &states[4],
-            &task.action_schemas()[3],
-            &actions[0],
-        ));
-
-        // state: (clear b1, clear b2, clear b4, on-table b1, on-table b2, on-table b4, holding b3)
-        assert_eq!(
-            format!("{}", states[5]),
-            "(0 [0])(0 [1])(0 [3])(1 [0])(1 [1])(1 [3])(3 [2])"
-        );
-
-        // action: (stack b3 b1)
-        let actions = generator.get_applicable_actions(&states[5], &task.action_schemas()[2]);
-        assert_eq!(actions.len(), 3);
-        assert!(actions.contains(&Action {
-            // (stack b3 b1)
-            index: 2,
-            instantiation: vec![2, 0]
-        }));
-        assert!(actions.contains(&Action {
-            // (stack b3 b2)
-            index: 2,
-            instantiation: vec![2, 1]
-        }));
-        assert!(actions.contains(&Action {
-            // (stack b3 b4)
-            index: 2,
-            instantiation: vec![2, 3]
-        }));
-        let action = actions.iter().find(|a| a.instantiation[1] == 0).unwrap();
-        states.push(generator.generate_successor(&states[5], &task.action_schemas()[2], action));
-
-        // state: (clear b2, clear b3, clear b4, on-table b1, on-table b2, on-table b4, arm-empty, on b3 b1)
-        assert_eq!(
-            format!("{}", states[6]),
-            "(0 [1])(0 [2])(0 [3])(1 [0])(1 [1])(1 [3])(4 [2, 0])(2)"
-        );
-
-        // action: (pickup b2)
-        let actions = generator.get_applicable_actions(&states[6], &task.action_schemas()[0]);
-        assert_eq!(actions.len(), 2);
-        assert!(actions.contains(&Action {
-            // (pickup b2)
-            index: 0,
-            instantiation: vec![1]
-        }));
-        assert!(actions.contains(&Action {
-            // (pickup b4)
-            index: 0,
-            instantiation: vec![3]
-        }));
-        let action = actions.iter().find(|a| a.instantiation[0] == 1).unwrap();
-        states.push(generator.generate_successor(&states[6], &task.action_schemas()[0], action));
-
-        // state: (clear b3, clear b4, on-table b1, on-table b4, holding b2, on b3 b1)
-        assert_eq!(
-            format!("{}", states[7]),
-            "(0 [2])(0 [3])(1 [0])(1 [3])(3 [1])(4 [2, 0])"
-        );
-
-        // action: (stack b2 b3)
-        let actions = generator.get_applicable_actions(&states[7], &task.action_schemas()[2]);
-        assert_eq!(actions.len(), 2);
-        assert!(actions.contains(&Action {
-            // (stack b2 b3)
-            index: 2,
-            instantiation: vec![1, 2]
-        }));
-        assert!(actions.contains(&Action {
-            // (stack b2 b4)
-            index: 2,
-            instantiation: vec![1, 3]
-        }));
-        let action = actions.iter().find(|a| a.instantiation[1] == 2).unwrap();
-        states.push(generator.generate_successor(&states[7], &task.action_schemas()[2], action));
-
-        // state: (clear b2, clear b4, on-table b1, on-table b4, arm-empty, on b2 b3, on b3 b1)
-        assert_eq!(
-            format!("{}", states[8]),
-            "(0 [1])(0 [3])(1 [0])(1 [3])(4 [1, 2])(4 [2, 0])(2)"
-        );
-
-        // action: (pickup b4)
-        let actions = generator.get_applicable_actions(&states[8], &task.action_schemas()[0]);
-        assert_eq!(actions.len(), 1);
-        states.push(generator.generate_successor(
-            &states[8],
-            &task.action_schemas()[0],
-            &actions[0],
-        ));
-
-        // state: (clear b2, on-table b1, holding b4, on b2 b3, on b3 b1)
-        assert_eq!(
-            format!("{}", states[9]),
-            "(0 [1])(1 [0])(3 [3])(4 [1, 2])(4 [2, 0])"
-        );
-
-        // action: (stack b4 b2)
-        let actions = generator.get_applicable_actions(&states[9], &task.action_schemas()[2]);
-        assert_eq!(actions.len(), 1);
-        states.push(generator.generate_successor(
-            &states[9],
-            &task.action_schemas()[2],
-            &actions[0],
-        ));
-
-        // state: (clear b4, on-table b1, arm-empty, on b2 b3, on b3 b1, on b4 b2)
-        assert_eq!(
-            format!("{}", states[10]),
-            "(0 [3])(1 [0])(4 [1, 2])(4 [2, 0])(4 [3, 1])(2)"
-        );
+        test_successor_generation_in_blocksworld(SuccessorGeneratorName::Naive);
     }
 
     #[test]
     fn applicable_actions_in_spanner_init() {
-        let task = Task::from_text(SPANNER_DOMAIN_TEXT, SPANNER_PROBLEM10_TEXT);
-        let generator = JoinSuccessorGenerator::new(NaiveJoinAlgorithm::new(), &task);
+        test_applicable_actions_in_spanner_init(SuccessorGeneratorName::Naive);
+    }
 
-        let state = &task.initial_state;
+    #[test]
+    fn applicable_actions_in_ferry_init() {
+        test_applicable_actions_in_ferry_init(SuccessorGeneratorName::Naive);
+    }
 
-        // (walk shed location1 bob)
-        let actions = generator.get_applicable_actions(state, &task.action_schemas()[0]);
-        assert_eq!(actions.len(), 1);
-
-        // pickup_spanner is not applicable in the initial state
-        let actions = generator.get_applicable_actions(state, &task.action_schemas()[1]);
-        assert_eq!(actions.len(), 0);
-
-        // tighten_nut is not applicable in the initial state
-        let actions = generator.get_applicable_actions(state, &task.action_schemas()[2]);
-        assert_eq!(actions.len(), 0);
+    #[test]
+    fn successor_generation_in_ferry() {
+        test_successor_generation_in_ferry(SuccessorGeneratorName::Naive);
     }
 }

@@ -2,8 +2,7 @@ use std::collections::HashMap;
 
 use crate::parsed_types::{Name, PredicateDefinition};
 
-// TODO: Check for static predicates.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Predicate {
     pub name: Name,
     pub index: usize,

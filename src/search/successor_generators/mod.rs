@@ -9,3 +9,6 @@ use hypergraph::Hypergraph;
 use join_algorithm::{JoinAlgorithm, NaiveJoinAlgorithm, PrecompiledActionData};
 use join_successor_generator::JoinSuccessorGenerator;
 pub use successor_generator::{SuccessorGenerator, SuccessorGeneratorName};
+
+#[cfg(test)]
+mod join_algorithm_tests;
