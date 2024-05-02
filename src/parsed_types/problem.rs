@@ -5,7 +5,7 @@ use crate::parsed_types::{Name, NameLiteral, Objects, Requirements};
 /// A domain-specific problem declaration.
 ///
 /// ## Usages
-/// This is the top-level type of a problem description within a [`Domain`](crate::Domain).
+/// This is the top-level type of a problem description within a [`Domain`](crate::parsed_types::Domain).
 ///
 /// ## Example
 /// ```

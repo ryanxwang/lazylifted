@@ -3,7 +3,7 @@ use crate::search::Negatable;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-/// An [`Atom`] is similar to a [`crate::search::SchemaAtom`], except that
+/// An [`Atom`] is similar to a [`crate::search::AtomSchema`], except that
 /// state atoms are fully grounded.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Atom {

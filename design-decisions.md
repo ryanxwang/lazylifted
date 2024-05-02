@@ -4,6 +4,13 @@ There is a lot of room to explore in this project. This file documents and
 discusses some of these design decisions as well as results from trialing out
 some of these options so that we can backtrack if something doesn't work.
 
+## Ranking vs Regression
+
+Empirically, it seems that regression based approaches produce much more
+informative heuristics for search. This is likely to do with search being able
+to focus much more on the state-space rather than the partial space, which the
+ranking based training data emphasises.
+
 ## Ranking algorithm
 
 This is the actual ML algorithm we use to rank things. So far we've explored

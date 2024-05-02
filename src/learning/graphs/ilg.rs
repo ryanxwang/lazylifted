@@ -7,7 +7,7 @@
 //! Learning Reliable Heuristics with Classical Machine Learning. ICAPS 2024.
 //!
 //! This implementation is based on the original Python implementation at
-//! https://github.com/DillonZChen/goose
+//! <https://github.com/DillonZChen/goose>
 
 use crate::search::{Negatable, Object, Task};
 use crate::{

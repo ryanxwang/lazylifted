@@ -1,7 +1,7 @@
 /// Wrapper around a type to indicate that it can be negated. Some types that
 /// are often wrapped inside a [`Negatable`] are [`crate::search::Atom`] and
-/// [`crate::search::AtomSchema`]. When using [`Negatable`] to wrap a type
-/// [`T`], it is often very useful to implement some wrapper functions for
+/// [`crate::search::AtomSchema`]. When using [`Negatable`] to wrap a type, it
+/// is often very useful to implement some wrapper functions for
 /// [`Negatable<T>`] as well, see [`crate::search::Atom`] for an example.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Negatable<T> {

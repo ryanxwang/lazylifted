@@ -21,8 +21,8 @@ pub type GroundAtom = Vec<usize>;
 pub struct Relation {
     /// The predicate symbol of this relation.
     pub predicate_symbol: usize,
-    /// The tuples of the relation. This is a [`BTreeSet`] as [`HashSet`]
-    /// does not implement [`Hash`] trait.
+    /// The tuples of the relation. This is a [`BTreeSet`] as
+    /// [`HashSet`](std::collections::HashSet) does not implement [`Hash`] trait.
     pub tuples: BTreeSet<GroundAtom>,
 }
 

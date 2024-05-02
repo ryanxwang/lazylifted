@@ -98,7 +98,7 @@ impl AtomSchema {
     }
 
     /// Returns a new AtomSchema with the given arguments partially grounded.
-    /// The i-th element of the [`object_indices`] slice contains the index of
+    /// The i-th element of the `object_indices` slice contains the index of
     /// object used to ground the schema parameter with index i.
     pub fn partially_ground(&self, object_indices: &[usize]) -> Self {
         Self {

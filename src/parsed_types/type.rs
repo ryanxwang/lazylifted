@@ -10,7 +10,7 @@ pub const TYPE_OBJECT: PrimitiveType = PrimitiveType(Name::new_static("object"))
 /// A primitive type.
 ///
 /// ## Requirements
-/// Requires [Typing](crate::Requirement::Typing).
+/// Requires [Typing](crate::parsed_types::Requirement::Typing).
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Default)]
 pub struct PrimitiveType(Name);
 
@@ -23,7 +23,7 @@ impl PrimitiveType {
 /// A type selection from `<primitive-type> | (either <primitive-type>)`.
 ///
 /// ## Requirements
-/// Requires [Typing](crate::Requirement::Typing).
+/// Requires [Typing](crate::parsed_types::Requirement::Typing).
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Type {
     /// The type is exactly this named type.

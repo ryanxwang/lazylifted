@@ -6,7 +6,7 @@ use crate::parsed_types::{Name, Types};
 /// The `Domain` type specifies a problem domain in which to plan.
 ///
 /// ## Usage
-/// This is the top-level type of a domain description. See also [`Problem`](crate::Problem).
+/// This is the top-level type of a domain description. See also [`Problem`](crate::parsed_types::Problem).
 ///
 /// ## Example
 /// ```
@@ -114,14 +114,14 @@ impl Domain {
     }
 
     /// Returns the optional domain requirements.
-    /// If no requirements were specified by the domain, [STRIPS](crate::Requirement::Strips) is implied.
+    /// If no requirements were specified by the domain, [STRIPS](crate::parsed_types::Requirement::Strips) is implied.
     pub const fn requirements(&self) -> &Requirements {
         &self.requirements
     }
 
     /// Returns the optional type declarations.
     /// ## Requirements
-    /// Requires [Typing](crate::Requirement::Typing).
+    /// Requires [Typing](crate::parsed_types::Requirement::Typing).
     pub const fn types(&self) -> &Types {
         &self.types
     }

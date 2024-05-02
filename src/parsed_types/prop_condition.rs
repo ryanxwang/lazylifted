@@ -8,13 +8,13 @@ pub enum PropCondition {
     Literal(TermLiteral),
     And(Vec<PropCondition>),
     /// ## Requirements
-    /// Requires [Disjunctive Preconditions](crate::Requirement::DisjunctivePreconditions).
+    /// Requires [Disjunctive Preconditions](crate::parsed_types::Requirement::DisjunctivePreconditions).
     Or(Vec<PropCondition>),
     /// ## Requirements
-    /// Requires [Disjunctive Preconditions](crate::Requirement::DisjunctivePreconditions).
+    /// Requires [Disjunctive Preconditions](crate::parsed_types::Requirement::DisjunctivePreconditions).
     Not(Box<PropCondition>),
     /// ## Requirements
-    /// Requires [Disjunctive Preconditions](crate::Requirement::DisjunctivePreconditions).
+    /// Requires [Disjunctive Preconditions](crate::parsed_types::Requirement::DisjunctivePreconditions).
     Imply(Box<PropCondition>, Box<PropCondition>),
 }
 
