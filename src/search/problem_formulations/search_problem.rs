@@ -5,7 +5,8 @@ use crate::search::{Plan, SearchNode, StateId, Transition};
 /// problem in different ways, outside of the canonical state space search
 /// formulation. Implementations of this trait should also implement various
 /// logging and statistics collection mechanisms. See
-/// [`super::StateSpaceProblem`] for an example.
+/// [`StateSpaceProblem`](crate::search::problem_formulations::StateSpaceProblem)
+/// for an example.
 pub trait SearchProblem<S, T: Transition> {
     /// Returns the initial state of the search problem.
     fn initial_state(&self) -> &SearchNode<T>;
