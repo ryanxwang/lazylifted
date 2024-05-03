@@ -29,11 +29,13 @@ mkdir -p $plan_dir/$domain
 
 source scripts/setup_dynamic_library.sh
 
-bin_location=""
-if [[ $(uname) == "Darwin" ]]; then
-    bin_location="./target/release/planner"
+planner_bin=""
+if [[ $PLANNER_BIN ]]; then
+    planner_bin=$PLANNER_BIN
+elif [[ $(uname) == "Darwin" ]]; then
+    planner_bin="./target/release/planner"
 elif [[ $(uname) == "Linux" ]]; then
-    bin_location="./planner"
+    planner_bin="./planner"
 else
     echo "Unsupported operating system"
     exit 1
@@ -51,7 +53,7 @@ else
     exit 1
 fi
 
-cmd="$bin_location benchmarks/ipc23-learning/$domain/domain.pddl benchmarks/ipc23-learning/$domain/$instance.pddl -o $plan_file --model trained_models/$model_type-$model-$domain $subcommand --heuristic wl"
+cmd="./$planner_bin benchmarks/ipc23-learning/$domain/domain.pddl benchmarks/ipc23-learning/$domain/$instance.pddl -o $plan_file --model trained_models/$model_type-$model-$domain $subcommand --heuristic wl"
 err_log=$log_dir/$model_str-$domain-$instance_str.err
 out_log=$log_dir/$model_str-$domain-$instance_str.out
 echo "Planning for domain $domain with command: $cmd, saving logs to $err_log and $out_log and plan to $plan_file"
