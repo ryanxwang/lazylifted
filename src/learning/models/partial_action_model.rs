@@ -380,11 +380,11 @@ impl Train for PartialActionModel {
         let train_histograms = self.wl.compute_histograms(&train_graphs);
         let val_histograms = self.wl.compute_histograms(&val_graphs);
         info!("computed histograms");
-        self.wl.log();
 
         let train_x = self.wl.compute_x(self.py(), &train_histograms);
         let val_x = self.wl.compute_x(self.py(), &val_histograms);
         info!("computed WL features");
+        self.wl.finalise();
 
         let train_y = PyArray1::from_vec_bound(self.py(), train_ranks.clone());
         let val_y = PyArray1::from_vec_bound(self.py(), val_ranks.clone());

@@ -1,25 +1,26 @@
 use crate::search::HeuristicValue;
 use ordered_float::Float;
+use std::time::Instant;
 use tracing::info;
 
 #[derive(Debug)]
 pub struct SearchStatistics {
     /// Number of nodes expanded
-    expanded_nodes: i32,
+    expanded_nodes: i64,
     /// Number of nodes evaluated
-    evaluated_nodes: i32,
+    evaluated_nodes: i64,
     /// Number of unique nodes generated
-    generated_nodes: i32,
+    generated_nodes: i64,
     /// Number of reopened nodes
-    reopened_nodes: i32,
+    reopened_nodes: i64,
     /// Number of applicable actions generated
-    generated_actions: i32,
+    generated_actions: i64,
     /// Best heuristic value found so far
     best_heuristic_value: HeuristicValue,
     /// Time when the search started
-    search_start_time: std::time::Instant,
+    search_start_time: Instant,
     /// Time when the last log was printed, used for periodic logging
-    last_log_time: std::time::Instant,
+    last_log_time: Instant,
 }
 
 impl Default for SearchStatistics {
@@ -38,8 +39,8 @@ impl SearchStatistics {
             reopened_nodes: 0,
             generated_actions: 0,
             best_heuristic_value: HeuristicValue::infinity(),
-            search_start_time: std::time::Instant::now(),
-            last_log_time: std::time::Instant::now(),
+            search_start_time: Instant::now(),
+            last_log_time: Instant::now(),
         }
     }
 
@@ -47,7 +48,7 @@ impl SearchStatistics {
         if heuristic_value < self.best_heuristic_value {
             self.best_heuristic_value = heuristic_value;
             info!(best_heuristic_value = self.best_heuristic_value.into_inner());
-            self.last_log_time = std::time::Instant::now();
+            self.last_log_time = Instant::now();
             self.log();
         }
     }
@@ -63,7 +64,7 @@ impl SearchStatistics {
     }
 
     pub fn increment_generated_nodes(&mut self, num_nodes: usize) {
-        self.generated_nodes += num_nodes as i32;
+        self.generated_nodes += num_nodes as i64;
         self.log_if_needed();
     }
 
@@ -73,7 +74,7 @@ impl SearchStatistics {
     }
 
     pub fn increment_generated_actions(&mut self, num_actions: usize) {
-        self.generated_actions += num_actions as i32;
+        self.generated_actions += num_actions as i64;
         self.log_if_needed();
     }
 

@@ -158,11 +158,11 @@ impl Train for StateSpaceModel {
         let train_histograms = self.wl.compute_histograms(&train_graphs);
         let val_histograms = self.wl.compute_histograms(&val_graphs);
         info!("computed WL histograms");
-        self.wl.log();
 
         let train_x = self.wl.compute_x(py, &train_histograms);
         let val_x = self.wl.compute_x(py, &val_histograms);
         info!("computed WL features");
+        self.wl.finalise();
 
         let train_y = PyArray1::from_vec_bound(py, train_labels);
         let val_y = PyArray1::from_vec_bound(py, val_labels);

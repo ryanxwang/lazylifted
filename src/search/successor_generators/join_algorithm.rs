@@ -26,7 +26,7 @@ pub trait JoinAlgorithm {
             Some(tables) => VecDeque::from(tables),
             None => return Table::EMPTY,
         };
-        debug_assert_eq!(tables.len(), data.relevant_precondition_atoms.len());
+        assert_eq!(tables.len(), data.relevant_precondition_atoms.len());
 
         let mut working_table = tables.pop_front().unwrap();
 
@@ -81,9 +81,9 @@ fn get_indices_and_constants_in_precondition(
     constants: &mut Vec<usize>,
     free_and_param_index: &mut Vec<(usize, usize)>,
 ) {
-    debug_assert!(indices.is_empty());
-    debug_assert!(constants.is_empty());
-    debug_assert!(free_and_param_index.is_empty());
+    assert!(indices.is_empty());
+    assert!(constants.is_empty());
+    assert!(free_and_param_index.is_empty());
 
     for (i, arg) in atom.arguments().iter().enumerate() {
         match arg {
@@ -115,7 +115,7 @@ fn select_tuples(
         //    subtype of the free variable
         let mut matches = true;
         for &constant in constants {
-            debug_assert!(atom.argument(constant).is_constant());
+            assert!(atom.argument(constant).is_constant());
             if tuple[constant] != atom.argument(constant).get_index() {
                 matches = false;
                 break;
@@ -177,7 +177,7 @@ fn select_tuples(
         }
 
         for tuple in all_tuples {
-            debug_assert!(tuple_matches(&tuple));
+            assert!(tuple_matches(&tuple));
             if state.relations[atom.predicate_index()]
                 .tuples
                 .contains(&tuple)

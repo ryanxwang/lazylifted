@@ -106,7 +106,7 @@ where
             new_state.nullary_atoms[index] = !effect.is_negated();
         }
 
-        debug_assert!(action_schema
+        assert!(action_schema
             .effects()
             .iter()
             .all(|effect| effect.predicate_index()
@@ -121,7 +121,7 @@ where
                     .arguments()
                     .iter()
                     .map(|arg| {
-                        debug_assert!(arg.is_constant());
+                        assert!(arg.is_constant());
                         arg.get_index()
                     })
                     .collect();
@@ -197,7 +197,7 @@ fn is_ground_action_applicable(action: &ActionSchema, state: &DBState) -> bool {
             .arguments()
             .iter()
             .map(|arg| {
-                debug_assert!(arg.is_constant());
+                assert!(arg.is_constant());
                 arg.get_index()
             })
             .collect();

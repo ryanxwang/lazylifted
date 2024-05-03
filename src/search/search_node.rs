@@ -106,7 +106,7 @@ where
     }
 
     pub fn close(&mut self) {
-        debug_assert_eq!(
+        assert_eq!(
             self.status,
             SearchNodeStatus::Open,
             "Node must be open to close it"

@@ -38,5 +38,5 @@ opt-level = 0
 [profile.release]
 opt-level = 3
 overflow-checks = true
-debug-assertions = true
+debug-assertions = false
 lto = true

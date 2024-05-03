@@ -1,4 +1,4 @@
-use crate::learning::graphs::CGraph;
+use crate::learning::{graphs::CGraph, WlStatistics};
 use numpy::{PyArray2, PyArrayMethods};
 use pyo3::{Bound, Python};
 use serde::{Deserialize, Serialize};
@@ -43,12 +43,9 @@ pub struct WlKernel {
     iters: usize,
     /// Mapping from subgraph hashes to colours.
     hashes: HashMap<Neighbourhood, i32>,
-    /// In evaluation, the number of times we generate a colour and it was
-    /// seen in training before.
-    hit_colours: i64,
-    /// In evaluation, the number of times we generate a colour but it was not
-    /// seen during training, forcing us to discard it.
-    missed_colours: i64,
+    /// The statistics of the kernel.
+    #[serde(skip)]
+    statistics: WlStatistics,
 }
 
 impl WlKernel {
@@ -66,8 +63,7 @@ impl WlKernel {
             k,
             iters,
             hashes: HashMap::new(),
-            hit_colours: 0,
-            missed_colours: 0,
+            statistics: WlStatistics::new(),
         }
     }
 
@@ -80,6 +76,8 @@ impl WlKernel {
         assert_eq!(self.k, 1, "k-WL not implemented yet for k > 1.");
         let mut histograms = vec![];
         for graph in graphs {
+            self.statistics.register_graph(graph.node_count() as i64);
+
             let mut histogram = HashMap::new();
             let mut cur_colours = HashMap::new();
             for node in graph.node_indices() {
@@ -155,11 +153,11 @@ impl WlKernel {
             },
             Mode::Evaluate => match self.hashes.get(&neighbourhood) {
                 Some(hash) => {
-                    self.hit_colours += 1;
+                    self.statistics.increment_hit_colours();
                     *hash
                 }
                 None => {
-                    self.missed_colours += 1;
+                    self.statistics.increment_miss_colours();
                     // Return a bad value, this will cause all subsequent hashes
                     // to be bad as well, and hence paint an accurate picture of
                     // how many colours are missing.
@@ -169,12 +167,11 @@ impl WlKernel {
         }
     }
 
-    pub fn log(&self) {
-        info!(
-            total_colours = self.hashes.len(),
-            colour_miss_rate =
-                self.missed_colours as f64 / (self.hit_colours + self.missed_colours) as f64
-        );
+    /// Finalise the kernel, printing out the statistics. This should be called
+    /// after all graphs have been processed.
+    pub fn finalise(&self) {
+        info!(total_colours = self.hashes.len());
+        self.statistics.finalise();
     }
 }
 

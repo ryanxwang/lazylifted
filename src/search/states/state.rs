@@ -94,7 +94,7 @@ impl DBState {
             self.nullary_atoms[goal_predicate]
         } else {
             let relations = &self.relations[goal_predicate];
-            debug_assert!(relations.predicate_symbol == goal_predicate);
+            assert_eq!(relations.predicate_symbol, goal_predicate);
             relations.tuples.contains(atom.arguments())
         };
 
