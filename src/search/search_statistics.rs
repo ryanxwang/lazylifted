@@ -15,6 +15,8 @@ pub struct SearchStatistics {
     reopened_nodes: i64,
     /// Number of applicable actions generated
     generated_actions: i64,
+    /// Number of node expansions that found an improving heuristic value
+    improving_expansions: i64,
     /// Best heuristic value found so far
     best_heuristic_value: HeuristicValue,
     /// Time when the search started
@@ -38,6 +40,7 @@ impl SearchStatistics {
             generated_nodes: 0,
             reopened_nodes: 0,
             generated_actions: 0,
+            improving_expansions: 0,
             best_heuristic_value: HeuristicValue::infinity(),
             search_start_time: Instant::now(),
             last_log_time: Instant::now(),
@@ -78,6 +81,11 @@ impl SearchStatistics {
         self.log_if_needed();
     }
 
+    pub fn increment_improving_expansions(&mut self) {
+        self.improving_expansions += 1;
+        self.log_if_needed();
+    }
+
     fn log_if_needed(&mut self) {
         if self.last_log_time.elapsed().as_secs() > 10 {
             self.last_log_time = std::time::Instant::now();
@@ -92,6 +100,7 @@ impl SearchStatistics {
             generated_nodes = self.generated_nodes,
             reopened_nodes = self.reopened_nodes,
             generated_actions = self.generated_actions,
+            improving_expansions = self.improving_expansions,
             best_heuristic_value = self.best_heuristic_value.into_inner(),
         );
     }

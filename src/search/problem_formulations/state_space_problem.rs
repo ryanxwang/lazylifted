@@ -106,11 +106,21 @@ impl SearchProblem<SparsePackedState, Action> for StateSpaceProblem {
         self.statistics.increment_generated_nodes(new_ids.len());
 
         let h_values = self.heuristic.evaluate_batch(&new_states, &self.task);
-        for (child_node_id, h_value) in new_ids.iter().zip(h_values.into_iter()) {
+
+        let mut found_improvement = false;
+        for (child_node_id, child_h_value) in new_ids.iter().zip(h_values.into_iter()) {
             self.statistics.increment_evaluated_nodes();
             let child_node = self.search_space.get_node_mut(*child_node_id);
-            child_node.open(g_value + 1., h_value);
+            child_node.open(g_value + 1., child_h_value);
+
+            if child_h_value < h_value {
+                found_improvement = true;
+            }
         }
+        if found_improvement {
+            self.statistics.increment_improving_expansions();
+        }
+
         for child_node_id in ids_to_reopen.iter() {
             let child_node = self.search_space.get_node_mut(*child_node_id);
             self.statistics.increment_reopened_nodes();
