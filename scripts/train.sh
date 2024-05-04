@@ -18,14 +18,7 @@ else
     trainer_bin="target/release/trainer"
 fi
 
-# https://stackoverflow.com/questions/1885525/how-do-i-prompt-a-user-for-confirmation-in-bash-script
 echo "This script will overwrite previous logs for the same training targets $log_dir and the previous trained models at trained_models/..."
-read -p "Are you sure? (y/n) " -n 1 -r
-echo    # move to a new line
-if [[ ! $REPLY =~ ^[Yy]$ ]]
-then
-    [[ "$0" = "$BASH_SOURCE" ]] && exit 1 || return 1 # handle exits from shell or function but don't exit interactive shell
-fi
 
 mkdir -p $log_dir
 
