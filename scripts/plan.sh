@@ -25,13 +25,8 @@ source scripts/setup_dynamic_library.sh
 planner_bin=""
 if [[ $PLANNER_BIN ]]; then
     planner_bin=$PLANNER_BIN
-elif [[ $(uname) == "Darwin" ]]; then
-    planner_bin="./target/release/planner"
-elif [[ $(uname) == "Linux" ]]; then
-    planner_bin="./planner"
-else
-    echo "Unsupported operating system"
-    exit 1
+else 
+    planner_bin="target/release/planner"
 fi
 
 instance_str=$(sed 's/\//_/g' <<< $instance)

@@ -88,7 +88,7 @@ impl SearchStatistics {
 
     fn log_if_needed(&mut self) {
         if self.last_log_time.elapsed().as_secs() > 10 {
-            self.last_log_time = std::time::Instant::now();
+            self.last_log_time = Instant::now();
             self.log();
         }
     }
