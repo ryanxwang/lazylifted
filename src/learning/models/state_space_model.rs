@@ -2,7 +2,10 @@ use crate::{
     learning::{
         graphs::{CGraph, IlgCompiler},
         ml::{Regressor, RegressorName},
-        models::{Evaluate, Train, TrainingInstance},
+        models::{
+            model_utils::{extract_from_zip, zip_files, PICKLE_FILE_NAME, RON_FILE_NAME},
+            Evaluate, Train, TrainingInstance,
+        },
         WlKernel,
     },
     search::{successor_generators::SuccessorGeneratorName, DBState, Task},
@@ -14,6 +17,7 @@ use pyo3::{
 };
 use serde::{Deserialize, Serialize};
 use std::{io::Write, path::Path, time};
+use tempfile::NamedTempFile;
 use tracing::info;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -193,10 +197,12 @@ impl Train for StateSpaceModel {
 
     fn save(&self, path: &Path) {
         assert_eq!(self.state, ModelState::Trained);
-        let pickle_path = path.with_extension("pkl");
-        self.model.pickle(&pickle_path);
 
-        let ron_path = path.with_extension("ron");
+        let pickle_file = NamedTempFile::new().expect("Failed to create temporary file");
+        let mut ron_file = NamedTempFile::new().expect("Failed to create temporary file");
+
+        self.model.pickle(pickle_file.path());
+
         let serialisable = SerialisableStateSpaceModel {
             successor_generator_name: self.successor_generator_name,
             wl: self.wl.clone(),
@@ -205,10 +211,18 @@ impl Train for StateSpaceModel {
         };
         let serialised = ron::to_string(&serialisable).expect("Failed to serialise model data");
 
-        let mut file = std::fs::File::create(ron_path).expect("Failed to create model file");
-        file.write_all(serialised.as_bytes())
+        ron_file
+            .write_all(serialised.as_bytes())
             .expect("Failed to write model data");
-        info!("saved model to {}.{{ron/pkl}}", path.display());
+
+        zip_files(
+            path,
+            vec![
+                (PICKLE_FILE_NAME, pickle_file.path()),
+                (RON_FILE_NAME, ron_file.path()),
+            ],
+        );
+        info!("saved model to {}", path.display());
     }
 }
 
@@ -256,11 +270,11 @@ impl Evaluate for StateSpaceModel {
     }
 
     fn load(py: Python<'static>, path: &Path) -> Self {
-        let pickle_path = path.with_extension("pkl");
-        let model = Regressor::unpickle(py, &pickle_path);
+        let pickle_file = extract_from_zip(path, PICKLE_FILE_NAME);
+        let model = Regressor::unpickle(py, pickle_file.path());
 
-        let ron_path = path.with_extension("ron");
-        let data = std::fs::read_to_string(ron_path).expect("Failed to read model data");
+        let ron_file = extract_from_zip(path, RON_FILE_NAME);
+        let data = std::fs::read_to_string(ron_file).expect("Failed to read model data");
         let serialisable: SerialisableStateSpaceModel =
             ron::from_str(&data).expect("Failed to deserialise model data");
         assert_eq!(serialisable.state, ModelState::Trained);

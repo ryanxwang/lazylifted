@@ -1,4 +1,5 @@
 mod model;
+mod model_utils;
 mod partial_action_model;
 mod state_space_model;
 

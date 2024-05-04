@@ -22,7 +22,9 @@ echo "This script will overwrite previous logs for the same training targets $lo
 
 mkdir -p $log_dir
 
-cmd="./$trainer_bin --data $data_dir/$domain.toml --model $model_dir/$model_type/$model.toml --save trained_models/$model_type-$model-$domain"
+source scripts/setup_dynamic_library.sh
+
+cmd="./$trainer_bin --data $data_dir/$domain.toml --model $model_dir/$model_type/$model.toml --save trained_models/$model_type-$model-$domain.model"
 err_log=$log_dir/$model_type-$model-$domain.err
 out_log=$log_dir/$model_type-$model-$domain.out
 echo "Training model for domain $domain with command: $cmd, saving logs to $err_log and $out_log"

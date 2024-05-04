@@ -2,7 +2,10 @@ use crate::{
     learning::{
         graphs::{CGraph, Compiler2, PartialActionCompilerName},
         ml::{MlModel, MlModelName},
-        models::{Evaluate, Train, TrainingInstance},
+        models::{
+            model_utils::{extract_from_zip, zip_files, PICKLE_FILE_NAME, RON_FILE_NAME},
+            Evaluate, Train, TrainingInstance,
+        },
         WlKernel,
     },
     search::{successor_generators::SuccessorGeneratorName, Action, DBState, PartialAction, Task},
@@ -15,6 +18,7 @@ use std::{
     io::Write,
     path::Path,
 };
+use tempfile::NamedTempFile;
 use tracing::info;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -466,10 +470,12 @@ impl Train for PartialActionModel {
 
     fn save(&self, path: &Path) {
         assert_eq!(self.state, PartialActionModelState::Trained);
-        let pickle_path = path.with_extension("pkl");
-        self.model.pickle(&pickle_path);
 
-        let ron_path = path.with_extension("ron");
+        let pickle_file = NamedTempFile::new().expect("Failed to create temporary file");
+        let mut ron_file = NamedTempFile::new().expect("Failed to create temporary file");
+
+        self.model.pickle(pickle_file.path());
+
         let serialisable = SerialisablePartialActionModel {
             successor_generator_name: self.successor_generator_name,
             graph_compiler_name: self.graph_compiler_name,
@@ -480,10 +486,18 @@ impl Train for PartialActionModel {
         };
         let serialised = ron::ser::to_string(&serialisable).expect("Failed to serialise model");
 
-        let mut file = std::fs::File::create(ron_path).expect("Failed to create model file");
-        file.write_all(serialised.as_bytes())
+        ron_file
+            .write_all(serialised.as_bytes())
             .expect("Failed to write model data");
-        info!("saved model to {}.{{ron/pkl}}", path.display());
+
+        zip_files(
+            path,
+            vec![
+                (PICKLE_FILE_NAME, pickle_file.path()),
+                (RON_FILE_NAME, ron_file.path()),
+            ],
+        );
+        info!("saved model to {}", path.display());
     }
 }
 
@@ -531,14 +545,14 @@ impl Evaluate for PartialActionModel {
     }
 
     fn load(py: Python<'static>, path: &Path) -> Self {
-        let ron_path = path.with_extension("ron");
-        let file = std::fs::File::open(ron_path).expect("Failed to open model file");
+        let ron_file = extract_from_zip(path, RON_FILE_NAME);
+        let file = std::fs::File::open(ron_file).expect("Failed to open model file");
         let serialisable: SerialisablePartialActionModel =
             ron::de::from_reader(file).expect("Failed to deserialise model");
         assert_eq!(serialisable.state, PartialActionModelState::Trained);
 
-        let pickle_path = path.with_extension("pkl");
-        let model = MlModel::unpickle(serialisable.config.model, py, &pickle_path);
+        let pickle_file = extract_from_zip(path, PICKLE_FILE_NAME);
+        let model = MlModel::unpickle(serialisable.config.model, py, pickle_file.path());
 
         Self {
             model,

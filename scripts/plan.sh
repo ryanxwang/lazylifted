@@ -46,7 +46,7 @@ else
     exit 1
 fi
 
-cmd="./$planner_bin benchmarks/ipc23-learning/$domain/domain.pddl benchmarks/ipc23-learning/$domain/$instance.pddl -o $plan_file --model trained_models/$model_type-$model-$domain $subcommand --heuristic wl"
+cmd="./$planner_bin benchmarks/ipc23-learning/$domain/domain.pddl benchmarks/ipc23-learning/$domain/$instance.pddl -o $plan_file --model trained_models/$model_type-$model-$domain.model $subcommand --heuristic wl"
 err_log=$log_dir/$instance_str.err
 out_log=$log_dir/$instance_str.out
 echo "Planning for domain $domain with command: $cmd, saving logs to $err_log and $out_log and plan to $plan_file"
