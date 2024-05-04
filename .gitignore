@@ -21,3 +21,5 @@ plans/
 *.plan
 releases/
 flamegraph.svg
+
+__pycache__/

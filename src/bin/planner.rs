@@ -143,6 +143,8 @@ fn plan(cli: Cli, task: Task) {
                     return;
                 }
             }
+            info!("plan found");
+            info!(plan_length = plan.len());
 
             println!("Plan found:");
             println!("{}", plan.to_string(&task));
@@ -158,6 +160,7 @@ fn plan(cli: Cli, task: Task) {
             std::fs::write(plan_path, plan.to_string(&task)).expect("Failed to write plan file");
         }
         _ => {
+            info!("no plan found");
             println!("No plan found: {:?}", result);
         }
     }
