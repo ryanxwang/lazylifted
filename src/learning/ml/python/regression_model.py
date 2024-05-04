@@ -4,12 +4,13 @@ from sklearn.gaussian_process.kernels import DotProduct
 
 
 class RegressionModel:
-    def __init__(self, model_str):
+    def __init__(self, model_str, **kwargs):
         self.model_str = model_str
         if model_str == "lr":
             self.model = LinearRegression()
         elif model_str == "gpr":
-            self.model = GaussianProcessRegressor(kernel=DotProduct(), alpha=1e-7)
+            alpha = kwargs["alpha"]
+            self.model = GaussianProcessRegressor(kernel=DotProduct(), alpha=alpha)
         else:
             raise ValueError("Unknown regressor model: " + model_str)
 

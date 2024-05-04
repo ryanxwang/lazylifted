@@ -1,9 +1,10 @@
 use crate::{
     learning::{
         graphs::{CGraph, Compiler2, PartialActionCompilerName},
-        ml::{MlModel, MlModelName},
+        ml::MlModel,
         models::{
             model_utils::{extract_from_zip, zip_files, PICKLE_FILE_NAME, RON_FILE_NAME},
+            partial_action_model_config::PartialActionModelConfig,
             Evaluate, Train, TrainingInstance,
         },
         WlKernel,
@@ -47,18 +48,6 @@ impl PartialEq for PartialActionModelState {
                 )
         )
     }
-}
-
-/// Configuration for the WL-PALG model. This is the format used by the trainer
-/// to create the model.
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename_all = "kebab-case")]
-pub struct PartialActionModelConfig {
-    pub model: MlModelName,
-    pub successor_generator: SuccessorGeneratorName,
-    pub graph_compiler: PartialActionCompilerName,
-    pub iters: usize,
-    pub validate: bool,
 }
 
 #[derive(Debug)]

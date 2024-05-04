@@ -1,8 +1,9 @@
 //! This module contains traits and structs for training and evaluating models.
 
 use crate::learning::models::{
-    partial_action_model::{PartialActionModel, PartialActionModelConfig},
-    state_space_model::{StateSpaceModel, StateSpaceModelConfig},
+    partial_action_model::PartialActionModel,
+    partial_action_model_config::PartialActionModelConfig,
+    state_space_model_config::StateSpaceModelConfig, StateSpaceModel,
 };
 use crate::search::{Plan, Task};
 use pyo3::Python;
@@ -58,13 +59,18 @@ impl ModelConfig {
         config
     }
 
-    pub fn trainer_from_config(self, iters: Option<usize>) -> Box<dyn Train> {
+    pub fn trainer_from_config(self, iters: Option<usize>, alpha: Option<f64>) -> Box<dyn Train> {
         let py = unsafe { Python::assume_gil_acquired() };
 
         match self {
             ModelConfig::StateSpaceModel(config) => {
                 let config = if let Some(iters) = iters {
-                    StateSpaceModelConfig { iters, ..config }
+                    config.with_iters(iters)
+                } else {
+                    config
+                };
+                let config = if let Some(alpha) = alpha {
+                    config.with_alpha(alpha)
                 } else {
                     config
                 };
@@ -73,6 +79,11 @@ impl ModelConfig {
             ModelConfig::PartialActionModel(config) => {
                 let config = if let Some(iters) = iters {
                     PartialActionModelConfig { iters, ..config }
+                } else {
+                    config
+                };
+                let config = if let Some(alpha) = alpha {
+                    config.with_alpha(alpha)
                 } else {
                     config
                 };
@@ -88,8 +99,8 @@ mod tests {
     use crate::{
         learning::{
             graphs::PartialActionCompilerName,
-            ml::{MlModelName, RankerName},
-            models::partial_action_model::PartialActionModelConfig,
+            ml::{MlModelName, RegressorName},
+            models::partial_action_model_config::PartialActionModelConfig,
         },
         search::successor_generators::SuccessorGeneratorName,
     };
@@ -99,7 +110,9 @@ mod tests {
     #[test]
     fn serialise_sample_model_config() {
         let config = ModelConfig::PartialActionModel(PartialActionModelConfig {
-            model: MlModelName::RankerName(RankerName::LambdaMart),
+            model: MlModelName::RegressorName(RegressorName::GaussianProcessRegressor {
+                alpha: 1e-7,
+            }),
             graph_compiler: PartialActionCompilerName::Palg,
             iters: 2,
             validate: true,

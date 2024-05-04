@@ -4,5 +4,5 @@ graph-compiler = "palg"
 iters = 2
 validate = false
 
-[partial-action-model.model]
-regressor-name = "gpr"
+[partial-action-model.model.regressor-name.gpr]
+alpha = 1e-7

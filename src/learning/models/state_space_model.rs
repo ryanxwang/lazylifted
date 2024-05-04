@@ -1,9 +1,10 @@
 use crate::{
     learning::{
         graphs::{CGraph, IlgCompiler},
-        ml::{Regressor, RegressorName},
+        ml::Regressor,
         models::{
             model_utils::{extract_from_zip, zip_files, PICKLE_FILE_NAME, RON_FILE_NAME},
+            state_space_model_config::StateSpaceModelConfig,
             Evaluate, Train, TrainingInstance,
         },
         WlKernel,
@@ -39,17 +40,6 @@ impl PartialEq for ModelState {
                 | (ModelState::Evaluating(_), ModelState::Evaluating(_))
         )
     }
-}
-
-/// Configuration for the WL-ILG model. This is the format used by the trainer
-/// to create the model.
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename_all = "kebab-case")]
-pub struct StateSpaceModelConfig {
-    pub model: RegressorName,
-    pub successor_generator: SuccessorGeneratorName,
-    pub iters: usize,
-    pub validate: bool,
 }
 
 #[derive(Debug)]
