@@ -183,7 +183,7 @@ impl PalgCompiler {
     fn create_atom_node(&self, graph: &mut CGraph, atom: &Atom, atom_type: AtomNodeType) -> NodeID {
         let node_id = graph.add_node(Self::get_atom_colour(atom_type));
         for (arg_index, object_index) in atom.arguments().iter().enumerate() {
-            let object_node_id = self.object_index_to_node_index[&object_index];
+            let object_node_id = self.object_index_to_node_index[object_index];
             graph.add_edge(node_id, object_node_id, arg_index as i32);
         }
         let pred_node_id = self.predicate_index_to_node_index[&atom.predicate_index()];
@@ -288,7 +288,7 @@ mod tests {
             };
             assert!(compiler.goal_atom_to_node_index.contains_key(atom));
             assert_eq!(
-                graph[compiler.goal_atom_to_node_index[&atom]],
+                graph[compiler.goal_atom_to_node_index[atom]],
                 PalgCompiler::get_atom_colour(AtomNodeType::UnachievedGoal)
             );
         }

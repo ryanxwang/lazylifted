@@ -58,7 +58,7 @@ impl Plan {
             }
 
             steps.push(Action {
-                index: action_table[&step.action_name()],
+                index: action_table[step.action_name()],
                 instantiation: step
                     .parameters()
                     .iter()

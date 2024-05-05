@@ -91,7 +91,7 @@ impl IlgCompiler {
                         AtomNodeType::NonGoal,
                     ));
                     for (arg_index, object_index) in atom.arguments().iter().enumerate() {
-                        let object_node_id = self.object_index_to_node_index[&object_index];
+                        let object_node_id = self.object_index_to_node_index[object_index];
                         graph.add_edge(node_id, object_node_id, arg_index as i32);
                     }
                 }
@@ -127,7 +127,7 @@ impl IlgCompiler {
                 AtomNodeType::UnachievedGoal,
             ));
             for (arg_index, object_index) in atom.arguments().iter().enumerate() {
-                let object_node_id = self.object_index_to_node_index[&object_index];
+                let object_node_id = self.object_index_to_node_index[object_index];
                 graph.add_edge(node_id, object_node_id, arg_index as i32);
             }
             self.goal_atom_to_node_index.insert(atom.clone(), node_id);
@@ -209,7 +209,7 @@ mod tests {
                 Negatable::Positive(atom) => {
                     assert!(compiler.goal_atom_to_node_index.contains_key(atom));
                     assert_eq!(
-                        graph[compiler.goal_atom_to_node_index[&atom]],
+                        graph[compiler.goal_atom_to_node_index[atom]],
                         IlgCompiler::get_atom_colour(
                             atom.predicate_index(),
                             AtomNodeType::UnachievedGoal
@@ -238,7 +238,7 @@ mod tests {
             if atom.predicate_index() == 4 && atom.arguments() == vec![1, 2] {
                 // (on b2 b3) is an achieved goal
                 assert_eq!(
-                    graph[compiler.goal_atom_to_node_index[&atom]],
+                    graph[compiler.goal_atom_to_node_index[atom]],
                     IlgCompiler::get_atom_colour(
                         atom.predicate_index(),
                         AtomNodeType::AchievedGoal
@@ -246,7 +246,7 @@ mod tests {
                 )
             } else {
                 assert_eq!(
-                    graph[compiler.goal_atom_to_node_index[&atom]],
+                    graph[compiler.goal_atom_to_node_index[atom]],
                     IlgCompiler::get_atom_colour(
                         atom.predicate_index(),
                         AtomNodeType::UnachievedGoal

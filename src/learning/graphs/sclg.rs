@@ -265,7 +265,7 @@ mod tests {
                 Negatable::Positive(atom) => {
                     assert!(compiler.goal_atom_to_node_index.contains_key(atom));
                     assert_eq!(
-                        graph[compiler.goal_atom_to_node_index[&atom]],
+                        graph[compiler.goal_atom_to_node_index[atom]],
                         SclgCompiler::get_atom_colour(
                             atom.predicate_index(),
                             AtomNodeType::UnachievedGoal
@@ -297,7 +297,7 @@ mod tests {
             if atom.predicate_index() == 4 && atom.arguments() == vec![1, 2] {
                 // (on b2 b3) is a removed achieved goal
                 assert_eq!(
-                    graph[compiler.goal_atom_to_node_index[&atom]],
+                    graph[compiler.goal_atom_to_node_index[atom]],
                     SclgCompiler::get_atom_colour(
                         atom.predicate_index(),
                         AtomNodeType::RemovedAchievedGoal
@@ -306,7 +306,7 @@ mod tests {
             } else if atom.predicate_index() == 0 {
                 // clear is being added
                 assert_eq!(
-                    graph[compiler.goal_atom_to_node_index[&atom]],
+                    graph[compiler.goal_atom_to_node_index[atom]],
                     SclgCompiler::get_atom_colour(
                         atom.predicate_index(),
                         AtomNodeType::AddedUnachievedGoal
@@ -314,7 +314,7 @@ mod tests {
                 )
             } else {
                 assert_eq!(
-                    graph[compiler.goal_atom_to_node_index[&atom]],
+                    graph[compiler.goal_atom_to_node_index[atom]],
                     SclgCompiler::get_atom_colour(
                         atom.predicate_index(),
                         AtomNodeType::UnachievedGoal
