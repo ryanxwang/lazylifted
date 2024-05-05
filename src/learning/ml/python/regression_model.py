@@ -19,14 +19,10 @@ class RegressionModel:
         self.weights = self.get_weights()
 
     def predict(self, X):
-        if (
-            self.model_str == "gpr"
-            and hasattr(self, "weights")
-            and self.weights is not None
-        ):
-            # for efficiency (especially for GPR), use the weights if available
-            return X @ self.weights.T
-        return self.model.predict(X)
+        # for efficiency, we don't use the predict method of the model but
+        # compute the prediction directly
+        assert hasattr(self, "weights") and self.weights is not None
+        return X @ self.weights.T
 
     def get_weights(self):
         if self.model_str == "lr":
@@ -34,3 +30,14 @@ class RegressionModel:
         elif self.model_str == "gpr":
             # this only works for GPR with DotProduct kernel
             return self.model.alpha_ @ self.model.X_train_
+
+    def __getstate__(self):
+        return {
+            "model_str": self.model_str,
+            "weights": self.weights,
+        }
+
+    def __setstate__(self, state):
+        self.model_str = state["model_str"]
+        self.model = None
+        self.weights = state["weights"]
