@@ -6,7 +6,7 @@ use lazylifted::{
 use pyo3::Python;
 use serde::Deserialize;
 use std::{fs, path::PathBuf};
-use tracing::info;
+use tracing::{info, warn};
 
 #[derive(Parser, Debug)]
 #[command(version)]
@@ -64,6 +64,17 @@ fn load_data(data_config: &DataConfig) -> Vec<TrainingInstance> {
         let problem_path = data_config
             .problems_dir
             .join(format!("{}.pddl", problem_name));
+
+        match problem_path.try_exists() {
+            Ok(false) | Err(_) => {
+                warn!(
+                    "Skipping training instance because cannot verify problem file exists: {}",
+                    problem_path.display()
+                );
+                continue;
+            }
+            Ok(true) => {}
+        };
 
         let task = Task::from_path(&data_config.domain_pddl, &problem_path);
         let plan = Plan::from_path(plan_path, &task);
