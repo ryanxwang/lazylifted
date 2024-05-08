@@ -116,7 +116,9 @@ impl PartialActionModel {
             let plan = &instance.plan;
             let task = &instance.task;
             let successor_generator = self.successor_generator_name.create(task);
-            let compiler = self.graph_compiler_name.create(task);
+            let compiler = self
+                .graph_compiler_name
+                .create(task, self.successor_generator_name);
 
             let mut cur_state = task.initial_state.clone();
             let mut prev_partials = Vec::new();
@@ -196,7 +198,9 @@ impl PartialActionModel {
             let plan = &instance.plan;
             let task = &instance.task;
             let successor_generator = self.successor_generator_name.create(task);
-            let compiler = self.graph_compiler_name.create(task);
+            let compiler = self
+                .graph_compiler_name
+                .create(task, self.successor_generator_name);
 
             let total_partial_steps = plan
                 .steps()
@@ -499,8 +503,10 @@ impl Evaluate for PartialActionModel {
                 panic!("Model not trained yet, cannot set evaluating task");
             }
             PartialActionModelState::Trained => {
-                self.state =
-                    PartialActionModelState::Evaluating(self.graph_compiler_name.create(task));
+                self.state = PartialActionModelState::Evaluating(
+                    self.graph_compiler_name
+                        .create(task, self.successor_generator_name),
+                );
             }
             PartialActionModelState::Evaluating(_) => {}
         }

@@ -1,20 +1,21 @@
 //! The State Change Learning Graph
 use crate::{
     learning::graphs::{CGraph, Compiler2, NodeID},
-    search::{ActionSchema, Atom, DBState, Negatable, Object, PartialAction, Task},
+    search::{
+        successor_generators::SuccessorGeneratorName, ActionSchema, Atom, DBState, Negatable,
+        Object, PartialAction, SuccessorGenerator, Task,
+    },
 };
-use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use strum::EnumCount;
 use strum_macros::{EnumCount as EnumCountMacro, FromRepr};
 
-// TODO: like felipe said, static information is still helpful. Instead of just
-// ignoring them for performance, we should find a way to take advantage of
-// them, or perhaps increase wl iteration number
 const NO_STATIC_PREDICATES: bool = true;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct SclgCompiler {
+    /// Successor generator to use
+    successor_generator: Box<dyn SuccessorGenerator>,
     /// A precompiled graph for the task.
     base_graph: Option<CGraph>,
     /// A map from object index to node index in the base graph.
@@ -30,8 +31,9 @@ pub struct SclgCompiler {
 }
 
 impl SclgCompiler {
-    pub fn new(task: &Task) -> Self {
+    pub fn new(task: &Task, successor_generator_name: SuccessorGeneratorName) -> Self {
         let mut compiler = Self {
+            successor_generator: successor_generator_name.create(task),
             base_graph: None,
             object_index_to_node_index: HashMap::new(),
             predicate_index_to_node_index: HashMap::new(),
@@ -48,7 +50,23 @@ impl SclgCompiler {
     pub fn compile(&self, state: &DBState, partial_action: &PartialAction) -> CGraph {
         let mut graph = self.base_graph.clone().unwrap();
         let action_schema = &self.action_schemas[partial_action.schema_index()];
-        let partial_effects = action_schema.partially_ground_effects(partial_action);
+
+        // TODO clean up this code, these should be typed as
+        // Vec<Negatable<Atom>>
+        let relevant_effects = self
+            .successor_generator
+            .get_applicable_actions(state, action_schema)
+            .into_iter()
+            .filter_map(|action| {
+                let action = PartialAction::from(action.clone());
+                if partial_action.is_superset_of(&action) {
+                    Some(action_schema.partially_ground_effects(&action))
+                } else {
+                    None
+                }
+            })
+            .flatten()
+            .collect::<Vec<_>>();
 
         let mut seen_nodes = HashSet::new();
         for atom in state.atoms() {
@@ -57,14 +75,15 @@ impl SclgCompiler {
             }
             let node_id = match self.goal_atom_to_node_index.get(&atom) {
                 Some(node_id) => {
+                    let cur_node_type = Self::get_atom_type(graph[*node_id]);
                     graph[*node_id] =
-                        Self::get_atom_colour(atom.predicate_index(), AtomNodeType::AchievedGoal);
+                        Self::get_atom_colour(atom.predicate_index(), cur_node_type.as_achieved());
                     *node_id
                 }
                 None => {
                     let node_id = graph.add_node(Self::get_atom_colour(
                         atom.predicate_index(),
-                        AtomNodeType::NonGoal,
+                        AtomType::new_state_atom(),
                     ));
                     for (arg_index, object_index) in atom.arguments().iter().enumerate() {
                         let object_node_id = self.object_index_to_node_index[object_index];
@@ -74,7 +93,7 @@ impl SclgCompiler {
                 }
             };
 
-            for effect in &partial_effects {
+            for effect in &relevant_effects {
                 if effect.includes(&atom) {
                     let cur_type = Self::get_atom_type(graph[node_id]);
                     match effect {
@@ -97,7 +116,7 @@ impl SclgCompiler {
                 continue;
             }
 
-            for effect in &partial_effects {
+            for effect in &relevant_effects {
                 if effect.includes(atom) {
                     let cur_type = Self::get_atom_type(graph[*node_index]);
                     match effect {
@@ -139,7 +158,7 @@ impl SclgCompiler {
             }
             let node_id = graph.add_node(Self::get_atom_colour(
                 atom.predicate_index(),
-                AtomNodeType::UnachievedGoal,
+                AtomType::new_goal_atom(),
             ));
             for (arg_index, object_index) in atom.arguments().iter().enumerate() {
                 let object_node_id = self.object_index_to_node_index[object_index];
@@ -158,14 +177,15 @@ impl SclgCompiler {
     }
 
     #[inline(always)]
-    fn get_atom_colour(predicate_index: usize, atom_type: AtomNodeType) -> i32 {
+    fn get_atom_colour(predicate_index: usize, atom_type: AtomType) -> i32 {
         const START: i32 = 1;
-        START + predicate_index as i32 * AtomNodeType::COUNT as i32 + atom_type as i32
+        START + predicate_index as i32 * AtomType::count() as i32 + atom_type.into_repr()
     }
 
-    fn get_atom_type(colour: i32) -> AtomNodeType {
+    #[inline(always)]
+    fn get_atom_type(colour: i32) -> AtomType {
         const START: i32 = 1;
-        AtomNodeType::from_repr((colour - START) % AtomNodeType::COUNT as i32).unwrap()
+        AtomType::from_repr((colour - START) % AtomType::count() as i32).unwrap()
     }
 }
 
@@ -176,63 +196,122 @@ impl Compiler2<DBState, PartialAction> for SclgCompiler {
 }
 
 #[allow(clippy::enum_variant_names)]
-#[derive(Debug, Clone, PartialEq, Eq, Copy, Serialize, Deserialize, EnumCountMacro, FromRepr)]
+struct AtomType {
+    atom_node_type: AtomNodeType,
+    atom_change_type: AtomChangeType,
+}
+
+impl AtomType {
+    #[inline(always)]
+    pub const fn new_state_atom() -> Self {
+        Self {
+            atom_node_type: AtomNodeType::NonGoal,
+            atom_change_type: AtomChangeType::Unchanged,
+        }
+    }
+
+    #[inline(always)]
+    pub const fn new_goal_atom() -> Self {
+        Self {
+            atom_node_type: AtomNodeType::UnachievedGoal,
+            atom_change_type: AtomChangeType::Unchanged,
+        }
+    }
+
+    #[inline(always)]
+    pub fn as_achieved(&self) -> Self {
+        Self {
+            atom_node_type: self.atom_node_type.as_achieved(),
+            atom_change_type: self.atom_change_type,
+        }
+    }
+
+    #[inline(always)]
+    pub fn as_added(&self) -> Self {
+        Self {
+            atom_node_type: self.atom_node_type,
+            atom_change_type: self.atom_change_type.as_added(),
+        }
+    }
+
+    #[inline(always)]
+    pub fn as_removed(&self) -> Self {
+        Self {
+            atom_node_type: self.atom_node_type,
+            atom_change_type: self.atom_change_type.as_removed(),
+        }
+    }
+
+    pub const fn count() -> usize {
+        AtomNodeType::COUNT * AtomChangeType::COUNT
+    }
+
+    pub fn from_repr(repr: i32) -> Option<Self> {
+        let atom_node_type = AtomNodeType::from_repr(repr / AtomChangeType::COUNT as i32)?;
+        let atom_change_type = AtomChangeType::from_repr(repr % AtomChangeType::COUNT as i32)?;
+        Some(Self {
+            atom_node_type,
+            atom_change_type,
+        })
+    }
+
+    pub fn into_repr(self) -> i32 {
+        self.atom_node_type as i32 * AtomChangeType::COUNT as i32 + self.atom_change_type as i32
+    }
+}
+
+#[derive(EnumCountMacro, Debug, Clone, Copy, FromRepr)]
+#[repr(i32)]
+enum AtomChangeType {
+    Unchanged,
+    Added,
+    Removed,
+    AddedAndRemoved,
+}
+
+impl AtomChangeType {
+    #[inline(always)]
+    pub fn as_added(&self) -> Self {
+        match self {
+            AtomChangeType::Unchanged => AtomChangeType::Added,
+            AtomChangeType::Added => AtomChangeType::Added,
+            AtomChangeType::Removed => AtomChangeType::AddedAndRemoved,
+            AtomChangeType::AddedAndRemoved => AtomChangeType::AddedAndRemoved,
+        }
+    }
+
+    #[inline(always)]
+    pub fn as_removed(&self) -> Self {
+        match self {
+            AtomChangeType::Unchanged => AtomChangeType::Removed,
+            AtomChangeType::Added => AtomChangeType::AddedAndRemoved,
+            AtomChangeType::Removed => AtomChangeType::Removed,
+            AtomChangeType::AddedAndRemoved => AtomChangeType::AddedAndRemoved,
+        }
+    }
+}
+
+#[allow(clippy::enum_variant_names)]
+#[derive(EnumCountMacro, Debug, Clone, Copy, FromRepr)]
 #[repr(i32)]
 enum AtomNodeType {
     /// The node is a goal node but not in the current state and is not being
     /// added.
     UnachievedGoal,
-    /// Same as [`AtomNodeType::UnachievedGoal`] but being added by the partial
-    /// action.
-    AddedUnachievedGoal,
     /// The node is a goal node and in the current state and is not being
     /// removed by the partial action.
     AchievedGoal,
-    /// Same as [`AtomNodeType::AchievedGoal`] but being removed by the partial
-    /// action.
-    RemovedAchievedGoal,
     /// The node is not a goal node, but is in the current state.
     NonGoal,
-    /// The node is not a goal node, but is in the current state and is being
-    /// removed by the partial action.
-    RemovedNonGoal,
 }
 
 impl AtomNodeType {
+    #[inline(always)]
     pub fn as_achieved(&self) -> Self {
         match self {
-            AtomNodeType::UnachievedGoal | AtomNodeType::AddedUnachievedGoal => {
-                AtomNodeType::AchievedGoal
-            }
+            AtomNodeType::UnachievedGoal => AtomNodeType::AchievedGoal,
             AtomNodeType::AchievedGoal => AtomNodeType::AchievedGoal,
-            AtomNodeType::RemovedAchievedGoal => AtomNodeType::RemovedAchievedGoal,
             AtomNodeType::NonGoal => AtomNodeType::NonGoal,
-            AtomNodeType::RemovedNonGoal => AtomNodeType::RemovedNonGoal,
-        }
-    }
-
-    // TODO: reconsider this decision
-    /// We assume the best case scenario, i.e. adding overrides removing
-    pub fn as_added(&self) -> Self {
-        match self {
-            AtomNodeType::UnachievedGoal => AtomNodeType::AddedUnachievedGoal,
-            AtomNodeType::AddedUnachievedGoal => AtomNodeType::AddedUnachievedGoal,
-            AtomNodeType::AchievedGoal => AtomNodeType::AchievedGoal,
-            AtomNodeType::RemovedAchievedGoal => AtomNodeType::AchievedGoal,
-            AtomNodeType::NonGoal => AtomNodeType::NonGoal,
-            AtomNodeType::RemovedNonGoal => AtomNodeType::NonGoal,
-        }
-    }
-
-    /// Removing does not override adding
-    pub fn as_removed(&self) -> Self {
-        match self {
-            AtomNodeType::UnachievedGoal => AtomNodeType::UnachievedGoal,
-            AtomNodeType::AddedUnachievedGoal => AtomNodeType::AddedUnachievedGoal,
-            AtomNodeType::AchievedGoal => AtomNodeType::RemovedAchievedGoal,
-            AtomNodeType::RemovedAchievedGoal => AtomNodeType::RemovedAchievedGoal,
-            AtomNodeType::NonGoal => AtomNodeType::RemovedNonGoal,
-            AtomNodeType::RemovedNonGoal => AtomNodeType::RemovedNonGoal,
         }
     }
 }
@@ -245,7 +324,7 @@ mod tests {
     #[test]
     fn blocksworld_precomilation() {
         let task = Task::from_text(BLOCKSWORLD_DOMAIN_TEXT, BLOCKSWORLD_PROBLEM13_TEXT);
-        let compiler = SclgCompiler::new(&task);
+        let compiler = SclgCompiler::new(&task, SuccessorGeneratorName::FullReducer);
 
         let graph = compiler.base_graph.as_ref().unwrap();
         assert_eq!(graph.node_count(), 9);
@@ -268,7 +347,7 @@ mod tests {
                         graph[compiler.goal_atom_to_node_index[atom]],
                         SclgCompiler::get_atom_colour(
                             atom.predicate_index(),
-                            AtomNodeType::UnachievedGoal
+                            AtomType::new_goal_atom()
                         )
                     );
                 }
@@ -279,7 +358,7 @@ mod tests {
     #[test]
     fn blocksworld_compilation() {
         let task = Task::from_text(BLOCKSWORLD_DOMAIN_TEXT, BLOCKSWORLD_PROBLEM13_TEXT);
-        let compiler = SclgCompiler::new(&task);
+        let compiler = SclgCompiler::new(&task, SuccessorGeneratorName::FullReducer);
 
         let graph = compiler.compile(
             &task.initial_state,
@@ -295,21 +374,15 @@ mod tests {
             };
             assert!(compiler.goal_atom_to_node_index.contains_key(atom));
             if atom.predicate_index() == 4 && atom.arguments() == vec![1, 2] {
-                // (on b2 b3) is a removed achieved goal
+                // (on b2 b3) is an achieved goal
                 assert_eq!(
                     graph[compiler.goal_atom_to_node_index[atom]],
                     SclgCompiler::get_atom_colour(
                         atom.predicate_index(),
-                        AtomNodeType::RemovedAchievedGoal
-                    )
-                )
-            } else if atom.predicate_index() == 0 {
-                // clear is being added
-                assert_eq!(
-                    graph[compiler.goal_atom_to_node_index[atom]],
-                    SclgCompiler::get_atom_colour(
-                        atom.predicate_index(),
-                        AtomNodeType::AddedUnachievedGoal
+                        AtomType {
+                            atom_node_type: AtomNodeType::AchievedGoal,
+                            atom_change_type: AtomChangeType::Unchanged
+                        }
                     )
                 )
             } else {
@@ -317,7 +390,7 @@ mod tests {
                     graph[compiler.goal_atom_to_node_index[atom]],
                     SclgCompiler::get_atom_colour(
                         atom.predicate_index(),
-                        AtomNodeType::UnachievedGoal
+                        AtomType::new_goal_atom()
                     )
                 )
             }
