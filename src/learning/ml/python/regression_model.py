@@ -27,7 +27,9 @@ class RegressionModel:
         return X @ self.weights.T + self.bias
 
     def get_weights(self):
-        if self.model_str == "lr":
+        if hasattr(self, "weights") and self.weights is not None:
+            return self.weights
+        elif self.model_str == "lr":
             return self.model.coef_
         elif self.model_str == "gpr":
             # this only works for GPR with DotProduct kernel

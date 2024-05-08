@@ -15,7 +15,7 @@ enum Mode {
 /// to hash down to a single value. Note that unlike the GOOSE implementation,
 /// this does not include the edge colours to the neighbours.
 #[derive(Debug, Clone, Hash, Eq, PartialEq, Serialize, Deserialize)]
-struct Neighbourhood {
+pub struct Neighbourhood {
     node_colour: i32,
     neighbour_colours: Vec<(i32, i32)>,
 }
@@ -67,6 +67,18 @@ impl WlKernel {
         }
     }
 
+    /// Inspect the neighbourhood that hashes to a particular colour. This
+    /// should only be used for debugging and understand the kernel.
+    pub fn inspect_colour(&self, colour: i32) -> Option<&Neighbourhood> {
+        self.hashes.iter().find_map(|(neighbourhood, &hash)| {
+            if hash == colour {
+                Some(neighbourhood)
+            } else {
+                None
+            }
+        })
+    }
+
     /// Compute colour histograms for some graph. This will run the
     /// Weisfeiler-Lehman algorithm on the graphs. The first time this is
     /// called, the kernel will be in training mode and will create new hashes
@@ -75,6 +87,23 @@ impl WlKernel {
     pub fn compute_histograms(&mut self, graphs: &[CGraph]) -> Vec<HashMap<i32, usize>> {
         assert_eq!(self.k, 1, "k-WL not implemented yet for k > 1.");
         let mut histograms = vec![];
+
+        if self.mode == Mode::Train {
+            self.hashes.clear();
+            let max_graph_colour = graphs
+                .iter()
+                .map(|graph| graph.node_indices().map(|node| graph[node]).max().unwrap())
+                .max();
+
+            // Add the colours of the nodes to the hash map.
+            if let Some(max_graph_colour) = max_graph_colour {
+                for colour in 0..=max_graph_colour {
+                    self.hashes
+                        .insert(Neighbourhood::new(colour, vec![]), colour);
+                }
+            }
+        }
+
         for graph in graphs {
             self.statistics.register_graph(graph.node_count() as i64);
 

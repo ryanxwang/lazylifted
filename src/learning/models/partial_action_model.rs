@@ -7,6 +7,7 @@ use crate::{
             partial_action_model_config::PartialActionModelConfig,
             Evaluate, Train, TrainingInstance,
         },
+        wl_kernel::Neighbourhood,
         WlKernel,
     },
     search::{successor_generators::SuccessorGeneratorName, Action, DBState, PartialAction, Task},
@@ -84,6 +85,16 @@ impl PartialActionModel {
             state: PartialActionModelState::New,
             config: config.clone(),
         }
+    }
+
+    /// Inspect the weights of the model. This should only be used for debugging
+    /// and understanding the model.
+    pub fn get_weights(&self) -> Vec<f64> {
+        self.model.get_weights(self.config.model)
+    }
+
+    pub fn inspect_colour(&self, colour: i32) -> Option<&Neighbourhood> {
+        self.wl.inspect_colour(colour)
     }
 
     /// Prepare the data for training from some training instances. The

@@ -1,5 +1,7 @@
 [state-space-model]
-model = "gpr"
 successor-generator = "full-reducer"
 iters = 4
 validate = false
+
+[state-space-model.model.gpr]
+alpha = 1e-7
