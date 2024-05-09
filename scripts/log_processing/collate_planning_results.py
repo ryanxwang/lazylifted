@@ -7,6 +7,8 @@ from typing import Optional, List
 from processed_log import process_log
 
 
+SEARCH_TIME_LIMIT = 1800 # 30 minutes
+
 @dataclass
 class PlanningResult:
     domain: str
@@ -14,18 +16,18 @@ class PlanningResult:
     model_type: str
     model: str
     found_plan: bool
+    search_duration: float
+    expanded_nodes: int
+    evaluated_nodes: int
+    generated_nodes: int
+    reopened_nodes: int
+    generated_actions: int
+    improving_expansions: int
     plan_length: Optional[int]
 
 
 def save_results(results: List[PlanningResult], output_file):
-    field_names = [
-        "domain",
-        "instance",
-        "model_type",
-        "model",
-        "found_plan",
-        "plan_length",
-    ]
+    field_names = list(results[0].__dict__.keys())
     with open(output_file, "w") as f:
         writer = csv.DictWriter(f, fieldnames=field_names)
         writer.writeheader()
@@ -45,23 +47,46 @@ def main():
 
     results = []
     for log_file in os.listdir(args.log_dir):
+        if not log_file.endswith(".err"):
+            continue
         log_path = os.path.join(args.log_dir, log_file)
 
-        try:
-            processed_log = process_log(log_path)
-        except Exception as e:
-            continue
+        processed_log = process_log(log_path)
 
         print(f"Processing found log file {log_file}")
 
         found_plan = False
         plan_length = None
+        search_duration = None
+        expanded_nodes = None
+        evaluated_nodes = None
+        generated_nodes = None
+        reopened_nodes = None
+        generated_actions = None
+        improving_expansions = None
         for key, value_entries in processed_log.values.items():
             if key == "plan_length" and value_entries:
                 found_plan = True
                 plan_length = value_entries[-1].value
-                break
-
+            if key == "search_duration" and value_entries:
+                search_duration = value_entries[-1].value
+            if key == "expanded_nodes" and value_entries:
+                expanded_nodes = value_entries[-1].value
+            if key == "evaluated_nodes" and value_entries:
+                evaluated_nodes = value_entries[-1].value
+            if key == "generated_nodes" and value_entries:
+                generated_nodes = value_entries[-1].value
+            if key == "reopened_nodes" and value_entries:
+                reopened_nodes = value_entries[-1].value
+            if key == "generated_actions" and value_entries:
+                generated_actions = value_entries[-1].value
+            if key == "improving_expansions" and value_entries:
+                improving_expansions = value_entries[-1].value
+        
+        if search_duration is None:
+            search_duration = SEARCH_TIME_LIMIT
+        assert(search_duration <= SEARCH_TIME_LIMIT)
+        
         results.append(
             PlanningResult(
                 domain=processed_log.domain,
@@ -69,6 +94,13 @@ def main():
                 model_type=processed_log.model_type,
                 model=processed_log.model,
                 found_plan=found_plan,
+                search_duration=search_duration,
+                expanded_nodes=expanded_nodes,
+                evaluated_nodes=evaluated_nodes,
+                generated_nodes=generated_nodes,
+                reopened_nodes=reopened_nodes,
+                generated_actions=generated_actions,
+                improving_expansions=improving_expansions,
                 plan_length=plan_length,
             )
         )

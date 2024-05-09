@@ -87,3 +87,7 @@ def process_log(path: str) -> ProcessedLog:
         values=values,
         texts=texts,
     )
+
+if __name__ == "__main__":
+    processed_log = process_log("planning_logs/partial_space-wl_sclg_gpr/blocksworld/testing_hard_p19.err")
+    print(processed_log.values["expanded_nodes"])
