@@ -3,9 +3,10 @@ mod repl_command;
 use clap::Parser;
 use dialoguer::{theme::ColorfulTheme, BasicHistory, Input};
 use lazylifted::learning::models::{Evaluate, PartialActionModel};
+use ordered_float::OrderedFloat;
 use pyo3::Python;
 use repl_command::ReplCommand;
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf};
 
 #[derive(Parser)]
 #[command(version)]
@@ -27,6 +28,16 @@ fn main() {
 fn run_repl(model: PartialActionModel) {
     let mut history = BasicHistory::new().max_entries(100).no_duplicates(true);
     let weights = model.get_weights();
+
+    let mut weight_groups = HashMap::new();
+    for (colour, weight) in weights.iter().enumerate() {
+        let weight = OrderedFloat(*weight);
+        let group = weight_groups.entry(weight).or_insert_with(Vec::new);
+        group.push(colour);
+    }
+    let mut weight_groups = weight_groups.into_iter().collect::<Vec<_>>();
+    weight_groups
+        .sort_by_key(|(weight, colours)| OrderedFloat(-weight.abs() * colours.len() as f64));
 
     #[allow(clippy::while_let_loop)]
     loop {
@@ -56,15 +67,8 @@ fn run_repl(model: PartialActionModel) {
                     }
                 }
                 Some(ReplCommand::ListByWeight(num_to_print)) => {
-                    let mut weights = weights.iter().enumerate().collect::<Vec<_>>();
-                    weights.sort_by(|(_, a), (_, b)| {
-                        b.abs()
-                            .partial_cmp(&a.abs())
-                            .unwrap_or(std::cmp::Ordering::Equal)
-                    });
-
-                    for (colour, weight) in weights.iter().take(num_to_print) {
-                        println!("{}: {}", colour, weight);
+                    for (weight, colours) in weight_groups.iter().take(num_to_print) {
+                        println!("{:?}: {}", colours, weight * colours.len() as f64);
                     }
                 }
                 Some(ReplCommand::GetNeighbourhood(colour)) => match model.inspect_colour(colour) {
