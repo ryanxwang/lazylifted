@@ -1,5 +1,5 @@
 use crate::parsed_types::{Atom as ParsedAtom, Name};
-use crate::search::Negatable;
+use crate::search::{AtomSchema, Negatable, SchemaArgument};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -75,5 +75,34 @@ impl Negatable<Atom> {
     #[inline(always)]
     pub fn arguments(&self) -> &[usize] {
         self.underlying().arguments()
+    }
+}
+
+impl TryFrom<AtomSchema> for Atom {
+    type Error = ();
+
+    fn try_from(value: AtomSchema) -> Result<Self, Self::Error> {
+        let mut arguments = vec![];
+        for argument in value.arguments() {
+            match argument {
+                SchemaArgument::Constant(index) => arguments.push(*index),
+                SchemaArgument::Free(_) => {
+                    return Err(());
+                }
+            }
+        }
+
+        Ok(Self::new(value.predicate_index(), arguments))
+    }
+}
+
+impl TryFrom<Negatable<AtomSchema>> for Negatable<Atom> {
+    type Error = ();
+
+    fn try_from(value: Negatable<AtomSchema>) -> Result<Self, Self::Error> {
+        Ok(Negatable::new(
+            value.is_negated(),
+            Atom::try_from(value.underlying().to_owned())?,
+        ))
     }
 }

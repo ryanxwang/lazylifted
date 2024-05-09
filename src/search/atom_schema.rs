@@ -49,7 +49,7 @@ impl SchemaArgument {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct AtomSchema {
     predicate_index: usize,
     arguments: Vec<SchemaArgument>,

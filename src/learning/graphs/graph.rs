@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use crate::learning::graphs::{IlgCompiler, PalgCompiler, SclgCompiler};
+use crate::learning::graphs::{IlgCompiler, PalgCompiler, RslgCompiler, SclgCompiler};
 use crate::search::successor_generators::SuccessorGeneratorName;
 use crate::search::{DBState, PartialAction, Task};
 use petgraph::{graph::Graph, Undirected};
@@ -23,6 +23,7 @@ pub enum PartialActionCompilerName {
     Sclg,
     Palg,
     Ilg,
+    Rslg,
 }
 
 impl PartialActionCompilerName {
@@ -37,6 +38,9 @@ impl PartialActionCompilerName {
             }
             PartialActionCompilerName::Palg => Box::new(PalgCompiler::new(task)),
             PartialActionCompilerName::Ilg => Box::new(IlgCompiler::new(task)),
+            PartialActionCompilerName::Rslg => {
+                Box::new(RslgCompiler::new(task, successcor_generator_name))
+            }
         }
     }
 }

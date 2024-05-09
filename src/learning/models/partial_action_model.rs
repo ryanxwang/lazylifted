@@ -213,20 +213,16 @@ impl PartialActionModel {
                 .graph_compiler_name
                 .create(task, self.successor_generator_name);
 
-            let total_partial_steps = plan
-                .steps()
-                .iter()
-                .map(|a| a.instantiation.len() + 1)
-                .sum::<usize>() as f64;
+            let total_steps = plan.steps().len() as f64;
 
             let mut cur_state = task.initial_state.clone();
             let mut cur_partial_step = 0.;
             for chosen_action in plan.steps() {
-                for partial_depth in 0..(chosen_action.instantiation.len() + 1) {
-                    cur_partial_step += 1.;
+                for partial_depth in 0..=(chosen_action.instantiation.len()) {
+                    cur_partial_step += 1. / (chosen_action.instantiation.len() + 1) as f64;
                     let partial = PartialAction::from_action(chosen_action, partial_depth);
                     graphs.push(compiler.compile(&cur_state, &partial));
-                    labels.push(total_partial_steps - cur_partial_step);
+                    labels.push(total_steps - cur_partial_step);
                 }
 
                 cur_state = successor_generator.generate_successor(

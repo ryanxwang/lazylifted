@@ -1,4 +1,4 @@
-use crate::search::{Action, ActionSchema, Task, Transition};
+use crate::search::{Action, ActionSchema, Atom, Negatable, Task, Transition};
 
 /// Struct that represents a partially instantiated action schema.
 /// [`PartialAction`] can be viewed as a representation of a set of actions, and
@@ -75,6 +75,18 @@ impl PartialAction {
             partial_instantiation: new_instantiation,
         }
     }
+
+    /// Get the effects that are guaranteed by the instantiation so far
+    pub fn get_guaranteed_effects(&self, action_schema: &ActionSchema) -> Vec<Negatable<Atom>> {
+        let partial_effects = action_schema.partially_ground_effects(self);
+        partial_effects
+            .into_iter()
+            .filter_map(|effect| match effect.try_into() {
+                Ok(atom) => Some(atom),
+                Err(_) => None,
+            })
+            .collect()
+    }
 }
 
 impl From<Action> for PartialAction {
@@ -113,7 +125,10 @@ impl Transition for PartialActionDiff {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use super::*;
+    use crate::test_utils::*;
 
     #[test]
     fn test_from_action() {
@@ -147,5 +162,26 @@ mod tests {
 
         assert!(other.is_subset_of(&partial));
         assert!(partial.is_superset_of(&other));
+    }
+
+    #[test]
+    fn test_guaranteed_effects() {
+        let task = Task::from_text(BLOCKSWORLD_DOMAIN_TEXT, BLOCKSWORLD_PROBLEM13_TEXT);
+        let unstack = task.action_schemas()[3].clone();
+
+        let partial = PartialAction::new(3, vec![1]);
+        let guaranteed_effects = partial.get_guaranteed_effects(&unstack);
+
+        assert_eq!(
+            guaranteed_effects
+                .clone()
+                .into_iter()
+                .collect::<HashSet<_>>(),
+            HashSet::from_iter(vec![
+                Negatable::Negative(Atom::new(0, vec![1])),
+                Negatable::Positive(Atom::new(3, vec![1])),
+                Negatable::Negative(Atom::new(2, vec![])),
+            ])
+        )
     }
 }
