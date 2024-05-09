@@ -272,9 +272,7 @@ impl AtomStatusType {
     #[inline(always)]
     pub fn with_optional_add(&self) -> Self {
         match self {
-            AtomStatusType::Achieved => {
-                panic!("Cannot optionally add an atom that is already in the state")
-            }
+            AtomStatusType::Achieved => AtomStatusType::Achieved,
             AtomStatusType::Unachieved => AtomStatusType::OptionalAdd,
             AtomStatusType::OptionalAdd => AtomStatusType::OptionalAdd,
             AtomStatusType::OptionalDelete => {
@@ -286,10 +284,8 @@ impl AtomStatusType {
     #[inline(always)]
     pub fn with_optional_delete(&self) -> Self {
         match self {
+            AtomStatusType::Unachieved => AtomStatusType::Unachieved,
             AtomStatusType::Achieved => AtomStatusType::OptionalDelete,
-            AtomStatusType::Unachieved => {
-                panic!("Cannot optionally delete an atom that is not in the state")
-            }
             AtomStatusType::OptionalAdd => {
                 panic!("Cannot have both optional add and delete, adds only work for atoms not in state, and deletes only work for atoms in state")
             }
