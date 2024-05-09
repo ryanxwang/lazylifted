@@ -2,13 +2,13 @@
 use crate::{
     learning::graphs::{CGraph, Compiler2, NodeID},
     search::{
-        successor_generators::SuccessorGeneratorName, ActionSchema, Atom, DBState, Object,
-        PartialAction, SuccessorGenerator, Task,
+        successor_generators::SuccessorGeneratorName, ActionSchema, Atom, DBState, Negatable,
+        Object, PartialAction, SuccessorGenerator, Task,
     },
 };
 use std::collections::{HashMap, HashSet};
 use strum::EnumCount;
-use strum_macros::EnumCount as EnumCountMacro;
+use strum_macros::{EnumCount as EnumCountMacro, FromRepr};
 
 const NO_STATIC_PREDICATES: bool = true;
 
@@ -20,8 +20,6 @@ pub struct RslgCompiler {
     base_graph: Option<CGraph>,
     /// A map from object index to node index in the base graph.
     object_index_to_node_index: HashMap<usize, NodeID>,
-    /// A map from predicate index to node index in the base graph.
-    predicate_index_to_node_index: HashMap<usize, NodeID>,
     /// The goal atoms of the task
     goal_atom: HashSet<Atom>,
     /// A copy of the action schemas of the task
@@ -36,7 +34,6 @@ impl RslgCompiler {
             successor_generator: successor_generator_name.create(task),
             base_graph: None,
             object_index_to_node_index: HashMap::new(),
-            predicate_index_to_node_index: HashMap::new(),
             goal_atom: task
                 .goal
                 .atoms()
@@ -59,50 +56,102 @@ impl RslgCompiler {
         let mut graph = self.base_graph.clone().unwrap();
         let action_schema = &self.action_schemas[partial_action.schema_index()];
 
-        let effects = partial_action.get_guaranteed_effects(action_schema);
+        let action_effects: Vec<HashSet<Negatable<Atom>>> = self
+            .successor_generator
+            .get_applicable_actions(state, action_schema)
+            .into_iter()
+            .filter(|action| partial_action.is_superset_of_action(action))
+            .map(|action| action_schema.ground_effects(&action).into_iter().collect())
+            .collect::<Vec<_>>();
 
-        let mut removed_atoms_from_cur_state = HashSet::new();
-        let mut atoms_in_new_state = HashSet::new();
-
-        for effect in effects {
-            let atom = effect.underlying().clone();
-            if NO_STATIC_PREDICATES && self.static_predicates.contains(&atom.predicate_index()) {
-                continue;
-            }
-            if effect.is_negated() {
-                removed_atoms_from_cur_state.insert(atom);
-            } else {
-                atoms_in_new_state.insert(atom);
-            }
-        }
-        for atom in state.atoms() {
-            if NO_STATIC_PREDICATES && self.static_predicates.contains(&atom.predicate_index()) {
-                continue;
-            }
-            if !removed_atoms_from_cur_state.contains(&atom) {
-                atoms_in_new_state.insert(atom);
-            }
-        }
-
-        let all_atoms = atoms_in_new_state
+        // the intersection of all the action effects are unavoidable
+        let unavoidable_effects: HashSet<Negatable<Atom>> = action_effects
             .iter()
-            .chain(self.goal_atom.iter())
-            .collect::<HashSet<_>>();
+            .fold(action_effects[0].clone(), |acc, effects| {
+                acc.intersection(effects).cloned().collect()
+            });
 
-        for atom in all_atoms {
-            let atom_type = match (
-                atoms_in_new_state.contains(atom),
-                self.goal_atom.contains(atom),
-            ) {
-                (true, true) => AtomNodeType::AchievedGoal,
-                (true, false) => AtomNodeType::NonGoal,
-                (false, true) => AtomNodeType::UnachievedGoal,
-                (false, false) => {
-                    panic!("Atom is neither in the goal nor in the new state")
-                }
-            };
+        // the union of all the action effects, minus the unavoidable effects,
+        // are optional
+        let optinal_effects: HashSet<Negatable<Atom>> = action_effects
+            .iter()
+            .fold(action_effects[0].clone(), |acc, effects| {
+                acc.union(effects).cloned().collect()
+            })
+            .difference(&unavoidable_effects)
+            .cloned()
+            .collect();
 
+        let (unavoidable_adds, unavoidable_deletes) = unavoidable_effects.into_iter().fold(
+            (HashSet::new(), HashSet::new()),
+            |(mut adds, mut deletes), effect| {
+                match effect {
+                    Negatable::Positive(atom) => {
+                        adds.insert(atom);
+                    }
+                    Negatable::Negative(atom) => {
+                        deletes.insert(atom);
+                    }
+                };
+                (adds, deletes)
+            },
+        );
+
+        let (optional_adds, optional_deletes) = optinal_effects.into_iter().fold(
+            (HashSet::new(), HashSet::new()),
+            |(mut adds, mut deletes), effect| {
+                match effect {
+                    Negatable::Positive(atom) => {
+                        adds.insert(atom);
+                    }
+                    Negatable::Negative(atom) => {
+                        deletes.insert(atom);
+                    }
+                };
+                (adds, deletes)
+            },
+        );
+
+        let mut atoms: HashMap<Atom, AtomType> = HashMap::new();
+        for atom in state.atoms() {
+            // for unavoidably deleted atoms, treat them as deleted
+            if unavoidable_deletes.contains(&atom) {
+                continue;
+            }
+            atoms.insert(atom, AtomType::achieved_nongoal_atom());
+        }
+        // for unavoidably added atoms, treat them as in the current state
+        for atom in unavoidable_adds {
+            atoms.insert(atom, AtomType::achieved_nongoal_atom());
+        }
+        for atom in self.goal_atom.iter() {
+            atoms
+                .entry(atom.clone())
+                .and_modify(|atom_type| {
+                    *atom_type = atom_type.with_in_goal();
+                })
+                .or_insert(AtomType::unachieved_goal_atom());
+        }
+        for atom in optional_adds {
+            atoms
+                .entry(atom.clone())
+                .and_modify(|atom_type| {
+                    *atom_type = atom_type.with_optional_add();
+                })
+                .or_insert(AtomType::unachieved_nongoal_atom().with_optional_add());
+        }
+        for atom in optional_deletes {
+            atoms.entry(atom.clone()).and_modify(|atom_type| {
+                *atom_type = atom_type.with_optional_delete();
+            });
+        }
+
+        for (atom, atom_type) in atoms {
+            if NO_STATIC_PREDICATES && self.static_predicates.contains(&atom.predicate_index()) {
+                continue;
+            }
             let node_id = graph.add_node(Self::get_atom_colour(atom.predicate_index(), atom_type));
+
             for (arg_index, object_index) in atom.arguments().iter().enumerate() {
                 let object_node_id = self.object_index_to_node_index[object_index];
                 graph.add_edge(node_id, object_node_id, arg_index as i32);
@@ -133,9 +182,9 @@ impl RslgCompiler {
     }
 
     #[inline(always)]
-    fn get_atom_colour(predicate_index: usize, atom_type: AtomNodeType) -> i32 {
+    fn get_atom_colour(predicate_index: usize, atom_type: AtomType) -> i32 {
         const START: i32 = 1;
-        START + predicate_index as i32 * AtomNodeType::COUNT as i32 + atom_type as i32
+        START + predicate_index as i32 * AtomType::COUNT as i32 + atom_type.into_repr()
     }
 }
 
@@ -145,16 +194,115 @@ impl Compiler2<DBState, PartialAction> for RslgCompiler {
     }
 }
 
-/// Colours of atom nodes in the RSLG.
 #[allow(clippy::enum_variant_names)]
-#[derive(Debug, Clone, PartialEq, Eq, EnumCountMacro)]
+#[derive(Debug, Clone, Copy)]
+struct AtomType {
+    atom_goal_type: AtomGoalType,
+    atom_status_type: AtomStatusType,
+}
+
+impl AtomType {
+    #[inline(always)]
+    pub const fn achieved_nongoal_atom() -> Self {
+        Self {
+            atom_goal_type: AtomGoalType::NonGoal,
+            atom_status_type: AtomStatusType::Achieved,
+        }
+    }
+
+    #[inline(always)]
+    pub const fn unachieved_goal_atom() -> Self {
+        Self {
+            atom_goal_type: AtomGoalType::NonGoal,
+            atom_status_type: AtomStatusType::OptionalAdd,
+        }
+    }
+
+    #[inline(always)]
+    pub const fn unachieved_nongoal_atom() -> Self {
+        Self {
+            atom_goal_type: AtomGoalType::NonGoal,
+            atom_status_type: AtomStatusType::Unachieved,
+        }
+    }
+
+    #[inline(always)]
+    pub fn with_in_goal(&self) -> Self {
+        Self {
+            atom_goal_type: AtomGoalType::Goal,
+            atom_status_type: self.atom_status_type,
+        }
+    }
+
+    #[inline(always)]
+    pub fn with_optional_add(&self) -> Self {
+        Self {
+            atom_goal_type: self.atom_goal_type,
+            atom_status_type: self.atom_status_type.with_optional_add(),
+        }
+    }
+
+    #[inline(always)]
+    pub fn with_optional_delete(&self) -> Self {
+        Self {
+            atom_goal_type: self.atom_goal_type,
+            atom_status_type: self.atom_status_type.with_optional_delete(),
+        }
+    }
+
+    pub const COUNT: usize = AtomGoalType::COUNT * AtomStatusType::COUNT;
+
+    pub fn into_repr(self) -> i32 {
+        self.atom_goal_type as i32 * AtomStatusType::COUNT as i32 + self.atom_status_type as i32
+    }
+}
+
+#[derive(EnumCountMacro, Debug, Clone, Copy, FromRepr)]
 #[repr(i32)]
-enum AtomNodeType {
-    /// The node is a goal node but not in the current state.
-    UnachievedGoal,
-    /// The node is a goal node and in the current state.
-    AchievedGoal,
-    /// The node is not a goal node, but is in the current state.
+enum AtomStatusType {
+    Achieved,
+    Unachieved,
+    OptionalAdd,
+    OptionalDelete,
+}
+
+impl AtomStatusType {
+    #[inline(always)]
+    pub fn with_optional_add(&self) -> Self {
+        match self {
+            AtomStatusType::Achieved => {
+                panic!("Cannot optionally add an atom that is already in the state")
+            }
+            AtomStatusType::Unachieved => AtomStatusType::OptionalAdd,
+            AtomStatusType::OptionalAdd => AtomStatusType::OptionalAdd,
+            AtomStatusType::OptionalDelete => {
+                panic!("Cannot have both optional add and delete, adds only work for atoms not in state, and deletes only work for atoms in state")
+            }
+        }
+    }
+
+    #[inline(always)]
+    pub fn with_optional_delete(&self) -> Self {
+        match self {
+            AtomStatusType::Achieved => AtomStatusType::OptionalDelete,
+            AtomStatusType::Unachieved => {
+                panic!("Cannot optionally delete an atom that is not in the state")
+            }
+            AtomStatusType::OptionalAdd => {
+                panic!("Cannot have both optional add and delete, adds only work for atoms not in state, and deletes only work for atoms in state")
+            }
+            AtomStatusType::OptionalDelete => AtomStatusType::OptionalDelete,
+        }
+    }
+}
+
+#[allow(clippy::enum_variant_names)]
+#[derive(EnumCountMacro, Debug, Clone, Copy, FromRepr)]
+#[repr(i32)]
+enum AtomGoalType {
+    /// The node is a goal node.
+    Goal,
+    /// The node is not a goal node.
     NonGoal,
 }
 

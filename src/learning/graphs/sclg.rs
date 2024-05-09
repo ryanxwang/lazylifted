@@ -20,8 +20,6 @@ pub struct SclgCompiler {
     base_graph: Option<CGraph>,
     /// A map from object index to node index in the base graph.
     object_index_to_node_index: HashMap<usize, NodeID>,
-    /// A map from predicate index to node index in the base graph.
-    predicate_index_to_node_index: HashMap<usize, NodeID>,
     /// A map from the atoms in the goal to node index in the base graph.
     goal_atom_to_node_index: HashMap<Atom, NodeID>,
     /// A copy of the action schemas of the task
@@ -36,7 +34,6 @@ impl SclgCompiler {
             successor_generator: successor_generator_name.create(task),
             base_graph: None,
             object_index_to_node_index: HashMap::new(),
-            predicate_index_to_node_index: HashMap::new(),
             goal_atom_to_node_index: HashMap::new(),
             action_schemas: task.action_schemas().to_owned(),
             static_predicates: task.static_predicates(),

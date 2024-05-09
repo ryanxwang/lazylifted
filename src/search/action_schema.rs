@@ -1,7 +1,7 @@
 use crate::parsed_types::{
     ActionDefinition, ActionName, Literal, Name, PropCondition, PropEffect, Typed, Variable,
 };
-use crate::search::{AtomSchema, Negatable, PartialAction};
+use crate::search::{Action, Atom, AtomSchema, Negatable, PartialAction};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -148,6 +148,14 @@ impl ActionSchema {
         self.effects
             .iter()
             .map(|effect| effect.partially_ground(partial_action.partial_instantiation()))
+            .collect()
+    }
+
+    pub fn ground_effects(&self, action: &Action) -> Vec<Negatable<Atom>> {
+        assert!(action.index == self.index);
+        self.effects
+            .iter()
+            .map(|effect| effect.ground(&action.instantiation))
             .collect()
     }
 }

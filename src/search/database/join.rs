@@ -6,6 +6,7 @@ use crate::search::database::{utils::compute_matching_columns, Table};
 /// join. If there are no matching columns, a cartesian product is applied.
 ///
 /// See also [`super::hash_join::hash_join`].
+#[allow(dead_code)]
 pub fn join(t1: &mut Table, t2: &Table) {
     let matches = compute_matching_columns(t1, t2);
 

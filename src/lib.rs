@@ -1,5 +1,4 @@
-// TODO: Remove this line once the code is somewhat stable
-#![allow(dead_code)]
+#![warn(dead_code)]
 #![warn(missing_debug_implementations)]
 #![deny(non_ascii_idents)]
 #![deny(trivial_casts)]

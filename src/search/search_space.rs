@@ -112,11 +112,6 @@ impl<S: Hash, T: Transition> SearchSpace<S, T> {
     pub fn get_state(&self, state_id: StateId) -> &S {
         self.states.get(state_id.0).expect("Invalid state id")
     }
-
-    #[inline(always)]
-    pub fn len(&self) -> usize {
-        self.registered_states.len()
-    }
 }
 
 impl<S: Hash> SearchSpace<S, Action> {

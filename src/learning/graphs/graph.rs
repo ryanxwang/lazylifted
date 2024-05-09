@@ -10,6 +10,7 @@ pub type CGraph = Graph<i32, i32, Undirected, u32>;
 pub type NodeID = petgraph::graph::NodeIndex<u32>;
 
 pub trait Compiler<T>: Debug {
+    #[allow(dead_code)]
     fn compile(&self, arg: &T) -> CGraph;
 }
 

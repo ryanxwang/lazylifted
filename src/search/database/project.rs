@@ -5,6 +5,7 @@ use std::collections::HashSet;
 /// as it does not remove the columns from the table's schema. This is so that
 /// we can still instantiate the actions later on. When there are multiple rows
 /// with the same values in the projected columns, only the first one is kept.
+#[allow(dead_code)]
 pub fn project(t: &mut Table, over: &HashSet<i32>) {
     let mut matches = Vec::new();
     for &x in over {

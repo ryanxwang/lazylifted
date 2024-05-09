@@ -4,6 +4,7 @@ use std::collections::{HashMap, HashSet};
 
 /// Same as [`super::semi_join::semi_join`], but uses a hash map to speed up the
 /// process.
+#[allow(dead_code)]
 pub fn hash_semi_join(t1: &mut Table, t2: &Table) -> usize {
     let matches = compute_matching_columns(t1, t2);
 

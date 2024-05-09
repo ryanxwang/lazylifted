@@ -6,6 +6,7 @@ use crate::search::ActionSchema;
 pub struct Hypergraph {
     /// A list of hypernodes. Each entry corresponds to a unique argument in the
     /// action schema preconditions.
+    #[allow(unused)]
     pub(super) hypernodes: Vec<usize>,
     /// A list of hyperedges. Each entry corresponds to the free variables in
     /// a precondition.
@@ -16,6 +17,7 @@ pub struct Hypergraph {
     pub(super) node_counters: HashMap<usize, usize>,
     /// A map from the indices of [`hypernodes`] to the indices of corresponding
     /// schema precondition arguments.
+    #[allow(unused)]
     pub(super) node_indices: HashMap<usize, usize>,
     /// A map from hyperedge indices to the corresponding schema precondition
     /// indices.

@@ -117,6 +117,19 @@ impl AtomSchema {
         }
     }
 
+    pub fn ground(&self, object_indices: &[usize]) -> Atom {
+        Atom::new(
+            self.predicate_index,
+            self.arguments
+                .iter()
+                .map(|arg| match arg {
+                    SchemaArgument::Constant(index) => *index,
+                    SchemaArgument::Free(index) => *object_indices.get(*index).unwrap(),
+                })
+                .collect(),
+        )
+    }
+
     pub fn includes(&self, atom: &Atom) -> bool {
         self.predicate_index == atom.predicate_index()
             && self.arguments.len() == atom.arguments().len()
@@ -170,6 +183,10 @@ impl Negatable<AtomSchema> {
             self.is_negated(),
             self.underlying().partially_ground(object_indices),
         )
+    }
+
+    pub fn ground(&self, object_indices: &[usize]) -> Negatable<Atom> {
+        Negatable::new(self.is_negated(), self.underlying().ground(object_indices))
     }
 
     pub fn includes(&self, atom: &Atom) -> bool {
