@@ -165,3 +165,32 @@ impl PartialEq for ActionSchema {
         self.index == other.index
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{search::Task, test_utils::*};
+
+    #[test]
+    #[should_panic(expected = "assertion failed: action.index == self.index")]
+    fn test_ground_effects_with_different_schema() {
+        let task = Task::from_text(BLOCKSWORLD_DOMAIN_TEXT, BLOCKSWORLD_PROBLEM13_TEXT);
+        let _effects = task.action_schemas()[0].ground_effects(&Action::new(1, vec![3]));
+    }
+
+    #[test]
+    fn test_ground_effects() {
+        let task = Task::from_text(BLOCKSWORLD_DOMAIN_TEXT, BLOCKSWORLD_PROBLEM13_TEXT);
+        let effects = task.action_schemas()[0].ground_effects(&Action::new(0, vec![3]));
+
+        assert_eq!(
+            effects,
+            vec![
+                Negatable::Positive(Atom::new(3, vec![3])),
+                Negatable::Negative(Atom::new(0, vec![3])),
+                Negatable::Negative(Atom::new(1, vec![3])),
+                Negatable::Negative(Atom::new(2, vec![])),
+            ]
+        )
+    }
+}

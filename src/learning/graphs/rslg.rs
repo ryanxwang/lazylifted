@@ -2,8 +2,8 @@
 use crate::{
     learning::graphs::{CGraph, Compiler2, NodeID},
     search::{
-        successor_generators::SuccessorGeneratorName, ActionSchema, Atom, DBState, Negatable,
-        Object, PartialAction, SuccessorGenerator, Task,
+        successor_generators::SuccessorGeneratorName, Action, ActionSchema, Atom, DBState,
+        Negatable, PartialAction, SuccessorGenerator, Task,
     },
 };
 use std::collections::{HashMap, HashSet};
@@ -56,11 +56,15 @@ impl RslgCompiler {
         let mut graph = self.base_graph.clone().unwrap();
         let action_schema = &self.action_schemas[partial_action.schema_index()];
 
-        let action_effects: Vec<HashSet<Negatable<Atom>>> = self
+        let applicable_actions: Vec<Action> = self
             .successor_generator
             .get_applicable_actions(state, action_schema)
             .into_iter()
             .filter(|action| partial_action.is_superset_of_action(action))
+            .collect();
+
+        let action_effects: Vec<HashSet<Negatable<Atom>>> = applicable_actions
+            .into_iter()
             .map(|action| action_schema.ground_effects(&action).into_iter().collect())
             .collect::<Vec<_>>();
 
@@ -166,17 +170,15 @@ impl RslgCompiler {
 
         // Object nodes
         for object in &task.objects {
-            self.object_index_to_node_index.insert(
-                object.index,
-                graph.add_node(Self::get_object_colour(object)),
-            );
+            self.object_index_to_node_index
+                .insert(object.index, graph.add_node(Self::get_object_colour()));
         }
 
         self.base_graph = Some(graph);
     }
 
     #[inline(always)]
-    fn get_object_colour(_object: &Object) -> i32 {
+    fn get_object_colour() -> i32 {
         const START: i32 = 0;
         START
     }
@@ -213,8 +215,8 @@ impl AtomType {
     #[inline(always)]
     pub const fn unachieved_goal_atom() -> Self {
         Self {
-            atom_goal_type: AtomGoalType::NonGoal,
-            atom_status_type: AtomStatusType::OptionalAdd,
+            atom_goal_type: AtomGoalType::Goal,
+            atom_status_type: AtomStatusType::Unachieved,
         }
     }
 
@@ -325,7 +327,7 @@ mod tests {
                 .contains_key(&object.index));
             assert_eq!(
                 graph[compiler.object_index_to_node_index[&object.index]],
-                RslgCompiler::get_object_colour(object)
+                RslgCompiler::get_object_colour()
             );
         }
     }
@@ -334,11 +336,144 @@ mod tests {
     fn blocksworld_compilation() {
         let task = Task::from_text(BLOCKSWORLD_DOMAIN_TEXT, BLOCKSWORLD_PROBLEM13_TEXT);
         let compiler = RslgCompiler::new(&task, SuccessorGeneratorName::FullReducer);
+        let successor_generator = SuccessorGeneratorName::FullReducer.create(&task);
 
         let state = task.initial_state.clone();
-        let graph = compiler.compile(&state, &PartialAction::new(3, vec![]));
+        let state = successor_generator.generate_successor(
+            &state,
+            &task.action_schemas()[3],
+            &Action::new(3, vec![0, 1]),
+        );
+        let state = successor_generator.generate_successor(
+            &state,
+            &task.action_schemas()[1],
+            &Action::new(1, vec![0]),
+        );
+        let state = successor_generator.generate_successor(
+            &state,
+            &task.action_schemas()[3],
+            &Action::new(3, vec![1, 2]),
+        );
+        // state: (clear b1) (clear b3) (on-table b1) (on-table b4) (holding b2)
+        // (on b3 b4)
 
-        assert_eq!(graph.node_count(), 13);
-        assert_eq!(graph.edge_count(), 14);
+        // partial: (stack ?ob ?underob), so that we can stack on top of either
+        // b1 or b3
+        let graph = compiler.compile(&state, &PartialAction::new(2, vec![]));
+
+        assert_eq!(graph.node_count(), 16);
+        assert_eq!(graph.edge_count(), 16);
+
+        fn count_nodes_with_colour(graph: &CGraph, colour: i32) -> usize {
+            graph
+                .node_indices()
+                .filter(|node_id| graph[*node_id] == colour)
+                .count()
+        }
+
+        // objects: b1 b2 b3 b4
+        assert_eq!(
+            count_nodes_with_colour(&graph, RslgCompiler::get_object_colour()),
+            4
+        );
+
+        // clear, optionally delete nongoal: (clear b1) (clear b3)
+        assert_eq!(
+            count_nodes_with_colour(
+                &graph,
+                RslgCompiler::get_atom_colour(
+                    0,
+                    AtomType::achieved_nongoal_atom().with_optional_delete()
+                )
+            ),
+            2
+        );
+
+        // clear, unachieved goal: (clear b4)
+        assert_eq!(
+            count_nodes_with_colour(
+                &graph,
+                RslgCompiler::get_atom_colour(0, AtomType::unachieved_goal_atom())
+            ),
+            1
+        );
+
+        // clear, achieved nongoal: (clear b2)
+        assert_eq!(
+            count_nodes_with_colour(
+                &graph,
+                RslgCompiler::get_atom_colour(0, AtomType::achieved_nongoal_atom())
+            ),
+            1
+        );
+
+        // on-table, achieved goal: (on-table b4)
+        assert_eq!(
+            count_nodes_with_colour(
+                &graph,
+                RslgCompiler::get_atom_colour(1, AtomType::achieved_nongoal_atom())
+            ),
+            1
+        );
+
+        // on-table, achieved goal: (on-table b1)
+        assert_eq!(
+            count_nodes_with_colour(
+                &graph,
+                RslgCompiler::get_atom_colour(1, AtomType::achieved_nongoal_atom().with_in_goal())
+            ),
+            1
+        );
+
+        // arm-empty, achieved nongoal: (arm-empty)
+        assert_eq!(
+            count_nodes_with_colour(
+                &graph,
+                RslgCompiler::get_atom_colour(2, AtomType::achieved_nongoal_atom())
+            ),
+            1
+        );
+
+        // on, achieved nongoal: (on b3 b4)
+        assert_eq!(
+            count_nodes_with_colour(
+                &graph,
+                RslgCompiler::get_atom_colour(4, AtomType::achieved_nongoal_atom())
+            ),
+            1
+        );
+
+        // on, optionally add nongoal: (on b2 b1)
+        assert_eq!(
+            count_nodes_with_colour(
+                &graph,
+                RslgCompiler::get_atom_colour(
+                    4,
+                    AtomType::unachieved_nongoal_atom().with_optional_add()
+                )
+            ),
+            1
+        );
+
+        // on, optionally add goal: (on b2 b3)
+        assert_eq!(
+            count_nodes_with_colour(
+                &graph,
+                RslgCompiler::get_atom_colour(
+                    4,
+                    AtomType::unachieved_goal_atom().with_optional_add()
+                )
+            ),
+            1
+        );
+
+        // on, unachieved goal: (on b3 b1), (on b4 b2)
+        assert_eq!(
+            count_nodes_with_colour(
+                &graph,
+                RslgCompiler::get_atom_colour(4, AtomType::unachieved_goal_atom())
+            ),
+            2
+        );
     }
 }
