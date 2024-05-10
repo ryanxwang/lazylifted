@@ -33,11 +33,15 @@ impl<'py> MlModel<'py> {
         &self,
         training_data: &TrainingData<Bound<'py, PyArray2<f64>>, Bound<'py, PyArray1<f64>>>,
     ) {
-        let x = training_data.features();
-        let y = training_data.targets();
         match self {
-            MlModel::Regressor(regressor) => regressor.fit(x, y),
-            MlModel::Ranker(ranker) => ranker.fit(x, y, training_data.groups().unwrap()),
+            MlModel::Regressor(regressor) => match training_data {
+                TrainingData::Regression(data) => regressor.fit(data),
+                _ => panic!("Wrong data type for regressor model"),
+            },
+            MlModel::Ranker(ranker) => match training_data {
+                TrainingData::Ranking(data) => ranker.fit(data),
+                _ => panic!("Wrong data type for ranker model"),
+            },
         }
     }
 

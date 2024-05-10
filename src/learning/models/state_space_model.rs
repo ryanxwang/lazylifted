@@ -11,15 +11,14 @@ use crate::{
     },
     search::{successor_generators::SuccessorGeneratorName, DBState, Task},
 };
-use numpy::{PyArray1, PyArray2, PyUntypedArrayMethods};
-use pyo3::{
-    types::{PyAnyMethods, PyModule},
-    Bound, Python,
-};
+use numpy::{PyArray1, PyUntypedArrayMethods};
+use pyo3::{types::PyAnyMethods, Python};
 use serde::{Deserialize, Serialize};
 use std::{io::Write, path::Path, time};
 use tempfile::NamedTempFile;
 use tracing::info;
+
+use super::RegressionTrainingData;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 enum ModelState {
@@ -76,7 +75,10 @@ impl StateSpaceModel {
         }
     }
 
-    fn prepare_data(&self, training_data: &[TrainingInstance]) -> (Vec<CGraph>, Vec<f64>) {
+    fn prepare_data(
+        &self,
+        training_data: &[TrainingInstance],
+    ) -> RegressionTrainingData<Vec<CGraph>, Vec<f64>> {
         let mut graphs = Vec::new();
         let mut dist_to_goal = Vec::new();
         for instance in training_data {
@@ -94,26 +96,16 @@ impl StateSpaceModel {
                 dist_to_goal.push(plan.len() as f64 - i as f64);
                 cur_state = next_state;
             }
-            // graphs.push(compiler.compile(&cur_state));
-            // dist_to_goal.push(0.0);
+            graphs.push(compiler.compile(&cur_state));
+            dist_to_goal.push(0.0);
         }
 
         assert_eq!(graphs.len(), dist_to_goal.len());
-        (graphs, dist_to_goal)
-    }
-
-    fn score(
-        &self,
-        x: Bound<'static, PyArray2<f64>>,
-        expected_y: Bound<'static, PyArray1<f64>>,
-    ) -> f64 {
-        let predicted_y = self.model.predict(&x);
-        let mean_squared_error = PyModule::import_bound(self.py(), "sklearn.metrics")
-            .unwrap()
-            .getattr("mean_squared_error")
-            .unwrap();
-        let mse = mean_squared_error.call1((expected_y, predicted_y)).unwrap();
-        mse.extract().unwrap()
+        RegressionTrainingData {
+            features: graphs,
+            labels: dist_to_goal,
+            noise: None,
+        }
     }
 
     fn py(&self) -> Python<'static> {
@@ -122,7 +114,7 @@ impl StateSpaceModel {
 }
 
 impl Train for StateSpaceModel {
-    fn train(&mut self, training_data: &[TrainingInstance]) {
+    fn train(&mut self, train_instances: &[TrainingInstance]) {
         let py = self.py();
         assert_eq!(self.state, ModelState::New);
         if self.validate {
@@ -131,17 +123,19 @@ impl Train for StateSpaceModel {
             info!("training on full dataset");
         }
         let (train_instances, val_instances) = match self.validate {
-            true => training_data.split_at((training_data.len() as f64 * 0.8) as usize),
+            true => train_instances.split_at((train_instances.len() as f64 * 0.8) as usize),
             // Without this trivial cast we get a dumb error message
             #[allow(trivial_casts)]
-            false => (training_data, &[] as &[TrainingInstance]),
+            false => (train_instances, &[] as &[TrainingInstance]),
         };
 
-        let (train_graphs, train_labels) = self.prepare_data(train_instances);
+        let train_data = self.prepare_data(train_instances);
+        let train_graphs = &train_data.features;
         let mean_train_graph_size = train_graphs.iter().map(|g| g.node_count()).sum::<usize>()
             as f64
             / train_graphs.len() as f64;
-        let (val_graphs, val_labels) = self.prepare_data(val_instances);
+        let val_data = self.prepare_data(val_instances);
+        let val_graphs = &val_data.features;
         info!("compiled states into graphs");
         info!(
             train_graphs = train_graphs.len(),
@@ -149,8 +143,8 @@ impl Train for StateSpaceModel {
             val_graphs = val_graphs.len()
         );
 
-        let train_histograms = self.wl.compute_histograms(&train_graphs);
-        let val_histograms = self.wl.compute_histograms(&val_graphs);
+        let train_histograms = self.wl.compute_histograms(train_graphs);
+        let val_histograms = self.wl.compute_histograms(val_graphs);
         info!("computed WL histograms");
 
         let train_x = self.wl.compute_x(py, &train_histograms);
@@ -158,8 +152,8 @@ impl Train for StateSpaceModel {
         info!("computed WL features");
         self.wl.finalise();
 
-        let train_y = PyArray1::from_vec_bound(py, train_labels);
-        let val_y = PyArray1::from_vec_bound(py, val_labels);
+        let train_y = PyArray1::from_vec_bound(py, train_data.labels.to_owned());
+        let val_y = PyArray1::from_vec_bound(py, val_data.labels.to_owned());
         info!("converted labels to numpy arrays");
         info!(
             train_x_shape = format!("{:?}", train_x.shape()),
@@ -167,17 +161,19 @@ impl Train for StateSpaceModel {
             val_x_shape = format!("{:?}", val_x.shape()),
             val_y_shape = format!("{:?}", val_y.shape())
         );
+        let train_data = train_data.with_features(train_x).with_labels(train_y);
+        let val_data = val_data.with_features(val_x).with_labels(val_y);
 
         info!("fitting model on training data");
-        self.model.fit(&train_x, &train_y);
+        self.model.fit(&train_data);
 
         let train_score_start = time::Instant::now();
-        let train_score = self.score(train_x, train_y);
+        let train_score = self.model.score(&train_data);
         info!(train_score_time = train_score_start.elapsed().as_secs_f64());
         info!(train_score = train_score);
         if self.validate {
             let val_score_start = time::Instant::now();
-            let val_score = self.score(val_x, val_y);
+            let val_score = self.model.score(&val_data);
             info!(val_score_time = val_score_start.elapsed().as_secs_f64());
             info!(val_score = val_score);
         }

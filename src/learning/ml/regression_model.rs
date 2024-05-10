@@ -53,9 +53,16 @@ impl<'py> Regressor<'py> {
         }
     }
 
-    pub fn fit(&self, x: &Bound<'py, PyArray2<f64>>, y: &Bound<'py, PyArray1<f64>>) {
+    pub fn fit(
+        &self,
+        data: &RegressionTrainingData<Bound<'py, PyArray2<f64>>, Bound<'py, PyArray1<f64>>>,
+    ) {
         let start_time = time::Instant::now();
-        self.model.getattr("fit").unwrap().call1((x, y)).unwrap();
+        self.model
+            .getattr("fit")
+            .unwrap()
+            .call1((&data.features, &data.labels))
+            .unwrap();
         info!(fitting_time = start_time.elapsed().as_secs_f64());
     }
 
@@ -132,7 +139,12 @@ mod tests {
                 Regressor::new(py, RegressorName::GaussianProcessRegressor { alpha: 1e-7 });
             let x = PyArray2::from_vec2_bound(py, &[vec![1.0, 2.0], vec![3.0, 4.0]]).unwrap();
             let y = PyArray1::from_vec_bound(py, vec![1.0, 2.0]);
-            regressor.fit(&x, &y);
+            let data = RegressionTrainingData {
+                features: x,
+                labels: y,
+                noise: None,
+            };
+            regressor.fit(&data);
 
             let x = PyArray2::from_vec2_bound(py, &[vec![5.0, 6.0], vec![7.0, 8.0]]).unwrap();
             let y = regressor.predict(&x);
@@ -154,7 +166,12 @@ mod tests {
             let regressor = Regressor::new(py, RegressorName::LinearRegressor);
             let x = PyArray2::from_vec2_bound(py, &[vec![1.0, 2.0], vec![3.0, 4.0]]).unwrap();
             let y = PyArray1::from_vec_bound(py, vec![1.0, 2.0]);
-            regressor.fit(&x, &y);
+            let data = RegressionTrainingData {
+                features: x,
+                labels: y,
+                noise: None,
+            };
+            regressor.fit(&data);
 
             let x = PyArray2::from_vec2_bound(py, &[vec![5.0, 6.0], vec![7.0, 8.0]]).unwrap();
             let y = regressor.predict(&x);

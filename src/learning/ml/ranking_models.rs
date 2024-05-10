@@ -38,15 +38,17 @@ impl<'py> Ranker<'py> {
 
     pub fn fit(
         &self,
-        x: &Bound<'py, PyArray2<f64>>,
-        y: &Bound<'py, PyArray1<f64>>,
-        group: &[usize],
+        data: &RankingTrainingData<Bound<'py, PyArray2<f64>>, Bound<'py, PyArray1<f64>>>,
     ) {
         let start_time = std::time::Instant::now();
         self.model
             .getattr("fit")
             .unwrap()
-            .call1((x, y, PyArray1::from_slice_bound(self.py(), group)))
+            .call1((
+                &data.features,
+                &data.ranks,
+                PyArray1::from_slice_bound(self.py(), &data.groups),
+            ))
             .unwrap();
         info!(fitting_time = start_time.elapsed().as_secs_f64());
     }
@@ -125,7 +127,12 @@ mod tests {
             .unwrap();
             let y = PyArray1::from_vec_bound(py, vec![0., 1., 0., 1., 0.]);
             let group = vec![3, 2];
-            ranker.fit(&x, &y, &group);
+            let data = RankingTrainingData {
+                features: x,
+                ranks: y,
+                groups: group,
+            };
+            ranker.fit(&data);
 
             let x =
                 PyArray2::from_vec2_bound(py, &[vec![1.1, 1.1], vec![2.1, 2.1], vec![1.0, 1.0]])
