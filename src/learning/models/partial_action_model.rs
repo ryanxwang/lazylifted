@@ -5,21 +5,18 @@ use crate::{
         models::{
             model_utils::{extract_from_zip, zip_files, PICKLE_FILE_NAME, RON_FILE_NAME},
             partial_action_model_config::PartialActionModelConfig,
-            Evaluate, Train, TrainingInstance,
+            Evaluate, RankingTrainingData, RegressionTrainingData, Train, TrainingData,
+            TrainingInstance,
         },
         wl_kernel::Neighbourhood,
         WlKernel,
     },
     search::{successor_generators::SuccessorGeneratorName, Action, DBState, PartialAction, Task},
 };
-use numpy::{PyArray1, PyArrayMethods, PyUntypedArrayMethods};
+use numpy::{PyArray1, PyUntypedArrayMethods};
 use pyo3::{prelude::*, Python};
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::{HashMap, HashSet},
-    io::Write,
-    path::Path,
-};
+use std::{collections::HashSet, io::Write, path::Path};
 use tempfile::NamedTempFile;
 use tracing::info;
 
@@ -119,7 +116,7 @@ impl PartialActionModel {
     fn prepare_ranking_data(
         &self,
         training_data: &[TrainingInstance],
-    ) -> (Vec<CGraph>, Vec<f64>, Vec<usize>) {
+    ) -> RankingTrainingData<Vec<CGraph>, Vec<f64>> {
         let mut graphs = Vec::new();
         let mut ranks = Vec::new();
         let mut groups = Vec::new();
@@ -196,13 +193,17 @@ impl PartialActionModel {
             }
         }
 
-        (graphs, ranks, groups)
+        RankingTrainingData {
+            features: graphs,
+            ranks,
+            groups,
+        }
     }
 
     fn prepare_regression_data(
         &self,
         training_data: &[TrainingInstance],
-    ) -> (Vec<CGraph>, Vec<f64>) {
+    ) -> RegressionTrainingData<Vec<CGraph>, Vec<f64>> {
         let mut graphs = Vec::new();
         let mut labels = Vec::new();
         for instance in training_data {
@@ -233,22 +234,22 @@ impl PartialActionModel {
             }
         }
 
-        (graphs, labels)
+        RegressionTrainingData {
+            features: graphs,
+            labels,
+            noise: None,
+        }
     }
 
     fn prepare_data(
         &self,
         training_data: &[TrainingInstance],
-    ) -> (Vec<CGraph>, Vec<f64>, Option<Vec<usize>>) {
+    ) -> TrainingData<Vec<CGraph>, Vec<f64>> {
         match self.model {
             MlModel::Regressor(_) => {
-                let (graphs, labels) = self.prepare_regression_data(training_data);
-                (graphs, labels, None)
+                TrainingData::Regression(self.prepare_regression_data(training_data))
             }
-            MlModel::Ranker(_) => {
-                let (graphs, ranks, groups) = self.prepare_ranking_data(training_data);
-                (graphs, ranks, Some(groups))
-            }
+            MlModel::Ranker(_) => TrainingData::Ranking(self.prepare_ranking_data(training_data)),
         }
     }
 
@@ -283,59 +284,6 @@ impl PartialActionModel {
         }
     }
 
-    fn score_ranking(
-        &self,
-        histograms: &[HashMap<i32, usize>],
-        ranks: &[f64],
-        group: &[usize],
-    ) -> f64 {
-        let mut start = 0;
-        let mut correct_count = 0;
-        for &group_size in group {
-            let histogram = &histograms[start..start + group_size];
-            let rank = &ranks[start..start + group_size];
-            start += group_size;
-
-            let x = self.wl.compute_x(self.py(), histogram);
-            let expected = rank
-                .iter()
-                .enumerate()
-                .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
-                .unwrap()
-                .0;
-            let predicted_y = self.model.predict(&x);
-            let predicted = predicted_y
-                .to_vec()
-                .unwrap()
-                .iter()
-                .enumerate()
-                .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
-                .unwrap()
-                .0;
-
-            if expected == predicted {
-                correct_count += 1;
-            }
-        }
-
-        correct_count as f64 / group.len() as f64
-    }
-
-    fn score_regression(
-        &self,
-        histograms: &[HashMap<i32, usize>],
-        expected_y: &Bound<'static, PyArray1<f64>>,
-    ) -> f64 {
-        let x = self.wl.compute_x(self.py(), histograms);
-        let predicted_y = self.model.predict(&x);
-        let mean_squared_error = PyModule::import_bound(self.py(), "sklearn.metrics")
-            .unwrap()
-            .getattr("mean_squared_error")
-            .unwrap();
-        let mse = mean_squared_error.call1((expected_y, predicted_y)).unwrap();
-        mse.extract().unwrap()
-    }
-
     /// Compute what a baseline model would score for the given training data.
     /// Here baseline means "randomly picking an applicable action schema for
     /// each state"
@@ -355,7 +303,7 @@ impl PartialActionModel {
 }
 
 impl Train for PartialActionModel {
-    fn train(&mut self, training_data: &[TrainingInstance]) {
+    fn train(&mut self, train_instances: &[TrainingInstance]) {
         assert_eq!(self.state, PartialActionModelState::New);
         if self.validate {
             info!("splitting training data into training and validation sets");
@@ -363,17 +311,19 @@ impl Train for PartialActionModel {
             info!("training on full dataset");
         }
         let (train_instances, val_instances) = match self.validate {
-            true => training_data.split_at((training_data.len() as f64 * 0.8) as usize),
+            true => train_instances.split_at((train_instances.len() as f64 * 0.8) as usize),
             // Without this trivial cast we get a dumb error message
             #[allow(trivial_casts)]
-            false => (training_data, &[] as &[TrainingInstance]),
+            false => (train_instances, &[] as &[TrainingInstance]),
         };
 
-        let (train_graphs, train_ranks, train_groups) = self.prepare_data(train_instances);
+        let train_data = self.prepare_data(train_instances);
+        let train_graphs = train_data.features();
         let mean_train_graph_size = train_graphs.iter().map(|g| g.node_count()).sum::<usize>()
             as f64
             / train_graphs.len() as f64;
-        let (val_graphs, val_ranks, val_groups) = self.prepare_data(val_instances);
+        let val_data = self.prepare_data(val_instances);
+        let val_graphs = val_data.features();
         info!("compiled states into graphs");
         info!(
             train_graphs = train_graphs.len(),
@@ -381,8 +331,8 @@ impl Train for PartialActionModel {
             val_graphs = val_graphs.len()
         );
 
-        let train_histograms = self.wl.compute_histograms(&train_graphs);
-        let val_histograms = self.wl.compute_histograms(&val_graphs);
+        let train_histograms = self.wl.compute_histograms(train_graphs);
+        let val_histograms = self.wl.compute_histograms(val_graphs);
         info!("computed histograms");
 
         let train_x = self.wl.compute_x(self.py(), &train_histograms);
@@ -390,25 +340,20 @@ impl Train for PartialActionModel {
         info!("computed WL features");
         self.wl.finalise();
 
-        let train_y = PyArray1::from_vec_bound(self.py(), train_ranks.clone());
-        let val_y = PyArray1::from_vec_bound(self.py(), val_ranks.clone());
+        let train_y = PyArray1::from_vec_bound(self.py(), train_data.targets().to_owned());
+        let val_y = PyArray1::from_vec_bound(self.py(), val_data.targets().to_owned());
         info!("converted labels to numpy arrays");
         info!(
             train_x_shape = format!("{:?}", train_x.shape()),
             train_y_shape = format!("{:?}", train_y.shape()),
             val_x_shape = format!("{:?}", val_x.shape()),
             val_y_shape = format!("{:?}", val_y.shape()),
-            train_groups_count = match &train_groups {
-                Some(groups) => groups.len(),
-                None => 0,
-            },
-            val_groups_count = match &val_groups {
-                Some(groups) => groups.len(),
-                None => 0,
-            }
         );
         info!("fitting model on training data");
-        self.model.fit(&train_x, &train_y, train_groups.as_deref());
+
+        let train_data = train_data.with_features(train_x).with_targets(train_y);
+        let val_data = val_data.with_features(val_x).with_targets(val_y);
+        self.model.fit(&train_data);
 
         let weights = self.model.get_weights(self.config.model);
         const THRESHOLD: f64 = 1e-2;
@@ -420,18 +365,12 @@ impl Train for PartialActionModel {
         );
 
         let train_score_start = std::time::Instant::now();
-        let train_score = match &self.model {
-            MlModel::Regressor(_) => self.score_regression(&train_histograms, &train_y),
-            MlModel::Ranker(_) => {
-                let train_groups = train_groups.as_ref().unwrap();
-                self.score_ranking(&train_histograms, &train_ranks, train_groups)
-            }
-        };
+        let train_score = self.model.score(&train_data);
         info!(train_score_time = train_score_start.elapsed().as_secs_f64());
         match &self.model {
             MlModel::Regressor(_) => info!(train_mse = train_score),
             MlModel::Ranker(_) => {
-                let train_groups = train_groups.as_ref().unwrap();
+                let train_groups = train_data.groups().unwrap();
                 let train_baseline = self.compute_ranking_baseline(train_groups);
                 info!(
                     train_score = train_score,
@@ -443,18 +382,12 @@ impl Train for PartialActionModel {
 
         if self.validate {
             let val_score_start = std::time::Instant::now();
-            let val_score = match &self.model {
-                MlModel::Regressor(_) => self.score_regression(&val_histograms, &val_y),
-                MlModel::Ranker(_) => {
-                    let val_groups = val_groups.as_ref().unwrap();
-                    self.score_ranking(&val_histograms, &val_ranks, val_groups)
-                }
-            };
+            let val_score = self.model.score(&val_data);
             info!(val_score_time = val_score_start.elapsed().as_secs_f64());
             match &self.model {
                 MlModel::Regressor(_) => info!(val_mse = val_score),
                 MlModel::Ranker(_) => {
-                    let val_groups = val_groups.as_ref().unwrap();
+                    let val_groups = val_data.groups().unwrap();
                     let val_baseline = self.compute_ranking_baseline(val_groups);
                     info!(
                         val_score = val_score,

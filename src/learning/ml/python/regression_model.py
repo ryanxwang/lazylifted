@@ -1,6 +1,7 @@
 from sklearn.linear_model import LinearRegression
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import DotProduct
+from sklearn.metrics import mean_squared_error
 
 
 class RegressionModel:
@@ -25,6 +26,9 @@ class RegressionModel:
         assert hasattr(self, "weights") and self.weights is not None
         assert hasattr(self, "bias") and self.bias is not None
         return X @ self.weights.T + self.bias
+
+    def score(self, X, y):
+        mean_squared_error(y, self.predict(X))
 
     def get_weights(self):
         if hasattr(self, "weights") and self.weights is not None:

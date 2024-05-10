@@ -1,5 +1,6 @@
 //! Wrapper around some sklearn regression models
 use crate::learning::ml::py_utils;
+use crate::learning::models::RegressionTrainingData;
 use numpy::{PyArray1, PyArray2};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -68,6 +69,19 @@ impl<'py> Regressor<'py> {
             .extract()
             .unwrap();
         y
+    }
+
+    pub fn score(
+        &self,
+        data: &RegressionTrainingData<Bound<'py, PyArray2<f64>>, Bound<'py, PyArray1<f64>>>,
+    ) -> f64 {
+        self.model
+            .getattr("score")
+            .unwrap()
+            .call1((&data.features, &data.labels))
+            .unwrap()
+            .extract()
+            .unwrap()
     }
 
     pub fn get_weights(&self) -> Vec<f64> {

@@ -1,6 +1,9 @@
 use std::path::Path;
 
-use crate::learning::ml::{Ranker, RankerName, Regressor, RegressorName};
+use crate::learning::{
+    ml::{Ranker, RankerName, Regressor, RegressorName},
+    models::TrainingData,
+};
 use numpy::{PyArray1, PyArray2};
 use pyo3::{Bound, Python};
 use serde::{Deserialize, Serialize};
@@ -28,18 +31,13 @@ impl<'py> MlModel<'py> {
 
     pub fn fit(
         &self,
-        x: &Bound<'py, PyArray2<f64>>,
-        y: &Bound<'py, PyArray1<f64>>,
-        group: Option<&[usize]>,
+        training_data: &TrainingData<Bound<'py, PyArray2<f64>>, Bound<'py, PyArray1<f64>>>,
     ) {
+        let x = training_data.features();
+        let y = training_data.targets();
         match self {
             MlModel::Regressor(regressor) => regressor.fit(x, y),
-            MlModel::Ranker(ranker) => {
-                let group = group
-                    .as_ref()
-                    .expect("Group is required for ranking models");
-                ranker.fit(x, y, group)
-            }
+            MlModel::Ranker(ranker) => ranker.fit(x, y, training_data.groups().unwrap()),
         }
     }
 
@@ -47,6 +45,22 @@ impl<'py> MlModel<'py> {
         match self {
             MlModel::Regressor(regressor) => regressor.predict(x),
             MlModel::Ranker(ranker) => ranker.predict(x),
+        }
+    }
+
+    pub fn score(
+        &self,
+        data: &TrainingData<Bound<'py, PyArray2<f64>>, Bound<'py, PyArray1<f64>>>,
+    ) -> f64 {
+        match self {
+            MlModel::Regressor(regressor) => match data {
+                TrainingData::Regression(data) => regressor.score(data),
+                _ => panic!("Wrong data type for regressor model"),
+            },
+            MlModel::Ranker(ranker) => match data {
+                TrainingData::Ranking(data) => ranker.score(data),
+                _ => panic!("Wrong data type for ranker model"),
+            },
         }
     }
 

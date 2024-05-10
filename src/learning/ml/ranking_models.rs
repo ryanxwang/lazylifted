@@ -1,5 +1,5 @@
 //! Wrapper around various Python learning-to-rank models
-use crate::learning::ml::py_utils;
+use crate::learning::{ml::py_utils, models::RankingTrainingData};
 use numpy::{PyArray1, PyArray2};
 use pyo3::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -56,6 +56,23 @@ impl<'py> Ranker<'py> {
             .getattr("predict")
             .unwrap()
             .call1((x,))
+            .unwrap()
+            .extract()
+            .unwrap()
+    }
+
+    pub fn score(
+        &self,
+        data: &RankingTrainingData<Bound<'py, PyArray2<f64>>, Bound<'py, PyArray1<f64>>>,
+    ) -> f64 {
+        self.model
+            .getattr("score")
+            .unwrap()
+            .call1((
+                &data.features,
+                &data.ranks,
+                PyArray1::from_slice_bound(self.py(), &data.groups),
+            ))
             .unwrap()
             .extract()
             .unwrap()

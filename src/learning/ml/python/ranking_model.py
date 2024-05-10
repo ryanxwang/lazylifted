@@ -32,3 +32,18 @@ class RankingModel:
             return self.model.predict(X).astype(np.float64)
         else:
             raise ValueError("Unknown regressor model: " + self.model_str)
+
+    def score(self, X, y, group):
+        start = 0
+        correct_count = 0
+
+        for group_size in group:
+            end = start + group_size
+            group_y = y[start:end]
+            group_pred = self.predict(X[start:end])
+
+            # we only care if the model picks the correct best item
+            if np.argmax(group_y) == np.argmax(group_pred):
+                correct_count += 1
+
+            start = end
