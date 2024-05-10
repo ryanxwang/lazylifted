@@ -9,6 +9,7 @@ from processed_log import process_log
 
 SEARCH_TIME_LIMIT = 1800 # 30 minutes
 
+
 @dataclass
 class PlanningResult:
     domain: str
@@ -104,6 +105,18 @@ def main():
                 plan_length=plan_length,
             )
         )
+
+    def instance_value(instance):
+        difficulty = instance.split('_')[1]
+        instance_value = int(instance.split('_')[2].strip('p'))
+        if difficulty == "easy":
+            return instance_value
+        elif difficulty == "medium":
+            return instance_value + 30
+        elif difficulty == "hard":
+            return instance_value + 60
+            
+    results.sort(key=lambda x: instance_value(x.instance))
 
     save_results(results, args.output_file)
 
