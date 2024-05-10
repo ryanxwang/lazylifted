@@ -206,6 +206,7 @@ impl PartialActionModel {
     ) -> RegressionTrainingData<Vec<CGraph>, Vec<f64>> {
         let mut graphs = Vec::new();
         let mut labels = Vec::new();
+        let mut noise = Vec::new();
         for instance in training_data {
             let plan = &instance.plan;
             let task = &instance.task;
@@ -224,6 +225,14 @@ impl PartialActionModel {
                     let partial = PartialAction::from_action(chosen_action, partial_depth);
                     graphs.push(compiler.compile(&cur_state, &partial));
                     labels.push(total_steps - cur_partial_step);
+
+                    if partial_depth == chosen_action.instantiation.len() {
+                        noise.push(0.0);
+                    } else {
+                        // TODO we hardcode this value for now, but what should
+                        // it actually be?
+                        noise.push(0.3);
+                    }
                 }
 
                 cur_state = successor_generator.generate_successor(
@@ -237,7 +246,7 @@ impl PartialActionModel {
         RegressionTrainingData {
             features: graphs,
             labels,
-            noise: None,
+            noise: Some(noise),
         }
     }
 

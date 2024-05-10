@@ -58,11 +58,20 @@ impl<'py> Regressor<'py> {
         data: &RegressionTrainingData<Bound<'py, PyArray2<f64>>, Bound<'py, PyArray1<f64>>>,
     ) {
         let start_time = time::Instant::now();
+
+        let kwargs = PyDict::new_bound(self.py());
+        if let Some(noise) = &data.noise {
+            kwargs
+                .set_item("noise", PyArray1::from_vec_bound(self.py(), noise.clone()))
+                .unwrap();
+        }
+
         self.model
             .getattr("fit")
             .unwrap()
-            .call1((&data.features, &data.labels))
+            .call((&data.features, &data.labels), Some(&kwargs))
             .unwrap();
+
         info!(fitting_time = start_time.elapsed().as_secs_f64());
     }
 
@@ -133,7 +142,7 @@ mod tests {
     }
 
     #[test]
-    fn test_fit_and_predict_for_gpr() {
+    fn test_fit_predict_score_for_gpr() {
         Python::with_gil(|py| {
             let regressor =
                 Regressor::new(py, RegressorName::GaussianProcessRegressor { alpha: 1e-7 });
@@ -145,6 +154,9 @@ mod tests {
                 noise: None,
             };
             regressor.fit(&data);
+
+            let score = regressor.score(&data);
+            assert_approx_eq!(score, 0.0, 1e-5);
 
             let x = PyArray2::from_vec2_bound(py, &[vec![5.0, 6.0], vec![7.0, 8.0]]).unwrap();
             let y = regressor.predict(&x);

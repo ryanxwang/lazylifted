@@ -15,7 +15,13 @@ class RegressionModel:
         else:
             raise ValueError("Unknown regressor model: " + model_str)
 
-    def fit(self, X, y):
+    def fit(self, X, y, noise=None):
+        if self.model_str == "gpr" and noise is not None:
+            alpha = self.model.get_params()["alpha"]
+            assert len(noise) == len(y)
+            noise += alpha
+            self.model.set_params(alpha=noise)
+
         self.model.fit(X, y)
         self.weights = self.get_weights()
         self.bias = self.get_bias()
@@ -28,7 +34,7 @@ class RegressionModel:
         return X @ self.weights.T + self.bias
 
     def score(self, X, y):
-        mean_squared_error(y, self.predict(X))
+        return mean_squared_error(y, self.predict(X))
 
     def get_weights(self):
         if hasattr(self, "weights") and self.weights is not None:
