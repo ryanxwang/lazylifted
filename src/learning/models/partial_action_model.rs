@@ -87,7 +87,7 @@ impl PartialActionModel {
     /// Inspect the weights of the model. This should only be used for debugging
     /// and understanding the model.
     pub fn get_weights(&self) -> Vec<f64> {
-        self.model.get_weights(self.config.model)
+        self.model.get_weights(self.config.model).unwrap()
     }
 
     pub fn inspect_colour(&self, colour: i32) -> Option<&Neighbourhood> {
@@ -132,31 +132,31 @@ impl PartialActionModel {
             let mut prev_partials = Vec::new();
             let mut prev_state = None;
             for chosen_action in plan.steps() {
-                let applicable_actions: Vec<Action> = task
-                    .action_schemas()
-                    .iter()
-                    .flat_map(|schema| -> Vec<Action> {
-                        successor_generator.get_applicable_actions(&cur_state, schema)
-                    })
-                    .collect();
+                // let applicable_actions: Vec<Action> = task
+                //     .action_schemas()
+                //     .iter()
+                //     .flat_map(|schema| -> Vec<Action> {
+                //         successor_generator.get_applicable_actions(&cur_state, schema)
+                //     })
+                //     .collect();
 
                 // Groups to prefer the chosen partial action over its siblings
-                for partial_depth in 0..(chosen_action.instantiation.len() + 1) {
-                    let chosen_partial = PartialAction::from_action(chosen_action, partial_depth);
-                    let siblings: HashSet<PartialAction> =
-                        Self::get_siblings(&applicable_actions, &chosen_partial, partial_depth);
-                    assert!(siblings.contains(&chosen_partial));
-                    if siblings.len() == 1 {
-                        continue;
-                    }
+                // for partial_depth in 0..(chosen_action.instantiation.len() + 1) {
+                //     let chosen_partial = PartialAction::from_action(chosen_action, partial_depth);
+                //     let siblings: HashSet<PartialAction> =
+                //         Self::get_siblings(&applicable_actions, &chosen_partial, partial_depth);
+                //     assert!(siblings.contains(&chosen_partial));
+                //     if siblings.len() == 1 {
+                //         continue;
+                //     }
 
-                    groups.push(siblings.len());
-                    for sibling in siblings {
-                        graphs.push(compiler.compile(&cur_state, &sibling));
+                //     groups.push(siblings.len());
+                //     for sibling in siblings {
+                //         graphs.push(compiler.compile(&cur_state, &sibling));
 
-                        ranks.push(if sibling == chosen_partial { 1.0 } else { 0.0 });
-                    }
-                }
+                //         ranks.push(if sibling == chosen_partial { 1.0 } else { 0.0 });
+                //     }
+                // }
 
                 // Groups to prefer more specific partials over more general ones
                 let partials: Vec<PartialAction> = (0..(chosen_action.instantiation.len() + 1))
@@ -364,14 +364,15 @@ impl Train for PartialActionModel {
         let val_data = val_data.with_features(val_x).with_targets(val_y);
         self.model.fit(&train_data);
 
-        let weights = self.model.get_weights(self.config.model);
-        const THRESHOLD: f64 = 1e-2;
-        let non_zero_weights = weights.iter().filter(|w| w.abs() > THRESHOLD).count();
-        info!(
-            non_zero_weights = non_zero_weights,
-            total_weights = weights.len(),
-            sparsity = non_zero_weights as f64 / weights.len() as f64
-        );
+        if let Some(weights) = self.model.get_weights(self.config.model) {
+            const THRESHOLD: f64 = 1e-2;
+            let non_zero_weights = weights.iter().filter(|w| w.abs() > THRESHOLD).count();
+            info!(
+                non_zero_weights = non_zero_weights,
+                total_weights = weights.len(),
+                sparsity = non_zero_weights as f64 / weights.len() as f64
+            );
+        }
 
         let train_score_start = std::time::Instant::now();
         let train_score = self.model.score(&train_data);

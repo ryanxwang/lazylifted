@@ -68,18 +68,16 @@ impl<'py> MlModel<'py> {
         }
     }
 
-    pub fn get_weights(&self, model_name: MlModelName) -> Vec<f64> {
+    pub fn get_weights(&self, model_name: MlModelName) -> Option<Vec<f64>> {
         match model_name {
             MlModelName::RegressorName(_regressor_name) => {
                 let regressor = match self {
                     MlModel::Regressor(regressor) => regressor,
                     _ => panic!("Model does not match provided model name"),
                 };
-                regressor.get_weights()
+                Some(regressor.get_weights())
             }
-            MlModelName::RankerName(_ranker_name) => {
-                todo!("Implement get_weights for ranker")
-            }
+            MlModelName::RankerName(_ranker_name) => None,
         }
     }
 

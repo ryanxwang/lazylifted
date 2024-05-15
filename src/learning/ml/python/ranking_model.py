@@ -23,7 +23,7 @@ class RankingModel:
         elif self.model_str == "lambdamart":
             self.model.fit(X, y, group=group)
         else:
-            raise ValueError("Unknown regressor model: " + self.model_str)
+            raise ValueError("Unknown ranking model: " + self.model_str)
 
     def predict(self, X):
         if self.model_str == "ranksvm":
@@ -31,14 +31,14 @@ class RankingModel:
         elif self.model_str == "lambdamart":
             return self.model.predict(X).astype(np.float64)
         else:
-            raise ValueError("Unknown regressor model: " + self.model_str)
+            raise ValueError("Unknown ranking model: " + self.model_str)
 
     def score(self, X, y, group):
         start = 0
         correct_count = 0
 
         for group_size in group:
-            end = start + group_size
+            end = int(start + group_size)
             group_y = y[start:end]
             group_pred = self.predict(X[start:end])
 
@@ -47,3 +47,5 @@ class RankingModel:
                 correct_count += 1
 
             start = end
+
+        return correct_count / len(group)

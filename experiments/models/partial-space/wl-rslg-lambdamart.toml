@@ -1,0 +1,8 @@
+[partial-action-model]
+successor-generator = "full-reducer"
+graph-compiler = "rslg"
+iters = 4
+validate = false
+
+[partial-action-model.model]
+ranker-name = "lambdamart"

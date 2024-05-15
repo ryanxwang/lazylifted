@@ -15,7 +15,16 @@ pub trait Compiler<T>: Debug {
 }
 
 pub trait PartialActionCompiler: Debug {
-    fn compile(&self, arg1: &DBState, arg2: &PartialAction) -> CGraph;
+    /// Compile the (state, partial) pair into a graph.
+    fn compile(&self, state: &DBState, partial: &PartialAction) -> CGraph;
+
+    // /// Get the concentration of the partial action in the state. This is a
+    // /// number between 0 and 1 that represents how much certainty the compiled
+    // /// graph has on the effect of the partial action. For example, if the
+    // /// partial action is actually a full action, the concentration should be 1,
+    // /// and if the partial action has a wide range of possible effects (for
+    // /// example, (stack b1 ?underob)), the concentration should be close to 0.
+    // fn get_partial_concentration(&self, state: &DBState, partial: &PartialAction) -> f64;
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Copy)]
