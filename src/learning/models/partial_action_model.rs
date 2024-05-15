@@ -105,7 +105,7 @@ impl PartialActionModel {
     /// We would like the model to learn to prefer the chosen partial actions
     /// over the other applicable partial actions. This is encoded by creating a
     /// group for each partial action, where the group contains all the
-    /// applicable partial actions for the same action schemaa at the same
+    /// applicable partial actions for the same action schema at the same
     /// partial depth.
     ///
     /// We would also like the model to learn to prefer (state, partial) action

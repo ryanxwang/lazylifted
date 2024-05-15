@@ -31,16 +31,16 @@ impl PartialActionCompilerName {
     pub fn create(
         &self,
         task: &Task,
-        successcor_generator_name: SuccessorGeneratorName,
+        successor_generator_name: SuccessorGeneratorName,
     ) -> Box<dyn Compiler2<DBState, PartialAction>> {
         match self {
             PartialActionCompilerName::Sclg => {
-                Box::new(SclgCompiler::new(task, successcor_generator_name))
+                Box::new(SclgCompiler::new(task, successor_generator_name))
             }
             PartialActionCompilerName::Palg => Box::new(PalgCompiler::new(task)),
             PartialActionCompilerName::Ilg => Box::new(IlgCompiler::new(task)),
             PartialActionCompilerName::Rslg => {
-                Box::new(RslgCompiler::new(task, successcor_generator_name))
+                Box::new(RslgCompiler::new(task, successor_generator_name))
             }
         }
     }
