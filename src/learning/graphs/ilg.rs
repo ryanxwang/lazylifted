@@ -9,9 +9,9 @@
 //! This implementation is based on the original Python implementation at
 //! <https://github.com/DillonZChen/goose>
 
-use crate::search::{Negatable, Object, Task};
+use crate::search::{Negatable, Object, PartialAction, Task};
 use crate::{
-    learning::graphs::{CGraph, Compiler, Compiler2, NodeID},
+    learning::graphs::{CGraph, Compiler, NodeID, PartialActionCompiler},
     search::{Atom, DBState},
 };
 use serde::{Deserialize, Serialize};
@@ -146,8 +146,8 @@ impl Compiler<DBState> for IlgCompiler {
 /// We implement the [`Compiler2`] trait for [`IlgCompiler`] to allow it to be
 /// used in also for [`crate::learning::models::PartialActionModel`], this
 /// implementation ignores the partial action completely.
-impl<T> Compiler2<DBState, T> for IlgCompiler {
-    fn compile(&self, state: &DBState, _: &T) -> CGraph {
+impl PartialActionCompiler for IlgCompiler {
+    fn compile(&self, state: &DBState, _: &PartialAction) -> CGraph {
         self.compile(state)
     }
 }
@@ -187,7 +187,7 @@ mod tests {
     }
 
     #[test]
-    fn blocksworld_precomilation() {
+    fn blocksworld_precompilation() {
         let task = Task::from_text(BLOCKSWORLD_DOMAIN_TEXT, BLOCKSWORLD_PROBLEM13_TEXT);
         let compiler = IlgCompiler::new(&task);
 

@@ -1,6 +1,6 @@
 //! The Resulting State Learning Graph
 use crate::{
-    learning::graphs::{CGraph, Compiler2, NodeID},
+    learning::graphs::{CGraph, NodeID, PartialActionCompiler},
     search::{
         successor_generators::SuccessorGeneratorName, Action, ActionSchema, Atom, DBState,
         Negatable, PartialAction, SuccessorGenerator, Task,
@@ -77,7 +77,7 @@ impl RslgCompiler {
 
         // the union of all the action effects, minus the unavoidable effects,
         // are optional
-        let optinal_effects: HashSet<Negatable<Atom>> = action_effects
+        let optional_effects: HashSet<Negatable<Atom>> = action_effects
             .iter()
             .fold(action_effects[0].clone(), |acc, effects| {
                 acc.union(effects).cloned().collect()
@@ -101,7 +101,7 @@ impl RslgCompiler {
             },
         );
 
-        let (optional_adds, optional_deletes) = optinal_effects.into_iter().fold(
+        let (optional_adds, optional_deletes) = optional_effects.into_iter().fold(
             (HashSet::new(), HashSet::new()),
             |(mut adds, mut deletes), effect| {
                 match effect {
@@ -190,7 +190,7 @@ impl RslgCompiler {
     }
 }
 
-impl Compiler2<DBState, PartialAction> for RslgCompiler {
+impl PartialActionCompiler for RslgCompiler {
     fn compile(&self, state: &DBState, partial_action: &PartialAction) -> CGraph {
         self.compile(state, partial_action)
     }
@@ -310,7 +310,7 @@ mod tests {
     use crate::test_utils::*;
 
     #[test]
-    fn blocksworld_precomilation() {
+    fn blocksworld_precompilation() {
         let task = Task::from_text(BLOCKSWORLD_DOMAIN_TEXT, BLOCKSWORLD_PROBLEM13_TEXT);
         let compiler = RslgCompiler::new(&task, SuccessorGeneratorName::FullReducer);
 

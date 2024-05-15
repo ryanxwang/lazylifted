@@ -1,6 +1,6 @@
 //! The State Change Learning Graph
 use crate::{
-    learning::graphs::{CGraph, Compiler2, NodeID},
+    learning::graphs::{CGraph, NodeID, PartialActionCompiler},
     search::{
         successor_generators::SuccessorGeneratorName, ActionSchema, Atom, DBState, Negatable,
         Object, PartialAction, SuccessorGenerator, Task,
@@ -186,7 +186,7 @@ impl SclgCompiler {
     }
 }
 
-impl Compiler2<DBState, PartialAction> for SclgCompiler {
+impl PartialActionCompiler for SclgCompiler {
     fn compile(&self, state: &DBState, partial_action: &PartialAction) -> CGraph {
         self.compile(state, partial_action)
     }
@@ -319,7 +319,7 @@ mod tests {
     use crate::test_utils::*;
 
     #[test]
-    fn blocksworld_precomilation() {
+    fn blocksworld_precompilation() {
         let task = Task::from_text(BLOCKSWORLD_DOMAIN_TEXT, BLOCKSWORLD_PROBLEM13_TEXT);
         let compiler = SclgCompiler::new(&task, SuccessorGeneratorName::FullReducer);
 

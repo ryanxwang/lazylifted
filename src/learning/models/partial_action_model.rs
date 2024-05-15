@@ -1,6 +1,6 @@
 use crate::{
     learning::{
-        graphs::{CGraph, Compiler2, PartialActionCompilerName},
+        graphs::{CGraph, PartialActionCompiler, PartialActionCompilerName},
         ml::MlModel,
         models::{
             model_utils::{extract_from_zip, zip_files, PICKLE_FILE_NAME, RON_FILE_NAME},
@@ -28,7 +28,7 @@ enum PartialActionModelState {
     Trained,
     // Ready for evaluating
     #[serde(skip)]
-    Evaluating(Box<dyn Compiler2<DBState, PartialAction>>),
+    Evaluating(Box<dyn PartialActionCompiler>),
 }
 
 impl PartialEq for PartialActionModelState {

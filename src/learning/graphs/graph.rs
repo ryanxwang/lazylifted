@@ -14,8 +14,8 @@ pub trait Compiler<T>: Debug {
     fn compile(&self, arg: &T) -> CGraph;
 }
 
-pub trait Compiler2<T, U>: Debug {
-    fn compile(&self, arg1: &T, arg2: &U) -> CGraph;
+pub trait PartialActionCompiler: Debug {
+    fn compile(&self, arg1: &DBState, arg2: &PartialAction) -> CGraph;
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Copy)]
@@ -32,7 +32,7 @@ impl PartialActionCompilerName {
         &self,
         task: &Task,
         successor_generator_name: SuccessorGeneratorName,
-    ) -> Box<dyn Compiler2<DBState, PartialAction>> {
+    ) -> Box<dyn PartialActionCompiler> {
         match self {
             PartialActionCompilerName::Sclg => {
                 Box::new(SclgCompiler::new(task, successor_generator_name))

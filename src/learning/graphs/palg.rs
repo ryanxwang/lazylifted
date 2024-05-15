@@ -1,6 +1,6 @@
 //! The Partial Action Learning Graph
 use crate::{
-    learning::graphs::{utils::SchemaPred, CGraph, Compiler2, NodeID},
+    learning::graphs::{utils::SchemaPred, CGraph, NodeID, PartialActionCompiler},
     search::{
         ActionSchema, Atom, DBState, Negatable, Object, PartialAction, Predicate, SchemaArgument,
         SchemaParameter, Task,
@@ -225,7 +225,7 @@ impl PalgCompiler {
 
 // Instead of placing the implementation in the trait, we just wrap the trait
 // around them so that they are accessible even without the trait in scope.
-impl Compiler2<DBState, PartialAction> for PalgCompiler {
+impl PartialActionCompiler for PalgCompiler {
     fn compile(&self, state: &DBState, partial_action: &PartialAction) -> CGraph {
         self.compile(state, partial_action)
     }
@@ -264,7 +264,7 @@ mod tests {
     use crate::test_utils::*;
 
     #[test]
-    fn blocksworld_precomilation() {
+    fn blocksworld_precompilation() {
         let task = Task::from_text(BLOCKSWORLD_DOMAIN_TEXT, BLOCKSWORLD_PROBLEM13_TEXT);
         let compiler = PalgCompiler::new(&task);
 

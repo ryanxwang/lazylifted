@@ -4,9 +4,13 @@
     "lldb.dereferencePointers": true,
     "lldb.consoleMode": "evaluate",
     "cSpell.words": [
+        "blocksworld",
+        "nongoal",
         "Palg",
+        "repr",
         "Rslg",
         "Sclg",
+        "underob",
         "unpickle"
     ]
 }
