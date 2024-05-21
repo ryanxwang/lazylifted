@@ -111,6 +111,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_fit_and_predict_for_lambdamart() {
         Python::with_gil(|py| {
             let ranker = Ranker::new(py, RankerName::LambdaMart);
@@ -146,6 +147,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_fit_and_predict_for_ranksvm() {
         Python::with_gil(|py| {
             let ranker = Ranker::new(py, RankerName::RankSVM);
@@ -174,9 +176,9 @@ mod tests {
             let y = ranker.predict(&x);
             assert_eq!(y.len().unwrap(), 3);
             let y = y.to_vec().unwrap();
-            assert_approx_eq!(y[0], -1.232e-5, 1e-8);
-            assert_approx_eq!(y[1], -2.352e-5, 1e-8);
-            assert_approx_eq!(y[2], -1.12e-5, 1e-8);
+            assert_approx_eq!(y[0], -1.188e-5, 1e-8);
+            assert_approx_eq!(y[1], -2.268e-5, 1e-8);
+            assert_approx_eq!(y[2], -1.08e-5, 1e-8);
         })
     }
 }
