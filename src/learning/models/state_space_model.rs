@@ -1,7 +1,7 @@
 use crate::{
     learning::{
         graphs::{CGraph, IlgCompiler},
-        ml::Regressor,
+        ml::MlModel,
         models::{
             model_utils::{extract_from_zip, zip_files, PICKLE_FILE_NAME, RON_FILE_NAME},
             state_space_model_config::StateSpaceModelConfig,
@@ -9,7 +9,7 @@ use crate::{
         },
         WlKernel,
     },
-    search::{successor_generators::SuccessorGeneratorName, DBState, Task},
+    search::{successor_generators::SuccessorGeneratorName, Action, DBState, Task},
 };
 use numpy::{PyArray1, PyUntypedArrayMethods};
 use pyo3::{types::PyAnyMethods, Python};
@@ -18,7 +18,7 @@ use std::{io::Write, path::Path, time};
 use tempfile::NamedTempFile;
 use tracing::info;
 
-use super::RegressionTrainingData;
+use super::{RankingTrainingData, RegressionTrainingData, TrainingData};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 enum ModelState {
@@ -43,7 +43,7 @@ impl PartialEq for ModelState {
 
 #[derive(Debug)]
 pub struct StateSpaceModel {
-    model: Regressor<'static>,
+    model: MlModel<'static>,
     /// The successor generator to use for generating successor states when
     /// training. It might appear weird we store the name of the successor
     /// generator instead of the generator itself, but this is because 1)
@@ -53,6 +53,7 @@ pub struct StateSpaceModel {
     wl: WlKernel,
     validate: bool,
     state: ModelState,
+    config: StateSpaceModelConfig,
 }
 
 /// Dummy struct to allow serialising/deserialising the model to disk.
@@ -62,20 +63,100 @@ struct SerialisableStateSpaceModel {
     wl: WlKernel,
     validate: bool,
     state: ModelState,
+    config: StateSpaceModelConfig,
 }
 
 impl StateSpaceModel {
     pub fn new(py: Python<'static>, config: StateSpaceModelConfig) -> Self {
         Self {
-            model: Regressor::new(py, config.model),
+            model: MlModel::new(py, config.model),
             wl: WlKernel::new(config.iters),
             successor_generator_name: config.successor_generator,
             validate: config.validate,
             state: ModelState::New,
+            config: config.clone(),
         }
     }
 
-    fn prepare_data(
+    fn prepare_ranking_data(
+        &self,
+        training_data: &[TrainingInstance],
+    ) -> RankingTrainingData<Vec<CGraph>, Vec<f64>> {
+        let mut graphs = Vec::new();
+        let mut ranks = Vec::new();
+        let mut groups = Vec::new();
+
+        for instance in training_data {
+            let plan = &instance.plan;
+            let task = &instance.task;
+            let successor_generator = self.successor_generator_name.create(task);
+            let compiler = IlgCompiler::new(task);
+
+            let mut cur_state = task.initial_state.clone();
+            let mut predecessor_graph: Option<CGraph> = None;
+            let mut sibling_graphs: Option<Vec<CGraph>> = None;
+            for chosen_action in plan.steps() {
+                let cur_graph = compiler.compile(&cur_state);
+
+                // First rank this state better than its predecessors
+                if let Some(predecessor_graph) = &predecessor_graph {
+                    graphs.push(cur_graph.clone());
+                    graphs.push(predecessor_graph.clone());
+                    ranks.push(1.0);
+                    ranks.push(0.0);
+                    groups.push(2);
+                }
+
+                // Then rank it better than its siblings
+                if let Some(sibling_graphs) = &sibling_graphs {
+                    for sibling_graph in sibling_graphs {
+                        graphs.push(cur_graph.clone());
+                        graphs.push(sibling_graph.clone());
+                        ranks.push(1.0);
+                        ranks.push(0.0);
+                        groups.push(2);
+                    }
+                }
+
+                // Update the structs
+                sibling_graphs = Some(vec![]);
+                let applicable_actions: Vec<Action> = task
+                    .action_schemas()
+                    .iter()
+                    .flat_map(|schema| {
+                        successor_generator.get_applicable_actions(&cur_state, schema)
+                    })
+                    .collect();
+                for action in applicable_actions {
+                    if action == *chosen_action {
+                        continue;
+                    }
+
+                    let action_schema = &task.action_schemas()[action.index];
+                    let next_state =
+                        successor_generator.generate_successor(&cur_state, action_schema, &action);
+                    let next_graph = compiler.compile(&next_state);
+                    sibling_graphs.as_mut().unwrap().push(next_graph);
+                }
+
+                predecessor_graph = Some(cur_graph);
+
+                cur_state = successor_generator.generate_successor(
+                    &cur_state,
+                    &task.action_schemas()[chosen_action.index],
+                    chosen_action,
+                );
+            }
+        }
+
+        RankingTrainingData {
+            features: graphs,
+            ranks,
+            groups,
+        }
+    }
+
+    fn prepare_regression_data(
         &self,
         training_data: &[TrainingInstance],
     ) -> RegressionTrainingData<Vec<CGraph>, Vec<f64>> {
@@ -108,6 +189,18 @@ impl StateSpaceModel {
         }
     }
 
+    fn prepare_data(
+        &self,
+        training_data: &[TrainingInstance],
+    ) -> TrainingData<Vec<CGraph>, Vec<f64>> {
+        match self.model {
+            MlModel::Regressor(_) => {
+                TrainingData::Regression(self.prepare_regression_data(training_data))
+            }
+            MlModel::Ranker(_) => TrainingData::Ranking(self.prepare_ranking_data(training_data)),
+        }
+    }
+
     fn py(&self) -> Python<'static> {
         self.model.py()
     }
@@ -130,12 +223,12 @@ impl Train for StateSpaceModel {
         };
 
         let train_data = self.prepare_data(train_instances);
-        let train_graphs = &train_data.features;
+        let train_graphs = &train_data.features();
         let mean_train_graph_size = train_graphs.iter().map(|g| g.node_count()).sum::<usize>()
             as f64
             / train_graphs.len() as f64;
         let val_data = self.prepare_data(val_instances);
-        let val_graphs = &val_data.features;
+        let val_graphs = &val_data.features();
         info!("compiled states into graphs");
         info!(
             train_graphs = train_graphs.len(),
@@ -152,8 +245,8 @@ impl Train for StateSpaceModel {
         info!("computed WL features");
         self.wl.finalise();
 
-        let train_y = PyArray1::from_vec_bound(py, train_data.labels.to_owned());
-        let val_y = PyArray1::from_vec_bound(py, val_data.labels.to_owned());
+        let train_y = PyArray1::from_vec_bound(py, train_data.targets().to_owned());
+        let val_y = PyArray1::from_vec_bound(py, val_data.targets().to_owned());
         info!("converted labels to numpy arrays");
         info!(
             train_x_shape = format!("{:?}", train_x.shape()),
@@ -161,8 +254,8 @@ impl Train for StateSpaceModel {
             val_x_shape = format!("{:?}", val_x.shape()),
             val_y_shape = format!("{:?}", val_y.shape())
         );
-        let train_data = train_data.with_features(train_x).with_labels(train_y);
-        let val_data = val_data.with_features(val_x).with_labels(val_y);
+        let train_data = train_data.with_features(train_x).with_targets(train_y);
+        let val_data = val_data.with_features(val_x).with_targets(val_y);
 
         info!("fitting model on training data");
         self.model.fit(&train_data);
@@ -194,6 +287,7 @@ impl Train for StateSpaceModel {
             wl: self.wl.clone(),
             validate: self.validate,
             state: self.state.clone(),
+            config: self.config.clone(),
         };
         let serialised = ron::to_string(&serialisable).expect("Failed to serialise model data");
 
@@ -256,20 +350,22 @@ impl Evaluate for StateSpaceModel {
     }
 
     fn load(py: Python<'static>, path: &Path) -> Self {
-        let pickle_file = extract_from_zip(path, PICKLE_FILE_NAME);
-        let model = Regressor::unpickle(py, pickle_file.path());
-
         let ron_file = extract_from_zip(path, RON_FILE_NAME);
         let data = std::fs::read_to_string(ron_file).expect("Failed to read model data");
         let serialisable: SerialisableStateSpaceModel =
             ron::from_str(&data).expect("Failed to deserialise model data");
         assert_eq!(serialisable.state, ModelState::Trained);
+
+        let pickle_file = extract_from_zip(path, PICKLE_FILE_NAME);
+        let model = MlModel::unpickle(serialisable.config.model, py, pickle_file.path());
+
         Self {
             model,
             successor_generator_name: serialisable.successor_generator_name,
             wl: serialisable.wl,
             validate: serialisable.validate,
             state: serialisable.state,
+            config: serialisable.config,
         }
     }
 }

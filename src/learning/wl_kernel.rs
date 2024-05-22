@@ -23,6 +23,7 @@ pub struct Neighbourhood {
 impl Neighbourhood {
     fn new(node_colour: i32, mut neighbour_colours: Vec<(i32, i32)>) -> Self {
         neighbour_colours.sort();
+        neighbour_colours.dedup();
         Self {
             node_colour,
             neighbour_colours,

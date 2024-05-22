@@ -228,7 +228,6 @@ impl PartialActionModel {
         }
     }
 
-    #[allow(dead_code)]
     fn get_siblings(
         applicable_actions: &[Action],
         chosen_partial: &PartialAction,
