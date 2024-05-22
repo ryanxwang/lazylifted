@@ -1,4 +1,6 @@
-use crate::search::{Action, ActionSchema, Task, Transition};
+use std::collections::HashSet;
+
+use crate::search::{Action, ActionSchema, Atom, Negatable, Task, Transition};
 
 /// Struct that represents a partially instantiated action schema.
 /// [`PartialAction`] can be viewed as a representation of a set of actions, and
@@ -86,6 +88,50 @@ impl PartialAction {
             partial_instantiation: new_instantiation,
         }
     }
+
+    // TODO: test
+    pub fn get_partial_effects(
+        &self,
+        action_schema: &ActionSchema,
+        applicable_actions: &[Action],
+    ) -> PartialEffects {
+        assert!(self.schema_index == action_schema.index());
+
+        let action_effects: Vec<HashSet<Negatable<Atom>>> = applicable_actions
+            .iter()
+            .map(|action| action_schema.ground_effects(action).into_iter().collect())
+            .collect::<Vec<_>>();
+
+        if action_effects.is_empty() {
+            return PartialEffects {
+                unavoidable_effects: HashSet::new(),
+                optional_effects: HashSet::new(),
+            };
+        }
+
+        // the intersection of all the action effects are unavoidable
+        let unavoidable_effects: HashSet<Negatable<Atom>> = action_effects
+            .iter()
+            .fold(action_effects[0].clone(), |acc, effects| {
+                acc.intersection(effects).cloned().collect()
+            });
+
+        // the union of all the action effects, minus the unavoidable effects,
+        // are optional
+        let optional_effects: HashSet<Negatable<Atom>> = action_effects
+            .iter()
+            .fold(action_effects[0].clone(), |acc, effects| {
+                acc.union(effects).cloned().collect()
+            })
+            .difference(&unavoidable_effects)
+            .cloned()
+            .collect();
+
+        PartialEffects {
+            unavoidable_effects,
+            optional_effects,
+        }
+    }
 }
 
 impl From<Action> for PartialAction {
@@ -120,6 +166,15 @@ impl Transition for PartialActionDiff {
     fn no_transition() -> Self {
         NO_PARTIAL_DIFF
     }
+}
+
+#[derive(Debug)]
+/// The effects of a partial action, split into unavoidable (any grounding of
+/// this partial in the current state yields this effect) and optional effects.
+/// See [`PartialAction::get_partial_effects`].
+pub struct PartialEffects {
+    pub unavoidable_effects: HashSet<Negatable<Atom>>,
+    pub optional_effects: HashSet<Negatable<Atom>>,
 }
 
 #[cfg(test)]

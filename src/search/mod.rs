@@ -30,7 +30,7 @@ pub use goal::Goal;
 pub use heuristics::{Heuristic, HeuristicValue};
 pub use negatable::Negatable;
 pub use object::Object;
-pub(crate) use partial_action::{PartialAction, PartialActionDiff, NO_PARTIAL};
+pub(crate) use partial_action::{PartialAction, PartialActionDiff, PartialEffects, NO_PARTIAL};
 pub use plan::Plan;
 pub use predicate::Predicate;
 pub(crate) use problem_formulations::SearchProblem;

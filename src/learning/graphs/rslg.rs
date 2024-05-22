@@ -3,7 +3,7 @@ use crate::{
     learning::graphs::{CGraph, NodeID, PartialActionCompiler},
     search::{
         successor_generators::SuccessorGeneratorName, Action, ActionSchema, Atom, DBState,
-        Negatable, PartialAction, SuccessorGenerator, Task,
+        Negatable, PartialAction, PartialEffects, SuccessorGenerator, Task,
     },
 };
 use std::collections::{HashMap, HashSet};
@@ -63,28 +63,10 @@ impl RslgCompiler {
             .filter(|action| partial_action.is_superset_of_action(action))
             .collect();
 
-        let action_effects: Vec<HashSet<Negatable<Atom>>> = applicable_actions
-            .into_iter()
-            .map(|action| action_schema.ground_effects(&action).into_iter().collect())
-            .collect::<Vec<_>>();
-
-        // the intersection of all the action effects are unavoidable
-        let unavoidable_effects: HashSet<Negatable<Atom>> = action_effects
-            .iter()
-            .fold(action_effects[0].clone(), |acc, effects| {
-                acc.intersection(effects).cloned().collect()
-            });
-
-        // the union of all the action effects, minus the unavoidable effects,
-        // are optional
-        let optional_effects: HashSet<Negatable<Atom>> = action_effects
-            .iter()
-            .fold(action_effects[0].clone(), |acc, effects| {
-                acc.union(effects).cloned().collect()
-            })
-            .difference(&unavoidable_effects)
-            .cloned()
-            .collect();
+        let PartialEffects {
+            unavoidable_effects,
+            optional_effects,
+        } = partial_action.get_partial_effects(action_schema, &applicable_actions);
 
         let (unavoidable_adds, unavoidable_deletes) = unavoidable_effects.into_iter().fold(
             (HashSet::new(), HashSet::new()),
