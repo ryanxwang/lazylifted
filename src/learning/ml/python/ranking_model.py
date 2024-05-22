@@ -26,7 +26,7 @@ class RankingModel:
 
             for i in range(start, end):
                 for j in range(start, end):
-                    if y[i] == y[j]:
+                    if y[i] == y[j] or np.array_equal(X[i], X[j]):
                         continue
 
                     X_new.append(X[i] - X[j])
@@ -89,7 +89,7 @@ class RankingModel:
 
             for i in range(start, end):
                 for j in range(start, end):
-                    if y[i] == y[j]:
+                    if y[i] == y[j] or np.array_equal(X[i], X[j]):
                         continue
 
                     total_pairs += 1
