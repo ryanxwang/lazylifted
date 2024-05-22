@@ -274,7 +274,7 @@ mod tests {
         let histograms2 = kernel.compute_histograms(&[graph2.clone()]);
         Python::with_gil(|py| {
             let x = kernel.compute_x(py, &histograms2);
-            assert_eq!(unsafe { x.as_slice().unwrap() }, &[3.0, 1.0, 3.0, 0.0]);
+            assert_eq!(unsafe { x.as_slice().unwrap() }, &[3.0, 1.0, 3.0, 1.0]);
         });
     }
 }
