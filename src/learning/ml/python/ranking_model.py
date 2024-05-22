@@ -8,7 +8,7 @@ class RankingModel:
         self.model_str = model_str
         if model_str == "ranksvm":
             self.model = LinearSVC(
-                C=1e-6, loss="hinge", max_iter=9999999, dual=True, fit_intercept=False
+                C=1e3, loss="hinge", max_iter=9999999, dual=True, fit_intercept=False
             )
         elif model_str == "lambdamart":
             self.model = XGBRanker(

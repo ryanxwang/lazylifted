@@ -161,6 +161,42 @@ impl SearchProblem<(SparsePackedState, PartialAction), PartialActionDiff> for Pa
         self.statistics
             .increment_generated_actions(transitions.len());
 
+        // If there is a unique transition (quite often the case), we can just
+        // recurse on it to save a heuristic evaluation.
+        if transitions.len() == 1 {
+            let transition = transitions.iter().next().unwrap();
+            let (new_state, new_partial) = self.apply_transition(state_id, transition);
+
+            let child_id: Option<StateId> = {
+                let child_node = self.search_space.insert_or_get_node(
+                    (self.packer.pack(&new_state), new_partial.clone()),
+                    *transition,
+                    state_id,
+                );
+
+                // We give it the same heuristic value as the parent, as we
+                // know it's the only child and want to avoid evaluating it.
+                if child_node.get_status() == SearchNodeStatus::New {
+                    self.statistics.increment_generated_nodes(1);
+                    child_node.open(g_value + 1., h_value);
+                    Some(child_node.get_state_id())
+                } else if g_value + 1. < child_node.get_g() {
+                    self.statistics.increment_reopened_nodes();
+                    child_node.update_parent(state_id, *transition);
+                    child_node.open(g_value + 1., child_node.get_h());
+                    Some(child_node.get_state_id())
+                } else {
+                    None
+                }
+            };
+
+            if let Some(child_id) = child_id {
+                return self.expand(child_id);
+            } else {
+                return vec![];
+            }
+        }
+
         let (new_states, new_ids, ids_to_reopen) = {
             let mut new_states = Vec::new();
             let mut new_ids = Vec::new();

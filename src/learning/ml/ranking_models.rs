@@ -176,9 +176,9 @@ mod tests {
             let y = ranker.predict(&x);
             assert_eq!(y.len().unwrap(), 3);
             let y = y.to_vec().unwrap();
-            assert_approx_eq!(y[0], -1.188e-5, 1e-8);
-            assert_approx_eq!(y[1], -2.268e-5, 1e-8);
-            assert_approx_eq!(y[2], -1.08e-5, 1e-8);
+            assert_approx_eq!(y[0], -1.375, 1e-2);
+            assert_approx_eq!(y[1], -2.625, 1e-2);
+            assert_approx_eq!(y[2], -1.25, 1e-2);
         })
     }
 }

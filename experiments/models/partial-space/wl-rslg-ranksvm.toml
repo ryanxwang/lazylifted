@@ -1,7 +1,7 @@
 [partial-action-model]
 successor-generator = "full-reducer"
 graph-compiler = "rslg"
-iters = 4
+iters = 3
 validate = false
 
 [partial-action-model.model]
