@@ -16,6 +16,12 @@ csvs=()
 mkdir -p planning_results/$model_str
 for domain in "${domains[@]}"; do
     log_dir=planning_logs/$model_str/$domain
+
+    if [ ! -d $log_dir ]; then
+        echo "Log directory $log_dir does not exist. Skipping..."
+        continue
+    fi
+
     result_file=planning_results/$model_str/$domain.csv
     echo "Collecting log for $domain in $log_dir"
 
