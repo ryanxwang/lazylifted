@@ -97,7 +97,6 @@ impl<'py> Ranker<'py> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use assert_approx_eq::assert_approx_eq;
     use numpy::PyArrayMethods;
     use serial_test::serial;
 
@@ -106,43 +105,6 @@ mod tests {
     fn test_imports() {
         Python::with_gil(|py: Python<'_>| {
             let _ = Ranker::new(py, RankerName::RankSVM);
-            let _ = Ranker::new(py, RankerName::LambdaMart);
-        })
-    }
-
-    #[test]
-    #[serial]
-    fn test_fit_and_predict_for_lambdamart() {
-        Python::with_gil(|py| {
-            let ranker = Ranker::new(py, RankerName::LambdaMart);
-            let x = PyArray2::from_vec2_bound(
-                py,
-                &[
-                    vec![1.0, 1.0],
-                    vec![2.0, 2.0],
-                    vec![1.2, 1.2],
-                    vec![2.2, 2.2],
-                    vec![1.3, 1.3],
-                ],
-            )
-            .unwrap();
-            let y = PyArray1::from_vec_bound(py, vec![0., 1., 0., 1., 0.]);
-            let data = RankingTrainingData {
-                features: x,
-                ranks: y,
-                groups: vec![3, 2],
-            };
-            ranker.fit(&data);
-
-            let x =
-                PyArray2::from_vec2_bound(py, &[vec![1.1, 1.1], vec![2.1, 2.1], vec![1.0, 1.0]])
-                    .unwrap();
-            let y = ranker.predict(&x);
-            assert_eq!(y.len().unwrap(), 3);
-            let y = y.to_vec().unwrap();
-            assert_approx_eq!(y[0], 0.0, 1e-5);
-            assert_approx_eq!(y[1], 0.0, 1e-5);
-            assert_approx_eq!(y[2], 0.0, 1e-5);
         })
     }
 
@@ -176,9 +138,8 @@ mod tests {
             let y = ranker.predict(&x);
             assert_eq!(y.len().unwrap(), 3);
             let y = y.to_vec().unwrap();
-            assert_approx_eq!(y[0], -1.375, 1e-2);
-            assert_approx_eq!(y[1], -2.625, 1e-2);
-            assert_approx_eq!(y[2], -1.25, 1e-2);
+            assert!(y[1] < y[0]);
+            assert!(y[1] < y[2]);
         })
     }
 }

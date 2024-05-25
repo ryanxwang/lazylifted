@@ -7,13 +7,10 @@ class RankingModel:
     def __init__(self, model_str):
         self.model_str = model_str
         if model_str == "ranksvm":
-            self.model = LinearSVC(
-                C=1e3, loss="hinge", max_iter=9999999, dual=True, fit_intercept=False
-            )
+            # we create the model later
+            pass
         elif model_str == "lambdamart":
-            self.model = XGBRanker(
-                tree_method="hist", objective="rank:ndcg", lambdarank_pair_method="mean"
-            )
+            raise ValueError("LambdaMART is no longer supported")
         else:
             raise ValueError("Unknown regressor model: " + model_str)
 
@@ -36,26 +33,64 @@ class RankingModel:
 
         return np.array(X_new), np.array(y_new)
 
+    def _train_ranksvm(self, X, y):
+        C_values = [1e-3, 1e-2, 1e-1, 1, 1e1, 1e2, 1e3]
+        X_train, X_val = X[: int(0.8 * len(X))], X[int(0.8 * len(X)) :]
+        y_train, y_val = y[: int(0.8 * len(y))], y[int(0.8 * len(y)) :]
+        best_score = 0
+        best_C = None
+        survived_challenges = 0
+
+        for C in C_values:
+            print("Training RankSVM with C =", C)
+            model = LinearSVC(
+                C=C,
+                loss="hinge",
+                max_iter=20000,
+                dual=True,
+                fit_intercept=False,
+                tol=1e-3,
+            )
+            model.fit(X_train, y_train)
+            score = model.score(X_val, y_val)
+            if score > best_score:
+                best_score = score
+                best_C = C
+            else:
+                survived_challenges += 1
+                if survived_challenges == 2:
+                    break
+
+        print("Best C:", best_C)
+        model = LinearSVC(
+            C=best_C,
+            loss="hinge",
+            max_iter=20000,
+            dual=True,
+            fit_intercept=False,
+            tol=1e-3,
+        )
+        model.fit(X, y)
+        if model.coef_.shape[0] == 1:
+            self.weights = model.coef_[0]
+        else:
+            self.weights = model.coef_
+
     def fit(self, X, y, group):
         if self.model_str == "ranksvm":
             X, y = self._to_classification(X, y, group)
-            self.model.fit(X, y)
+            self._train_ranksvm(X, y)
         elif self.model_str == "lambdamart":
-            self.model.fit(X, y, group=group)
+            raise ValueError("LambdaMART is no longer supported")
         else:
             raise ValueError("Unknown ranking model: " + self.model_str)
 
     def predict(self, X):
         if self.model_str == "ranksvm":
-            if self.model.coef_.shape[0] == 1:
-                coef = self.model.coef_[0]
-            else:
-                coef = self.model.coef_
-
-            return -np.dot(X, coef.T).astype(np.float64)
+            return -np.dot(X, self.weights.T).astype(np.float64)
 
         elif self.model_str == "lambdamart":
-            return -self.model.predict(X).astype(np.float64)
+            raise ValueError("LambdaMART is no longer supported")
         else:
             raise ValueError("Unknown ranking model: " + self.model_str)
 
