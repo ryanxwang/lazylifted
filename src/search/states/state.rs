@@ -7,7 +7,7 @@
 //! The implementation is based on that of powerlifted.
 
 use crate::parsed_types::{Literal, Name};
-use crate::search::{Atom, Negatable};
+use crate::search::{Atom, Negatable, Task};
 use std::{
     collections::{BTreeSet, HashMap},
     fmt::{self, Display, Formatter},
@@ -118,6 +118,14 @@ impl DBState {
         }
 
         atoms
+    }
+
+    pub fn human_readable(&self, task: &Task) -> String {
+        self.atoms()
+            .into_iter()
+            .map(|a| a.human_readable(task))
+            .collect::<Vec<_>>()
+            .join(" ")
     }
 }
 

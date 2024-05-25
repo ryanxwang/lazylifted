@@ -132,6 +132,28 @@ impl PartialAction {
             optional_effects,
         }
     }
+
+    pub fn human_readable(&self, task: &Task) -> String {
+        let action_schema = task.action_schemas()[self.schema_index].clone();
+        let parameters = action_schema.parameters();
+
+        format!(
+            "({} {})",
+            action_schema.name(),
+            parameters
+                .iter()
+                .enumerate()
+                .map(|param| {
+                    let object_index = self.partial_instantiation.get(param.0).copied();
+                    match object_index {
+                        Some(index) => task.objects[index].name.to_string(),
+                        None => "_".to_string(),
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join(" ")
+        )
+    }
 }
 
 impl From<Action> for PartialAction {

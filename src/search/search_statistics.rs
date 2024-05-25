@@ -17,6 +17,8 @@ pub struct SearchStatistics {
     generated_actions: i64,
     /// Number of node expansions that found an improving heuristic value
     improving_expansions: i64,
+    /// Number of evaluations skipped as there is only one applicable transition
+    skipped_evaluations: i64,
     /// Best heuristic value found so far
     best_heuristic_value: HeuristicValue,
     /// Time when the search started
@@ -41,6 +43,7 @@ impl SearchStatistics {
             reopened_nodes: 0,
             generated_actions: 0,
             improving_expansions: 0,
+            skipped_evaluations: 0,
             best_heuristic_value: HeuristicValue::infinity(),
             search_start_time: Instant::now(),
             last_log_time: Instant::now(),
@@ -86,6 +89,11 @@ impl SearchStatistics {
         self.log_if_needed();
     }
 
+    pub fn increment_skipped_evaluations(&mut self) {
+        self.skipped_evaluations += 1;
+        self.log_if_needed();
+    }
+
     fn log_if_needed(&mut self) {
         if self.last_log_time.elapsed().as_secs() > 10 {
             self.last_log_time = Instant::now();
@@ -101,6 +109,7 @@ impl SearchStatistics {
             reopened_nodes = self.reopened_nodes,
             generated_actions = self.generated_actions,
             improving_expansions = self.improving_expansions,
+            skipped_evaluations = self.skipped_evaluations,
             best_heuristic_value = self.best_heuristic_value.into_inner(),
         );
     }

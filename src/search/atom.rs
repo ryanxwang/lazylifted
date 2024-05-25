@@ -1,5 +1,5 @@
 use crate::parsed_types::{Atom as ParsedAtom, Name};
-use crate::search::{AtomSchema, Negatable, SchemaArgument};
+use crate::search::{AtomSchema, Negatable, SchemaArgument, Task};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -51,6 +51,18 @@ impl Atom {
     #[inline(always)]
     pub fn arguments(&self) -> &[usize] {
         &self.arguments
+    }
+
+    pub fn human_readable(&self, task: &Task) -> String {
+        format!(
+            "({} {})",
+            task.predicates[self.predicate_index].name,
+            self.arguments
+                .iter()
+                .map(|&arg| task.objects[arg].name.to_string())
+                .collect::<Vec<_>>()
+                .join(" ")
+        )
     }
 }
 
