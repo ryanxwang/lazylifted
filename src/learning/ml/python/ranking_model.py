@@ -1,6 +1,10 @@
 import numpy as np
+import sys
+from sklearn.exceptions import ConvergenceWarning
 from sklearn.svm import LinearSVC
-from xgboost import XGBRanker
+from sklearn.experimental import enable_halving_search_cv  # noqa
+from sklearn.model_selection import HalvingGridSearchCV
+import warnings
 
 
 class RankingModel:
@@ -34,47 +38,36 @@ class RankingModel:
         return np.array(X_new), np.array(y_new)
 
     def _train_ranksvm(self, X, y):
-        C_values = [1e-3, 1e-2, 1e-1, 1, 1e1, 1e2, 1e3]
-        X_train, X_val = X[: int(0.8 * len(X))], X[int(0.8 * len(X)) :]
-        y_train, y_val = y[: int(0.8 * len(y))], y[int(0.8 * len(y)) :]
-        best_score = 0
-        best_C = None
-        survived_challenges = 0
-
-        for C in C_values:
-            print("Training RankSVM with C =", C)
-            model = LinearSVC(
-                C=C,
-                loss="hinge",
-                max_iter=20000,
-                dual=True,
-                fit_intercept=False,
-                tol=1e-3,
-            )
-            model.fit(X_train, y_train)
-            score = model.score(X_val, y_val)
-            if score > best_score:
-                best_score = score
-                best_C = C
-            else:
-                survived_challenges += 1
-                if survived_challenges == 2:
-                    break
-
-        print("Best C:", best_C)
         model = LinearSVC(
-            C=best_C,
             loss="hinge",
             max_iter=20000,
             dual=True,
             fit_intercept=False,
-            tol=1e-3,
         )
-        model.fit(X, y)
-        if model.coef_.shape[0] == 1:
-            self.weights = model.coef_[0]
+        param_distributions = {
+            "C": [1e-3, 1e-2, 1e-1, 1, 1e1, 1e2, 1e3, 1e4, 1e5],
+            "tol": [1e-3, 1e-4, 1e-5],
+        }
+        search = HalvingGridSearchCV(
+            model,
+            param_distributions,
+            resource="max_iter",
+            max_resources=2000000,
+            min_resources=1000,
+            refit=True,
+        )
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=ConvergenceWarning)
+            search.fit(X, y)
+        print(
+            "Best parameters found by grid search:",
+            search.best_params_,
+            file=sys.stderr,
+        )
+        if search.best_estimator_.coef_.shape[0] == 1:
+            self.weights = search.best_estimator_.coef_[0]
         else:
-            self.weights = model.coef_
+            self.weights = search.best_estimator_.coef_
 
     def fit(self, X, y, group):
         if self.model_str == "ranksvm":

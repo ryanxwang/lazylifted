@@ -119,16 +119,18 @@ mod tests {
                     vec![1.0, 1.0],
                     vec![2.0, 2.0],
                     vec![1.2, 1.2],
+                    vec![1.2, 1.2],
+                    vec![0.9, 0.9],
                     vec![2.2, 2.2],
                     vec![1.3, 1.3],
                 ],
             )
             .unwrap();
-            let y = PyArray1::from_vec_bound(py, vec![0., 1., 0., 1., 0.]);
+            let y = PyArray1::from_vec_bound(py, vec![0., 1., 0., 0., 0., 1., 0.]);
             let data = RankingTrainingData {
                 features: x,
                 ranks: y,
-                groups: vec![3, 2],
+                groups: vec![5, 2],
             };
             ranker.fit(&data);
 
