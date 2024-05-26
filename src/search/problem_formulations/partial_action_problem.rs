@@ -180,9 +180,10 @@ impl SearchProblem<(SparsePackedState, PartialAction), PartialActionDiff> for Pa
                 child_node.open(g_value + 1., h_value);
                 Some(child_node.get_state_id())
             } else if g_value + 1. < child_node.get_g() {
+                // We don't count this into the reopened nodes statistic, so
+                // that the number of reopened nodes is not inflated.
                 child_node.update_parent(state_id, *transition);
                 child_node.open(g_value + 1., child_node.get_h());
-                self.statistics.increment_reopened_nodes();
                 Some(child_node.get_state_id())
             } else {
                 None
