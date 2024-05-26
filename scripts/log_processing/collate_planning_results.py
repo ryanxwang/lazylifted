@@ -24,6 +24,7 @@ class PlanningResult:
     reopened_nodes: int
     generated_actions: int
     improving_expansions: int
+    skipped_evaluations: int
     plan_length: Optional[int]
 
 
@@ -65,6 +66,7 @@ def main():
         reopened_nodes = None
         generated_actions = None
         improving_expansions = None
+        skipped_evaluations = None
         for key, value_entries in processed_log.values.items():
             if key == "plan_length" and value_entries:
                 found_plan = True
@@ -83,6 +85,8 @@ def main():
                 generated_actions = value_entries[-1].value
             if key == "improving_expansions" and value_entries:
                 improving_expansions = value_entries[-1].value
+            if key == "skipped_evaluations" and value_entries:
+                skipped_evaluations = value_entries[-1].value
         
         if search_duration is None:
             search_duration = SEARCH_TIME_LIMIT
@@ -102,6 +106,7 @@ def main():
                 reopened_nodes=reopened_nodes,
                 generated_actions=generated_actions,
                 improving_expansions=improving_expansions,
+                skipped_evaluations=skipped_evaluations,
                 plan_length=plan_length,
             )
         )
