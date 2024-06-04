@@ -19,7 +19,7 @@ nom_locate = "4.1.0"
 numpy = "0.21.0"
 ordered-float = "4.2.0"
 petgraph = { version = "0.6.5", features = ["serde-1"] }
-priority-queue = "2.0.2"
+priority-queue = "2.0.3"
 pyo3 = { version = "0.21.2", features = ["auto-initialize", "serde"] }
 ron = "0.8.1"
 segvec = "0.2.0"
