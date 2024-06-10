@@ -25,7 +25,7 @@ ron = "0.8.1"
 segvec = "0.2.0"
 serde = { version = "1.0.203", features = ["derive"] }
 strum = "0.26.2"
-strum_macros = "0.26.2"
+strum_macros = "0.26.4"
 tempfile = "3.10.1"
 thiserror = "1.0.60"
 toml = "0.8.14"
