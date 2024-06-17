@@ -1,8 +1,7 @@
-use std::collections::{HashSet, VecDeque};
-
 use crate::search::database::{hash_join, Table};
 use crate::search::states::GroundAtom;
-use crate::search::{AtomSchema, DBState, Negatable, SchemaArgument};
+use crate::search::{object_tuple, AtomSchema, DBState, Negatable, ObjectTuple, SchemaArgument};
+use std::collections::{HashSet, VecDeque};
 
 #[derive(Debug)]
 pub struct PrecompiledActionData {
@@ -108,7 +107,7 @@ fn select_tuples(
     free_and_param_index: &[(usize, usize)],
     objects_per_param: &[HashSet<usize>],
 ) -> Vec<GroundAtom> {
-    let tuple_matches = |tuple: &Vec<usize>| -> bool {
+    let tuple_matches = |tuple: &ObjectTuple| -> bool {
         // the tuple matches the atom if
         // 1. when the atom is a constant, the tuple has the same value
         // 2. when the atom is a free variable, the type of the tuple is a
@@ -150,7 +149,7 @@ fn select_tuples(
         // state.
 
         // TODO: plenty of low-hanging optimisation fruits here
-        fn product(l: &HashSet<Vec<usize>>, r: HashSet<usize>) -> HashSet<Vec<usize>> {
+        fn product(l: &HashSet<ObjectTuple>, r: HashSet<usize>) -> HashSet<ObjectTuple> {
             l.iter()
                 .flat_map(|x| {
                     r.iter().map(move |y| {
@@ -170,8 +169,8 @@ fn select_tuples(
         };
         let mut all_tuples = get_relevant_objects(0)
             .iter()
-            .map(|&x| vec![x])
-            .collect::<HashSet<Vec<usize>>>();
+            .map(|&x| object_tuple![x])
+            .collect::<HashSet<ObjectTuple>>();
         for param_index in 1..atom.arguments().len() {
             all_tuples = product(&all_tuples, get_relevant_objects(param_index));
         }

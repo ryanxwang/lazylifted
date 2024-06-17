@@ -15,11 +15,12 @@ pub fn compute_matching_columns(t1: &Table, t2: &Table) -> Vec<(usize, usize)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use smallvec::smallvec;
 
     #[test]
     fn test_compute_matching_columns() {
-        let t1 = Table::new(vec![vec![1, 2, 3], vec![1, 2, 4]], vec![1, 2]);
-        let t2 = Table::new(vec![vec![1, 2, 3], vec![1, 2, 4]], vec![0, 1]);
+        let t1 = Table::new(vec![smallvec![1, 2, 3], smallvec![1, 2, 4]], vec![1, 2]);
+        let t2 = Table::new(vec![smallvec![1, 2, 3], smallvec![1, 2, 4]], vec![0, 1]);
 
         assert_eq!(compute_matching_columns(&t1, &t2), vec![(0, 1)]);
     }

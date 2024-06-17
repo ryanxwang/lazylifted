@@ -1,4 +1,7 @@
-pub type Tuple = Vec<usize>;
+use smallvec::SmallVec;
+
+const TYPICAL_TUPLE_SIZE: usize = 5;
+pub type Tuple = SmallVec<[usize; TYPICAL_TUPLE_SIZE]>;
 
 /// Data structure containing a set of tuples and indices corresponding to the
 /// free variable index in each tuple position.

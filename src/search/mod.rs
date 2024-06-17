@@ -19,6 +19,7 @@ pub mod states;
 pub mod successor_generators;
 mod task;
 mod transition;
+mod utils;
 mod validate;
 mod verbosity;
 
@@ -41,5 +42,9 @@ pub use states::DBState;
 pub use successor_generators::SuccessorGenerator;
 pub use task::Task;
 pub(crate) use transition::Transition;
+pub(crate) use utils::ObjectTuple;
 pub use validate::validate;
 pub use verbosity::Verbosity;
+
+#[allow(unused_imports)]
+pub(crate) use utils::object_tuple;

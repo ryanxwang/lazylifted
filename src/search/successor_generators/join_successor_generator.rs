@@ -2,7 +2,7 @@ use crate::search::states::GroundAtom;
 use crate::search::successor_generators::{
     JoinAlgorithm, PrecompiledActionData, SuccessorGenerator,
 };
-use crate::search::{Action, ActionSchema, AtomSchema, DBState, Negatable, Task};
+use crate::search::{Action, ActionSchema, AtomSchema, DBState, Negatable, ObjectTuple, Task};
 use std::fmt::Debug;
 
 #[derive(Debug)]
@@ -193,7 +193,7 @@ fn precompile_action_data(task: &Task, action_schema: &ActionSchema) -> Precompi
 fn is_ground_action_applicable(action: &ActionSchema, state: &DBState) -> bool {
     for precondition in action.preconditions() {
         let index = precondition.predicate_index();
-        let tuple: Vec<usize> = precondition
+        let tuple: ObjectTuple = precondition
             .arguments()
             .iter()
             .map(|arg| {
