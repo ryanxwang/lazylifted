@@ -20,6 +20,6 @@ planning_logs/
 plans/
 *.plan
 releases/
-flamegraph.svg
+flamegraph*
 
 __pycache__/
