@@ -5,6 +5,8 @@ use crate::search::{
 };
 use std::rc::Rc;
 
+const REOPEN: bool = false;
+
 #[derive(Debug)]
 pub struct StateSpaceProblem {
     task: Rc<Task>,
@@ -95,7 +97,7 @@ impl SearchProblem<SparsePackedState, Action> for StateSpaceProblem {
                     if child_node.get_status() == SearchNodeStatus::New {
                         new_states.push(successor);
                         new_ids.push(child_node.get_state_id());
-                    } else if g_value + 1. < child_node.get_g() {
+                    } else if REOPEN && g_value + 1. < child_node.get_g() {
                         child_node.update_parent(state_id, action);
                         ids_to_reopen.push(child_node.get_state_id());
                     }
@@ -107,18 +109,10 @@ impl SearchProblem<SparsePackedState, Action> for StateSpaceProblem {
 
         let h_values = self.heuristic.evaluate_batch(&new_states, &self.task);
 
-        let mut found_improvement = false;
         for (child_node_id, child_h_value) in new_ids.iter().zip(h_values.into_iter()) {
             self.statistics.increment_evaluated_nodes();
             let child_node = self.search_space.get_node_mut(*child_node_id);
             child_node.open(g_value + 1., child_h_value);
-
-            if child_h_value < h_value {
-                found_improvement = true;
-            }
-        }
-        if found_improvement {
-            self.statistics.increment_improving_expansions();
         }
 
         for child_node_id in ids_to_reopen.iter() {

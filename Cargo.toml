@@ -9,7 +9,7 @@ rust-version = "1.77.0"
 
 [dependencies]
 assert_approx_eq = "1.1.0"
-clap = { version = "4.5.4", features = ["derive"] }
+clap = { version = "4.5.7", features = ["derive"] }
 console = "0.15.8"
 dialoguer = { version = "0.11.0", features = ["history"] }
 lazy_static = "1.4.0"
@@ -19,19 +19,20 @@ nom_locate = "4.1.0"
 numpy = "0.21.0"
 ordered-float = "4.2.0"
 petgraph = { version = "0.6.5", features = ["serde-1"] }
-priority-queue = "2.0.2"
+priority-queue = "2.0.3"
 pyo3 = { version = "0.21.2", features = ["auto-initialize", "serde"] }
 ron = "0.8.1"
 segvec = "0.2.0"
-serde = { version = "1.0.201", features = ["derive"] }
+serde = { version = "1.0.203", features = ["derive"] }
+smallvec = { version = "1.13.2", features = ["serde", "union"] }
 strum = "0.26.2"
-strum_macros = "0.26.2"
+strum_macros = "0.26.4"
 tempfile = "3.10.1"
 thiserror = "1.0.61"
-toml = "0.8.12"
+toml = "0.8.14"
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
-zip = "1.2.3"
+zip = "2.1.1"
 
 [dev-dependencies]
 serial_test = "3.1.1"

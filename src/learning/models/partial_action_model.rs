@@ -110,14 +110,45 @@ impl PartialActionModel {
                 .create(task, self.successor_generator_name);
 
             let mut cur_state = task.initial_state.clone();
-            // let mut prev_partials = Vec::new();
-            // let mut prev_state = None;
 
-            let mut instance_graphs = Vec::new();
+            let mut predecessor_graph: Option<CGraph> = None;
             for chosen_action in plan.steps() {
+                let applicable_actions: Vec<Action> = task
+                    .action_schemas()
+                    .iter()
+                    .flat_map(|schema| -> Vec<Action> {
+                        successor_generator.get_applicable_actions(&cur_state, schema)
+                    })
+                    .collect();
+
                 for partial_depth in 0..=(chosen_action.instantiation.len()) {
                     let partial = PartialAction::from_action(chosen_action, partial_depth);
-                    instance_graphs.push(compiler.compile(&cur_state, &partial));
+
+                    let graph = compiler.compile(&cur_state, &partial);
+
+                    // First rank this partial action better than its predecessor
+                    if let Some(predecessor_graph) = &predecessor_graph {
+                        graphs.push(predecessor_graph.clone());
+                        ranks.push(0.0);
+                        graphs.push(graph.clone());
+                        ranks.push(1.0);
+                        groups.push(2);
+                    }
+
+                    // Then rank this partial action better than its siblings
+                    let siblings: HashSet<PartialAction> =
+                        Self::get_siblings(&applicable_actions, &partial, partial_depth);
+                    assert!(siblings.contains(&partial));
+                    if siblings.len() == 1 {
+                        continue;
+                    }
+                    groups.push(siblings.len());
+                    for sibling in siblings {
+                        graphs.push(compiler.compile(&cur_state, &sibling));
+                        ranks.push(if sibling == partial { 1.0 } else { 0.0 });
+                    }
+
+                    predecessor_graph = Some(graph);
                 }
 
                 cur_state = successor_generator.generate_successor(
@@ -126,76 +157,6 @@ impl PartialActionModel {
                     chosen_action,
                 );
             }
-
-            for i in 0..instance_graphs.len() {
-                let start = 0.max(i as isize - 10) as usize;
-                for j in start..i {
-                    graphs.push(instance_graphs[i].clone());
-                    graphs.push(instance_graphs[j].clone());
-                    ranks.push(1.0);
-                    ranks.push(0.0);
-                    groups.push(2);
-                }
-            }
-            // let applicable_actions: Vec<Action> = task
-            //     .action_schemas()
-            //     .iter()
-            //     .flat_map(|schema| -> Vec<Action> {
-            //         successor_generator.get_applicable_actions(&cur_state, schema)
-            //     })
-            //     .collect();
-
-            // // Groups to prefer the chosen partial action over its siblings
-            // for partial_depth in 0..(chosen_action.instantiation.len() + 1) {
-            //     let chosen_partial = PartialAction::from_action(chosen_action, partial_depth);
-            //     let siblings: HashSet<PartialAction> =
-            //         Self::get_siblings(&applicable_actions, &chosen_partial, partial_depth);
-            //     assert!(siblings.contains(&chosen_partial));
-            //     if siblings.len() == 1 {
-            //         continue;
-            //     }
-
-            //     groups.push(siblings.len());
-            //     for sibling in siblings {
-            //         graphs.push(compiler.compile(&cur_state, &sibling));
-
-            //         ranks.push(if sibling == chosen_partial { 1.0 } else { 0.0 });
-            //     }
-            // }
-
-            // // Groups to prefer more specific partials over more general ones
-            // let partials: Vec<PartialAction> = (0..(chosen_action.instantiation.len() + 1))
-            //     .map(|depth| PartialAction::from_action(chosen_action, depth))
-            //     .collect();
-            // for i in 0..partials.len() - 1 {
-            //     graphs.push(compiler.compile(&cur_state, &partials[i]));
-            //     ranks.push(0.0);
-            //     graphs.push(compiler.compile(&cur_state, &partials[i + 1]));
-            //     ranks.push(1.0);
-            //     groups.push(2);
-            // }
-
-            // // Groups to prefer ones closer to the goal
-            // if let Some(ref prev_state) = prev_state {
-            //     for previous in &prev_partials {
-            //         for current in &partials {
-            //             graphs.push(compiler.compile(prev_state, previous));
-            //             ranks.push(0.0);
-            //             graphs.push(compiler.compile(&cur_state, current));
-            //             ranks.push(1.0);
-            //             groups.push(2);
-            //         }
-            //     }
-            // }
-
-            // prev_partials = partials;
-            // let next_state = successor_generator.generate_successor(
-            //     &cur_state,
-            //     &task.action_schemas()[chosen_action.index],
-            //     chosen_action,
-            // );
-            // (prev_state, cur_state) = (Some(cur_state), next_state);
-            // }
         }
 
         RankingTrainingData {
@@ -267,7 +228,6 @@ impl PartialActionModel {
         }
     }
 
-    #[allow(dead_code)]
     fn get_siblings(
         applicable_actions: &[Action],
         chosen_partial: &PartialAction,

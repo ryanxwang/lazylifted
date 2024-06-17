@@ -1,9 +1,9 @@
-use std::collections::{BTreeSet, HashMap};
-
 use crate::search::{
+    object_tuple,
     states::{DBState, GroundAtom, Relation},
     Task,
 };
+use std::collections::{BTreeSet, HashMap};
 
 /// The [`SparsePackedState`] struct is used to store a state in a more compact
 /// representation. This is based on the powerlifted implementation, which is
@@ -113,7 +113,8 @@ impl SparseStatePacker {
             let mut tuples = BTreeSet::new();
             let predicate_index = packed_state.predicate_symbols[i];
             for &hash in packed_relation.iter() {
-                let mut tuple: GroundAtom = vec![0; self.hash_multipliers[predicate_index].len()];
+                let mut tuple: GroundAtom =
+                    object_tuple![0; self.hash_multipliers[predicate_index].len()];
                 let mut hash = hash;
                 for j in (0..self.hash_multipliers[predicate_index].len()).rev() {
                     let multiplier = self.hash_multipliers[predicate_index][j];

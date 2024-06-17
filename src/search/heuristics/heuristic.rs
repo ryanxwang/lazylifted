@@ -2,10 +2,12 @@ use crate::search::heuristics::goal_counting::GoalCounting;
 use crate::search::heuristics::wl_partial::WlPartialHeuristic;
 use crate::search::heuristics::wl_state::WlStateHeuristic;
 use crate::search::heuristics::zero_heuristic::ZeroHeuristic;
+use crate::search::successor_generators::SuccessorGeneratorName;
 use crate::search::{DBState, PartialAction, Task};
 use ordered_float::OrderedFloat;
 use std::fmt::Debug;
 use std::path::Path;
+use std::rc::Rc;
 
 pub type HeuristicValue = OrderedFloat<f64>;
 
@@ -40,9 +42,16 @@ pub enum StateHeuristicNames {
 }
 
 impl StateHeuristicNames {
-    pub fn create(&self, saved_model: Option<&Path>) -> Box<dyn Heuristic<DBState>> {
+    pub fn create(
+        &self,
+        task: Rc<Task>,
+        successor_generator_name: SuccessorGeneratorName,
+        saved_model: Option<&Path>,
+    ) -> Box<dyn Heuristic<DBState>> {
         match self {
-            StateHeuristicNames::GoalCounting => Box::new(GoalCounting::new()),
+            StateHeuristicNames::GoalCounting => {
+                Box::new(GoalCounting::new(task.clone(), successor_generator_name))
+            }
             StateHeuristicNames::Wl => {
                 let saved_model = saved_model
                     .as_ref()
@@ -64,11 +73,15 @@ pub enum PartialActionHeuristicNames {
     Wl,
     #[clap(name = "zero", help = "The zero heuristic.")]
     ZeroHeuristic,
+    #[clap(help = "The goal counting heuristic.")]
+    GoalCounting,
 }
 
 impl PartialActionHeuristicNames {
     pub fn create(
         &self,
+        task: Rc<Task>,
+        successor_generator_name: SuccessorGeneratorName,
         saved_model: Option<&Path>,
     ) -> Box<dyn Heuristic<(DBState, PartialAction)>> {
         match self {
@@ -79,6 +92,9 @@ impl PartialActionHeuristicNames {
                 Box::new(WlPartialHeuristic::load(saved_model))
             }
             PartialActionHeuristicNames::ZeroHeuristic => Box::new(ZeroHeuristic::new()),
+            PartialActionHeuristicNames::GoalCounting => {
+                Box::new(GoalCounting::new(task.clone(), successor_generator_name))
+            }
         }
     }
 }

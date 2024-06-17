@@ -1,5 +1,5 @@
 use crate::parsed_types::{Atom as ParsedAtom, Name};
-use crate::search::{AtomSchema, Negatable, SchemaArgument};
+use crate::search::{object_tuple, AtomSchema, Negatable, ObjectTuple, SchemaArgument, Task};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -8,11 +8,11 @@ use std::collections::HashMap;
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Atom {
     predicate_index: usize,
-    arguments: Vec<usize>,
+    arguments: ObjectTuple,
 }
 
 impl Atom {
-    pub fn new(predicate_index: usize, arguments: Vec<usize>) -> Self {
+    pub fn new(predicate_index: usize, arguments: ObjectTuple) -> Self {
         Self {
             predicate_index,
             arguments,
@@ -52,6 +52,18 @@ impl Atom {
     pub fn arguments(&self) -> &[usize] {
         &self.arguments
     }
+
+    pub fn human_readable(&self, task: &Task) -> String {
+        format!(
+            "({} {})",
+            task.predicates[self.predicate_index].name,
+            self.arguments
+                .iter()
+                .map(|&arg| task.objects[arg].name.to_string())
+                .collect::<Vec<_>>()
+                .join(" ")
+        )
+    }
 }
 
 impl Negatable<Atom> {
@@ -82,7 +94,7 @@ impl TryFrom<AtomSchema> for Atom {
     type Error = ();
 
     fn try_from(value: AtomSchema) -> Result<Self, Self::Error> {
-        let mut arguments = vec![];
+        let mut arguments = object_tuple![];
         for argument in value.arguments() {
             match argument {
                 SchemaArgument::Constant(index) => arguments.push(*index),

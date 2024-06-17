@@ -41,27 +41,37 @@ pub fn hash_semi_join(t1: &mut Table, t2: &Table) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::search::database::table::Tuple;
+    use smallvec::smallvec;
 
     #[test]
     fn test_semi_join() {
         let mut t1 = Table::new(
-            vec![vec![1, 2, 3], vec![1, 2, 4], vec![3, 2, 3], vec![3, 5, 1]],
+            vec![
+                smallvec![1, 2, 3],
+                smallvec![1, 2, 4],
+                smallvec![3, 2, 3],
+                smallvec![3, 5, 1],
+            ],
             vec![0, 1, 2],
         );
-        let t2 = Table::new(vec![vec![2, 3, 5], vec![5, 1, 2]], vec![1, 2, 3]);
+        let t2 = Table::new(vec![smallvec![2, 3, 5], smallvec![5, 1, 2]], vec![1, 2, 3]);
 
         assert_eq!(hash_semi_join(&mut t1, &t2), 3);
-        assert_eq!(t1.tuples, vec![vec![1, 2, 3], vec![3, 2, 3], vec![3, 5, 1]]);
+        let expected_tuples: Vec<Tuple> =
+            vec![smallvec![1, 2, 3], smallvec![3, 2, 3], smallvec![3, 5, 1]];
+        assert_eq!(t1.tuples, expected_tuples);
         assert_eq!(t1.tuple_index, vec![0, 1, 2]);
     }
 
     #[test]
     fn test_semi_join_no_match() {
-        let mut t1 = Table::new(vec![vec![1, 2], vec![1, 4]], vec![0, 1]);
-        let t2 = Table::new(vec![vec![2, 3]], vec![2, 3]);
+        let mut t1 = Table::new(vec![smallvec![1, 2], smallvec![1, 4]], vec![0, 1]);
+        let t2 = Table::new(vec![smallvec![2, 3]], vec![2, 3]);
 
         assert_eq!(hash_semi_join(&mut t1, &t2), 2);
-        assert_eq!(t1.tuples, vec![vec![1, 2], vec![1, 4]]);
+        let expected_tupels: Vec<Tuple> = vec![smallvec![1, 2], smallvec![1, 4]];
+        assert_eq!(t1.tuples, expected_tupels);
         assert_eq!(t1.tuple_index, vec![0, 1]);
     }
 }

@@ -169,7 +169,11 @@ impl PartialEq for ActionSchema {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{search::Task, test_utils::*};
+    use crate::{
+        search::{object_tuple, Task},
+        test_utils::*,
+    };
+    // use smallvec::smallvec;
 
     #[test]
     #[should_panic(expected = "assertion failed: action.index == self.index")]
@@ -186,10 +190,10 @@ mod tests {
         assert_eq!(
             effects,
             vec![
-                Negatable::Positive(Atom::new(3, vec![3])),
-                Negatable::Negative(Atom::new(0, vec![3])),
-                Negatable::Negative(Atom::new(1, vec![3])),
-                Negatable::Negative(Atom::new(2, vec![])),
+                Negatable::Positive(Atom::new(3, object_tuple![3])),
+                Negatable::Negative(Atom::new(0, object_tuple![3])),
+                Negatable::Negative(Atom::new(1, object_tuple![3])),
+                Negatable::Negative(Atom::new(2, object_tuple![])),
             ]
         )
     }

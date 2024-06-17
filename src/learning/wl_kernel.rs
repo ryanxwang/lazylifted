@@ -23,6 +23,7 @@ pub struct Neighbourhood {
 impl Neighbourhood {
     fn new(node_colour: i32, mut neighbour_colours: Vec<(i32, i32)>) -> Self {
         neighbour_colours.sort();
+        neighbour_colours.dedup();
         Self {
             node_colour,
             neighbour_colours,
@@ -273,7 +274,7 @@ mod tests {
         let histograms2 = kernel.compute_histograms(&[graph2.clone()]);
         Python::with_gil(|py| {
             let x = kernel.compute_x(py, &histograms2);
-            assert_eq!(unsafe { x.as_slice().unwrap() }, &[3.0, 1.0, 3.0, 0.0]);
+            assert_eq!(unsafe { x.as_slice().unwrap() }, &[3.0, 1.0, 3.0, 1.0]);
         });
     }
 }

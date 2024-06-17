@@ -7,6 +7,8 @@ use crate::search::{
 use ordered_float::Float;
 use std::{collections::HashSet, rc::Rc};
 
+const REOPEN: bool = false;
+
 #[derive(Debug)]
 pub struct PartialActionProblem {
     task: Rc<Task>,
@@ -161,6 +163,46 @@ impl SearchProblem<(SparsePackedState, PartialAction), PartialActionDiff> for Pa
         self.statistics
             .increment_generated_actions(transitions.len());
 
+        if transitions.len() == 1 {
+            self.statistics.increment_skipped_evaluations();
+            let transition = transitions.iter().next().unwrap();
+            let (new_state, new_partial) = self.apply_transition(state_id, transition);
+            let child_node = self.search_space.insert_or_get_node(
+                (self.packer.pack(&new_state), new_partial.clone()),
+                *transition,
+                state_id,
+            );
+
+            let child_id: Option<StateId> = if child_node.get_status() == SearchNodeStatus::New {
+                // In this case, we technically should evaluate and give the
+                // children a heuristic value. But since we want to skip
+                // evaluations, we just use the same value as its parent, i.e.
+                // the current node.
+                self.statistics.increment_generated_nodes(1);
+                child_node.open(g_value + 1., h_value);
+                Some(child_node.get_state_id())
+            } else if REOPEN && g_value + 1. < child_node.get_g() {
+                // We don't count this into the reopened nodes statistic, so
+                // that the number of reopened nodes is not inflated.
+                child_node.update_parent(state_id, *transition);
+                child_node.open(g_value + 1., child_node.get_h());
+                Some(child_node.get_state_id())
+            } else {
+                None
+            };
+
+            if let Some(child_id) = child_id {
+                // Don't skip goals
+                if self.is_goal(child_id) {
+                    return vec![self.search_space.get_node(child_id)];
+                } else {
+                    return self.expand(child_id);
+                }
+            } else {
+                return vec![];
+            }
+        }
+
         let (new_states, new_ids, ids_to_reopen) = {
             let mut new_states = Vec::new();
             let mut new_ids = Vec::new();
@@ -177,7 +219,7 @@ impl SearchProblem<(SparsePackedState, PartialAction), PartialActionDiff> for Pa
                 if child_node.get_status() == SearchNodeStatus::New {
                     new_states.push((new_state, new_partial));
                     new_ids.push(child_node.get_state_id());
-                } else if g_value + 1. < child_node.get_g() {
+                } else if REOPEN && g_value + 1. < child_node.get_g() {
                     child_node.update_parent(state_id, transition);
                     ids_to_reopen.push(child_node.get_state_id());
                 }
@@ -189,18 +231,10 @@ impl SearchProblem<(SparsePackedState, PartialAction), PartialActionDiff> for Pa
 
         let h_values = self.heuristic.evaluate_batch(&new_states, &self.task);
 
-        let mut found_improvement = false;
         for (child_node_id, child_h_value) in new_ids.iter().zip(h_values) {
             self.statistics.increment_evaluated_nodes();
             let child_node = self.search_space.get_node_mut(*child_node_id);
             child_node.open(g_value + 1., child_h_value);
-
-            if child_h_value < h_value {
-                found_improvement = true;
-            }
-        }
-        if found_improvement {
-            self.statistics.increment_improving_expansions();
         }
         for child_node_id in ids_to_reopen.iter() {
             let child_node = self.search_space.get_node_mut(*child_node_id);

@@ -142,6 +142,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_fit_predict_score_for_gpr() {
         Python::with_gil(|py| {
             let regressor =
@@ -173,6 +174,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_fit_and_predict_for_lr() {
         Python::with_gil(|py| {
             let regressor = Regressor::new(py, RegressorName::LinearRegressor);

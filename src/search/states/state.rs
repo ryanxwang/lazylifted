@@ -7,7 +7,7 @@
 //! The implementation is based on that of powerlifted.
 
 use crate::parsed_types::{Literal, Name};
-use crate::search::{Atom, Negatable};
+use crate::search::{object_tuple, Atom, Negatable, ObjectTuple, Task};
 use std::{
     collections::{BTreeSet, HashMap},
     fmt::{self, Display, Formatter},
@@ -15,7 +15,7 @@ use std::{
 
 /// A ground atom is a vector of object indices. It only makes sense in the
 /// context of a specific predicate, see [`Relation`].
-pub type GroundAtom = Vec<usize>;
+pub type GroundAtom = ObjectTuple;
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub struct Relation {
@@ -72,7 +72,7 @@ impl DBState {
             if atom.values().is_empty() {
                 state.set_nullary_atom(predicate_symbol, true);
             } else {
-                let mut args = Vec::with_capacity(atom.values().len());
+                let mut args = ObjectTuple::with_capacity(atom.values().len());
                 for arg in atom.values() {
                     args.push(*object_table.get(arg).unwrap_or_else(|| {
                         panic!(
@@ -113,11 +113,19 @@ impl DBState {
 
         for (i, &nullary) in self.nullary_atoms.iter().enumerate() {
             if nullary {
-                atoms.push(Atom::new(i, vec![]));
+                atoms.push(Atom::new(i, object_tuple![]));
             }
         }
 
         atoms
+    }
+
+    pub fn human_readable(&self, task: &Task) -> String {
+        self.atoms()
+            .into_iter()
+            .map(|a| a.human_readable(task))
+            .collect::<Vec<_>>()
+            .join(" ")
     }
 }
 
@@ -151,7 +159,7 @@ mod tests {
     fn test_satisfied() {
         let task = Task::from_text(BLOCKSWORLD_DOMAIN_TEXT, BLOCKSWORLD_PROBLEM13_TEXT);
 
-        let on_b1_b2 = Negatable::Positive(Atom::new(4, vec![0, 1]));
+        let on_b1_b2 = Negatable::Positive(Atom::new(4, object_tuple![0, 1]));
         let not_on_b1_b2 = Negatable::Negative(on_b1_b2.underlying().clone());
         assert!(task.initial_state.satisfied(&on_b1_b2));
         assert!(!task.initial_state.satisfied(&not_on_b1_b2));

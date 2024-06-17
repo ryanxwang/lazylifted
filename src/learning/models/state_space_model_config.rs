@@ -1,4 +1,7 @@
-use crate::{learning::ml::RegressorName, search::successor_generators::SuccessorGeneratorName};
+use crate::{
+    learning::ml::{MlModelName, RegressorName},
+    search::successor_generators::SuccessorGeneratorName,
+};
 use serde::{Deserialize, Serialize};
 
 /// Configuration for the WL-ILG model. This is the format used by the trainer
@@ -6,7 +9,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct StateSpaceModelConfig {
-    pub model: RegressorName,
+    pub model: MlModelName,
     pub successor_generator: SuccessorGeneratorName,
     pub iters: usize,
     pub validate: bool,
@@ -20,8 +23,8 @@ impl StateSpaceModelConfig {
     pub fn with_alpha(self, alpha: f64) -> Self {
         Self {
             model: match self.model {
-                RegressorName::GaussianProcessRegressor { .. } => {
-                    RegressorName::GaussianProcessRegressor { alpha }
+                MlModelName::RegressorName(RegressorName::GaussianProcessRegressor { .. }) => {
+                    MlModelName::RegressorName(RegressorName::GaussianProcessRegressor { alpha })
                 }
                 _ => self.model,
             },
