@@ -40,34 +40,17 @@ class RankingModel:
     def _train_ranksvm(self, X, y):
         model = LinearSVC(
             loss="hinge",
-            max_iter=20000,
+            max_iter=30000,
             dual=True,
             fit_intercept=False,
+            C=1,
+            tol=1e-3,
         )
-        param_distributions = {
-            "C": [1e-3, 1e-2, 1e-1, 1, 1e1, 1e2, 1e3, 1e4, 1e5],
-            "tol": [1e-3, 1e-4, 1e-5],
-        }
-        search = HalvingGridSearchCV(
-            model,
-            param_distributions,
-            resource="max_iter",
-            max_resources=2000000,
-            min_resources=1000,
-            refit=True,
-        )
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=ConvergenceWarning)
-            search.fit(X, y)
-        print(
-            "Best parameters found by grid search:",
-            search.best_params_,
-            file=sys.stderr,
-        )
-        if search.best_estimator_.coef_.shape[0] == 1:
-            self.weights = search.best_estimator_.coef_[0]
+        model.fit(X, y)
+        if model.coef_.shape[0] == 1:
+            self.weights = model.coef_[0]
         else:
-            self.weights = search.best_estimator_.coef_
+            self.weights = model.coef_
 
     def fit(self, X, y, group):
         if self.model_str == "ranksvm":
