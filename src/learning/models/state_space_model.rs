@@ -11,14 +11,16 @@ use crate::{
     },
     search::{successor_generators::SuccessorGeneratorName, Action, DBState, Task},
 };
-use numpy::{PyArray1, PyUntypedArrayMethods};
+use numpy::PyUntypedArrayMethods;
 use pyo3::{types::PyAnyMethods, Python};
 use serde::{Deserialize, Serialize};
 use std::{io::Write, path::Path, time};
 use tempfile::NamedTempFile;
 use tracing::info;
 
-use super::{RankingTrainingData, RegressionTrainingData, TrainingData};
+use super::{
+    RankingPair, RankingRelation, RankingTrainingData, RegressionTrainingData, TrainingData,
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 enum ModelState {
@@ -81,10 +83,9 @@ impl StateSpaceModel {
     fn prepare_ranking_data(
         &self,
         training_data: &[TrainingInstance],
-    ) -> RankingTrainingData<Vec<CGraph>, Vec<f64>> {
+    ) -> RankingTrainingData<Vec<CGraph>> {
         let mut graphs = Vec::new();
-        let mut ranks = Vec::new();
-        let mut groups = Vec::new();
+        let mut pairs = Vec::new();
 
         for instance in training_data {
             let plan = &instance.plan;
@@ -97,24 +98,28 @@ impl StateSpaceModel {
             let mut sibling_graphs: Option<Vec<CGraph>> = None;
             for chosen_action in plan.steps() {
                 let cur_graph = compiler.compile(&cur_state);
+                let cur_index = graphs.len();
+                graphs.push(cur_graph.clone());
 
                 // First rank this state better than its predecessors
                 if let Some(predecessor_graph) = &predecessor_graph {
-                    graphs.push(cur_graph.clone());
+                    pairs.push(RankingPair {
+                        i: cur_index,
+                        j: graphs.len(),
+                        relation: RankingRelation::Better,
+                    });
                     graphs.push(predecessor_graph.clone());
-                    ranks.push(1.0);
-                    ranks.push(0.0);
-                    groups.push(2);
                 }
 
-                // Then rank it better than its siblings
+                // Then rank it better than or equal to its siblings
                 if let Some(sibling_graphs) = &sibling_graphs {
                     for sibling_graph in sibling_graphs {
-                        graphs.push(cur_graph.clone());
+                        pairs.push(RankingPair {
+                            i: cur_index,
+                            j: graphs.len(),
+                            relation: RankingRelation::BetterOrEqual,
+                        });
                         graphs.push(sibling_graph.clone());
-                        ranks.push(1.0);
-                        ranks.push(0.0);
-                        groups.push(2);
                     }
                 }
 
@@ -151,15 +156,14 @@ impl StateSpaceModel {
 
         RankingTrainingData {
             features: graphs,
-            ranks,
-            groups,
+            pairs,
         }
     }
 
     fn prepare_regression_data(
         &self,
         training_data: &[TrainingInstance],
-    ) -> RegressionTrainingData<Vec<CGraph>, Vec<f64>> {
+    ) -> RegressionTrainingData<Vec<CGraph>> {
         let mut graphs = Vec::new();
         let mut dist_to_goal = Vec::new();
         for instance in training_data {
@@ -189,10 +193,7 @@ impl StateSpaceModel {
         }
     }
 
-    fn prepare_data(
-        &self,
-        training_data: &[TrainingInstance],
-    ) -> TrainingData<Vec<CGraph>, Vec<f64>> {
+    fn prepare_data(&self, training_data: &[TrainingInstance]) -> TrainingData<Vec<CGraph>> {
         match self.model {
             MlModel::Regressor(_) => {
                 TrainingData::Regression(self.prepare_regression_data(training_data))
@@ -245,17 +246,12 @@ impl Train for StateSpaceModel {
         info!("computed WL features");
         self.wl.finalise();
 
-        let train_y = PyArray1::from_vec_bound(py, train_data.targets().to_owned());
-        let val_y = PyArray1::from_vec_bound(py, val_data.targets().to_owned());
-        info!("converted labels to numpy arrays");
         info!(
             train_x_shape = format!("{:?}", train_x.shape()),
-            train_y_shape = format!("{:?}", train_y.shape()),
             val_x_shape = format!("{:?}", val_x.shape()),
-            val_y_shape = format!("{:?}", val_y.shape())
         );
-        let train_data = train_data.with_features(train_x).with_targets(train_y);
-        let val_data = val_data.with_features(val_x).with_targets(val_y);
+        let train_data = train_data.with_features(train_x);
+        let val_data = val_data.with_features(val_x);
 
         info!("fitting model on training data");
         self.model.fit(&train_data);

@@ -1,12 +1,18 @@
+use numpy::PyArray1;
+use pyo3::{
+    types::{PyList, PyTuple},
+    Bound, Python,
+};
+
 #[derive(Debug)]
-pub struct RegressionTrainingData<F, T> {
+pub struct RegressionTrainingData<F> {
     pub features: F,
-    pub labels: T,
+    pub labels: Vec<f64>,
     pub noise: Option<Vec<f64>>,
 }
 
-impl<F, T> RegressionTrainingData<F, T> {
-    pub fn with_features<G>(self, features: G) -> RegressionTrainingData<G, T> {
+impl<F> RegressionTrainingData<F> {
+    pub fn with_features<G>(self, features: G) -> RegressionTrainingData<G> {
         RegressionTrainingData {
             features,
             labels: self.labels,
@@ -14,47 +20,63 @@ impl<F, T> RegressionTrainingData<F, T> {
         }
     }
 
-    pub fn with_labels<U>(self, labels: U) -> RegressionTrainingData<F, U> {
-        RegressionTrainingData {
-            features: self.features,
-            labels,
-            noise: self.noise,
-        }
+    pub fn numpy_labels(&self) -> Bound<'static, PyArray1<f64>> {
+        let py = unsafe { Python::assume_gil_acquired() };
+        PyArray1::from_vec_bound(py, self.labels.clone())
     }
 }
 
 #[derive(Debug)]
-pub struct RankingTrainingData<F, T> {
-    pub features: F,
-    pub ranks: T,
-    pub groups: Vec<usize>,
+pub enum RankingRelation {
+    Better,
+    BetterOrEqual,
 }
 
-impl<F, T> RankingTrainingData<F, T> {
-    pub fn with_features<G>(self, features: G) -> RankingTrainingData<G, T> {
+#[derive(Debug)]
+pub struct RankingPair {
+    pub i: usize,
+    pub j: usize,
+    pub relation: RankingRelation,
+}
+
+#[derive(Debug)]
+pub struct RankingTrainingData<F> {
+    pub features: F,
+    pub pairs: Vec<RankingPair>,
+}
+
+impl<F> RankingTrainingData<F> {
+    pub fn with_features<G>(self, features: G) -> RankingTrainingData<G> {
         RankingTrainingData {
             features,
-            ranks: self.ranks,
-            groups: self.groups,
+            pairs: self.pairs,
         }
     }
 
-    pub fn with_ranks<U>(self, ranks: U) -> RankingTrainingData<F, U> {
-        RankingTrainingData {
-            features: self.features,
-            ranks,
-            groups: self.groups,
-        }
+    pub fn pairs_for_python(&self) -> Bound<'static, PyList> {
+        let py = unsafe { Python::assume_gil_acquired() };
+        let py_tuples: Vec<Bound<PyTuple>> = self
+            .pairs
+            .iter()
+            .map(|pair| {
+                let relation = match pair.relation {
+                    RankingRelation::Better => 1,
+                    RankingRelation::BetterOrEqual => 0,
+                };
+                PyTuple::new_bound(py, [pair.i, pair.j, relation])
+            })
+            .collect();
+        PyList::new_bound(py, py_tuples)
     }
 }
 
 #[derive(Debug)]
-pub enum TrainingData<F, T> {
-    Regression(RegressionTrainingData<F, T>),
-    Ranking(RankingTrainingData<F, T>),
+pub enum TrainingData<F> {
+    Regression(RegressionTrainingData<F>),
+    Ranking(RankingTrainingData<F>),
 }
 
-impl<F, T> TrainingData<F, T> {
+impl<F> TrainingData<F> {
     pub fn features(&self) -> &F {
         match self {
             TrainingData::Regression(data) => &data.features,
@@ -62,33 +84,12 @@ impl<F, T> TrainingData<F, T> {
         }
     }
 
-    pub fn targets(&self) -> &T {
-        match self {
-            TrainingData::Regression(data) => &data.labels,
-            TrainingData::Ranking(data) => &data.ranks,
-        }
-    }
-
-    pub fn groups(&self) -> Option<&Vec<usize>> {
-        match self {
-            TrainingData::Regression(_) => None,
-            TrainingData::Ranking(data) => Some(&data.groups),
-        }
-    }
-
-    pub fn with_features<G>(self, features: G) -> TrainingData<G, T> {
+    pub fn with_features<G>(self, features: G) -> TrainingData<G> {
         match self {
             TrainingData::Regression(data) => {
                 TrainingData::Regression(data.with_features(features))
             }
             TrainingData::Ranking(data) => TrainingData::Ranking(data.with_features(features)),
-        }
-    }
-
-    pub fn with_targets<U>(self, targets: U) -> TrainingData<F, U> {
-        match self {
-            TrainingData::Regression(data) => TrainingData::Regression(data.with_labels(targets)),
-            TrainingData::Ranking(data) => TrainingData::Ranking(data.with_ranks(targets)),
         }
     }
 }

@@ -12,6 +12,8 @@ pub enum RankerName {
     RankSVM,
     #[serde(rename = "lambdamart")]
     LambdaMart,
+    #[serde(rename = "lp")]
+    LP,
 }
 
 impl RankerName {
@@ -19,6 +21,7 @@ impl RankerName {
         match self {
             RankerName::RankSVM => "ranksvm",
             RankerName::LambdaMart => "lambdamart",
+            RankerName::LP => "lp",
         }
     }
 }
@@ -36,19 +39,12 @@ impl<'py> Ranker<'py> {
         }
     }
 
-    pub fn fit(
-        &self,
-        data: &RankingTrainingData<Bound<'py, PyArray2<f64>>, Bound<'py, PyArray1<f64>>>,
-    ) {
+    pub fn fit(&self, data: &RankingTrainingData<Bound<'py, PyArray2<f64>>>) {
         let start_time = std::time::Instant::now();
         self.model
             .getattr("fit")
             .unwrap()
-            .call1((
-                &data.features,
-                &data.ranks,
-                PyArray1::from_slice_bound(self.py(), &data.groups),
-            ))
+            .call1((&data.features, &data.pairs_for_python()))
             .unwrap();
         info!(fitting_time = start_time.elapsed().as_secs_f64());
     }
@@ -63,18 +59,11 @@ impl<'py> Ranker<'py> {
             .unwrap()
     }
 
-    pub fn score(
-        &self,
-        data: &RankingTrainingData<Bound<'py, PyArray2<f64>>, Bound<'py, PyArray1<f64>>>,
-    ) -> f64 {
+    pub fn kendall_tau(&self, data: &RankingTrainingData<Bound<'py, PyArray2<f64>>>) -> f64 {
         self.model
-            .getattr("score")
+            .getattr("kendall_tau")
             .unwrap()
-            .call1((
-                &data.features,
-                &data.ranks,
-                PyArray1::from_slice_bound(self.py(), &data.groups),
-            ))
+            .call1((&data.features, &data.pairs_for_python()))
             .unwrap()
             .extract()
             .unwrap()
@@ -97,6 +86,8 @@ impl<'py> Ranker<'py> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::learning::models::{RankingPair, RankingRelation};
+    use assert_approx_eq::assert_approx_eq;
     use numpy::PyArrayMethods;
     use serial_test::serial;
 
@@ -108,30 +99,58 @@ mod tests {
         })
     }
 
+    fn test_data(py: Python) -> RankingTrainingData<Bound<PyArray2<f64>>> {
+        let x = PyArray2::from_vec2_bound(
+            py,
+            &[
+                vec![1.0, 1.0],
+                vec![2.0, 2.0],
+                vec![1.2, 1.2],
+                vec![1.2, 1.2],
+                vec![0.9, 0.9],
+                vec![2.2, 2.2],
+                vec![1.3, 1.3],
+            ],
+        )
+        .unwrap();
+
+        let pairs = vec![
+            RankingPair {
+                i: 1,
+                j: 0,
+                relation: RankingRelation::Better,
+            },
+            RankingPair {
+                i: 1,
+                j: 2,
+                relation: RankingRelation::Better,
+            },
+            RankingPair {
+                i: 1,
+                j: 3,
+                relation: RankingRelation::Better,
+            },
+            RankingPair {
+                i: 1,
+                j: 4,
+                relation: RankingRelation::Better,
+            },
+            RankingPair {
+                i: 5,
+                j: 6,
+                relation: RankingRelation::Better,
+            },
+        ];
+
+        RankingTrainingData { features: x, pairs }
+    }
+
     #[test]
     #[serial]
     fn test_fit_and_predict_for_ranksvm() {
         Python::with_gil(|py| {
             let ranker = Ranker::new(py, RankerName::RankSVM);
-            let x = PyArray2::from_vec2_bound(
-                py,
-                &[
-                    vec![1.0, 1.0],
-                    vec![2.0, 2.0],
-                    vec![1.2, 1.2],
-                    vec![1.2, 1.2],
-                    vec![0.9, 0.9],
-                    vec![2.2, 2.2],
-                    vec![1.3, 1.3],
-                ],
-            )
-            .unwrap();
-            let y = PyArray1::from_vec_bound(py, vec![0., 1., 0., 0., 0., 1., 0.]);
-            let data = RankingTrainingData {
-                features: x,
-                ranks: y,
-                groups: vec![5, 2],
-            };
+            let data = test_data(py);
             ranker.fit(&data);
 
             let x =
@@ -142,6 +161,31 @@ mod tests {
             let y = y.to_vec().unwrap();
             assert!(y[1] < y[0]);
             assert!(y[1] < y[2]);
+
+            let kendall_tau = ranker.kendall_tau(&data);
+            assert_approx_eq!(kendall_tau, 1.0);
+        })
+    }
+
+    #[test]
+    #[serial]
+    fn test_fit_and_predict_for_lp() {
+        Python::with_gil(|py| {
+            let ranker = Ranker::new(py, RankerName::LP);
+            let data = test_data(py);
+            ranker.fit(&data);
+
+            let x =
+                PyArray2::from_vec2_bound(py, &[vec![1.1, 1.1], vec![2.1, 2.1], vec![1.0, 1.0]])
+                    .unwrap();
+            let y = ranker.predict(&x);
+            assert_eq!(y.len().unwrap(), 3);
+            let y = y.to_vec().unwrap();
+            assert!(y[1] < y[0]);
+            assert!(y[1] < y[2]);
+
+            let kendall_tau = ranker.kendall_tau(&data);
+            assert_approx_eq!(kendall_tau, 1.0);
         })
     }
 }

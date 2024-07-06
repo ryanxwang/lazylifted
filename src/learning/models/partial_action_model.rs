@@ -5,15 +5,15 @@ use crate::{
         models::{
             model_utils::{extract_from_zip, zip_files, PICKLE_FILE_NAME, RON_FILE_NAME},
             partial_action_model_config::PartialActionModelConfig,
-            Evaluate, RankingTrainingData, RegressionTrainingData, Train, TrainingData,
-            TrainingInstance,
+            Evaluate, RankingPair, RankingRelation, RankingTrainingData, RegressionTrainingData,
+            Train, TrainingData, TrainingInstance,
         },
         wl_kernel::Neighbourhood,
         WlKernel,
     },
     search::{successor_generators::SuccessorGeneratorName, Action, DBState, PartialAction, Task},
 };
-use numpy::{PyArray1, PyUntypedArrayMethods};
+use numpy::PyUntypedArrayMethods;
 use pyo3::{prelude::*, Python};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, io::Write, path::Path};
@@ -97,10 +97,9 @@ impl PartialActionModel {
     fn prepare_ranking_data(
         &self,
         training_data: &[TrainingInstance],
-    ) -> RankingTrainingData<Vec<CGraph>, Vec<f64>> {
+    ) -> RankingTrainingData<Vec<CGraph>> {
         let mut graphs = Vec::new();
-        let mut ranks = Vec::new();
-        let mut groups = Vec::new();
+        let mut pairs = Vec::new();
         for instance in training_data {
             let plan = &instance.plan;
             let task = &instance.task;
@@ -125,14 +124,17 @@ impl PartialActionModel {
                     let partial = PartialAction::from_action(chosen_action, partial_depth);
 
                     let graph = compiler.compile(&cur_state, &partial);
+                    let cur_index = graphs.len();
+                    graphs.push(graph.clone());
 
                     // First rank this partial action better than its predecessor
                     if let Some(predecessor_graph) = &predecessor_graph {
+                        pairs.push(RankingPair {
+                            i: cur_index,
+                            j: graphs.len(),
+                            relation: RankingRelation::Better,
+                        });
                         graphs.push(predecessor_graph.clone());
-                        ranks.push(0.0);
-                        graphs.push(graph.clone());
-                        ranks.push(1.0);
-                        groups.push(2);
                     }
 
                     // Then rank this partial action better than its siblings
@@ -142,10 +144,16 @@ impl PartialActionModel {
                     if siblings.len() == 1 {
                         continue;
                     }
-                    groups.push(siblings.len());
                     for sibling in siblings {
+                        if sibling == partial {
+                            continue;
+                        }
+                        pairs.push(RankingPair {
+                            i: cur_index,
+                            j: graphs.len(),
+                            relation: RankingRelation::BetterOrEqual,
+                        });
                         graphs.push(compiler.compile(&cur_state, &sibling));
-                        ranks.push(if sibling == partial { 1.0 } else { 0.0 });
                     }
 
                     predecessor_graph = Some(graph);
@@ -161,15 +169,14 @@ impl PartialActionModel {
 
         RankingTrainingData {
             features: graphs,
-            ranks,
-            groups,
+            pairs,
         }
     }
 
     fn prepare_regression_data(
         &self,
         training_data: &[TrainingInstance],
-    ) -> RegressionTrainingData<Vec<CGraph>, Vec<f64>> {
+    ) -> RegressionTrainingData<Vec<CGraph>> {
         let mut graphs = Vec::new();
         let mut labels = Vec::new();
         let mut noise = Vec::new();
@@ -216,10 +223,7 @@ impl PartialActionModel {
         }
     }
 
-    fn prepare_data(
-        &self,
-        training_data: &[TrainingInstance],
-    ) -> TrainingData<Vec<CGraph>, Vec<f64>> {
+    fn prepare_data(&self, training_data: &[TrainingInstance]) -> TrainingData<Vec<CGraph>> {
         match self.model {
             MlModel::Regressor(_) => {
                 TrainingData::Regression(self.prepare_regression_data(training_data))
@@ -257,19 +261,6 @@ impl PartialActionModel {
                 })
                 .collect()
         }
-    }
-
-    /// Compute what a baseline model would score for the given training data.
-    /// Here baseline means "randomly picking an applicable action schema for
-    /// each state"
-    fn compute_ranking_baseline(&self, groups: &[usize]) -> f64 {
-        let mut baseline = 0.;
-        let mut total = 0.;
-        for group in groups {
-            baseline += 1. / *group as f64;
-            total += 1.;
-        }
-        baseline / total
     }
 
     fn py(&self) -> Python<'static> {
@@ -315,19 +306,14 @@ impl Train for PartialActionModel {
         info!("computed WL features");
         self.wl.finalise();
 
-        let train_y = PyArray1::from_vec_bound(self.py(), train_data.targets().to_owned());
-        let val_y = PyArray1::from_vec_bound(self.py(), val_data.targets().to_owned());
-        info!("converted labels to numpy arrays");
         info!(
             train_x_shape = format!("{:?}", train_x.shape()),
-            train_y_shape = format!("{:?}", train_y.shape()),
             val_x_shape = format!("{:?}", val_x.shape()),
-            val_y_shape = format!("{:?}", val_y.shape()),
         );
         info!("fitting model on training data");
 
-        let train_data = train_data.with_features(train_x).with_targets(train_y);
-        let val_data = val_data.with_features(val_x).with_targets(val_y);
+        let train_data = train_data.with_features(train_x);
+        let val_data = val_data.with_features(val_x);
         self.model.fit(&train_data);
 
         if let Some(weights) = self.model.get_weights(self.config.model) {
@@ -345,15 +331,7 @@ impl Train for PartialActionModel {
         info!(train_score_time = train_score_start.elapsed().as_secs_f64());
         match &self.model {
             MlModel::Regressor(_) => info!(train_mse = train_score),
-            MlModel::Ranker(_) => {
-                let train_groups = train_data.groups().unwrap();
-                let train_baseline = self.compute_ranking_baseline(train_groups);
-                info!(
-                    train_score = train_score,
-                    train_baseline = train_baseline,
-                    train_improvement = train_score - train_baseline
-                );
-            }
+            MlModel::Ranker(_) => info!(kendall_tau = train_score),
         }
 
         if self.validate {
@@ -362,15 +340,7 @@ impl Train for PartialActionModel {
             info!(val_score_time = val_score_start.elapsed().as_secs_f64());
             match &self.model {
                 MlModel::Regressor(_) => info!(val_mse = val_score),
-                MlModel::Ranker(_) => {
-                    let val_groups = val_data.groups().unwrap();
-                    let val_baseline = self.compute_ranking_baseline(val_groups);
-                    info!(
-                        val_score = val_score,
-                        val_baseline = val_baseline,
-                        val_improvement = val_score - val_baseline
-                    );
-                }
+                MlModel::Ranker(_) => info!(kendall_tau = val_score),
             }
         }
 

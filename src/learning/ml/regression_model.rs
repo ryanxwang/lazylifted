@@ -53,10 +53,7 @@ impl<'py> Regressor<'py> {
         }
     }
 
-    pub fn fit(
-        &self,
-        data: &RegressionTrainingData<Bound<'py, PyArray2<f64>>, Bound<'py, PyArray1<f64>>>,
-    ) {
+    pub fn fit(&self, data: &RegressionTrainingData<Bound<'py, PyArray2<f64>>>) {
         let start_time = time::Instant::now();
 
         let kwargs = PyDict::new_bound(self.py());
@@ -69,7 +66,7 @@ impl<'py> Regressor<'py> {
         self.model
             .getattr("fit")
             .unwrap()
-            .call((&data.features, &data.labels), Some(&kwargs))
+            .call((&data.features, &data.numpy_labels()), Some(&kwargs))
             .unwrap();
 
         info!(fitting_time = start_time.elapsed().as_secs_f64());
@@ -87,14 +84,11 @@ impl<'py> Regressor<'py> {
         y
     }
 
-    pub fn score(
-        &self,
-        data: &RegressionTrainingData<Bound<'py, PyArray2<f64>>, Bound<'py, PyArray1<f64>>>,
-    ) -> f64 {
+    pub fn score(&self, data: &RegressionTrainingData<Bound<'py, PyArray2<f64>>>) -> f64 {
         self.model
             .getattr("score")
             .unwrap()
-            .call1((&data.features, &data.labels))
+            .call1((&data.features, &data.numpy_labels()))
             .unwrap()
             .extract()
             .unwrap()
@@ -148,7 +142,7 @@ mod tests {
             let regressor =
                 Regressor::new(py, RegressorName::GaussianProcessRegressor { alpha: 1e-7 });
             let x = PyArray2::from_vec2_bound(py, &[vec![1.0, 2.0], vec![3.0, 4.0]]).unwrap();
-            let y = PyArray1::from_vec_bound(py, vec![1.0, 2.0]);
+            let y = vec![1.0, 2.0];
             let data = RegressionTrainingData {
                 features: x,
                 labels: y,
@@ -179,7 +173,7 @@ mod tests {
         Python::with_gil(|py| {
             let regressor = Regressor::new(py, RegressorName::LinearRegressor);
             let x = PyArray2::from_vec2_bound(py, &[vec![1.0, 2.0], vec![3.0, 4.0]]).unwrap();
-            let y = PyArray1::from_vec_bound(py, vec![1.0, 2.0]);
+            let y = vec![1.0, 2.0];
             let data = RegressionTrainingData {
                 features: x,
                 labels: y,

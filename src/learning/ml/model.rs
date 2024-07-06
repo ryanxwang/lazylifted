@@ -29,10 +29,7 @@ impl<'py> MlModel<'py> {
         }
     }
 
-    pub fn fit(
-        &self,
-        training_data: &TrainingData<Bound<'py, PyArray2<f64>>, Bound<'py, PyArray1<f64>>>,
-    ) {
+    pub fn fit(&self, training_data: &TrainingData<Bound<'py, PyArray2<f64>>>) {
         match self {
             MlModel::Regressor(regressor) => match training_data {
                 TrainingData::Regression(data) => regressor.fit(data),
@@ -52,17 +49,14 @@ impl<'py> MlModel<'py> {
         }
     }
 
-    pub fn score(
-        &self,
-        data: &TrainingData<Bound<'py, PyArray2<f64>>, Bound<'py, PyArray1<f64>>>,
-    ) -> f64 {
+    pub fn score(&self, data: &TrainingData<Bound<'py, PyArray2<f64>>>) -> f64 {
         match self {
             MlModel::Regressor(regressor) => match data {
                 TrainingData::Regression(data) => regressor.score(data),
                 _ => panic!("Wrong data type for regressor model"),
             },
             MlModel::Ranker(ranker) => match data {
-                TrainingData::Ranking(data) => ranker.score(data),
+                TrainingData::Ranking(data) => ranker.kendall_tau(data),
                 _ => panic!("Wrong data type for ranker model"),
             },
         }

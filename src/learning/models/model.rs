@@ -98,8 +98,7 @@ mod tests {
     use super::*;
     use crate::{
         learning::{
-            graphs::PartialActionCompilerName,
-            ml::{MlModelName, RegressorName},
+            graphs::PartialActionCompilerName, ml::MlModelName,
             models::partial_action_model_config::PartialActionModelConfig,
         },
         search::successor_generators::SuccessorGeneratorName,
@@ -110,12 +109,10 @@ mod tests {
     #[test]
     fn serialise_sample_model_config() {
         let config = ModelConfig::PartialActionModel(PartialActionModelConfig {
-            model: MlModelName::RegressorName(RegressorName::GaussianProcessRegressor {
-                alpha: 1e-7,
-            }),
-            graph_compiler: PartialActionCompilerName::Palg,
-            iters: 2,
-            validate: true,
+            model: MlModelName::RankerName(crate::learning::ml::RankerName::LP),
+            graph_compiler: PartialActionCompilerName::Rslg,
+            iters: 4,
+            validate: false,
             successor_generator: SuccessorGeneratorName::FullReducer,
         });
 
