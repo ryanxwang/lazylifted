@@ -1,11 +1,11 @@
 [partial-action-model]
 successor-generator = "full-reducer"
 graph-compiler = "rslg"
-iters = 2
 validate = false
 
 [partial-action-model.model]
 ranker-name = "lp"
 
 [partial-action-model.wl]
-iters = 2
+iters = 3
+set-or-multiset = "multiset"
