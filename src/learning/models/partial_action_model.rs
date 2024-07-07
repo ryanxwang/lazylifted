@@ -8,8 +8,7 @@ use crate::{
             Evaluate, RankingPair, RankingRelation, RankingTrainingData, RegressionTrainingData,
             Train, TrainingData, TrainingInstance,
         },
-        wl_kernel::Neighbourhood,
-        WlKernel,
+        wl::{Neighbourhood, WlKernel},
     },
     search::{successor_generators::SuccessorGeneratorName, Action, DBState, PartialAction, Task},
 };
@@ -77,7 +76,7 @@ impl PartialActionModel {
             model: MlModel::new(py, config.model),
             successor_generator_name: config.successor_generator,
             graph_compiler_name: config.graph_compiler,
-            wl: WlKernel::new(config.iters),
+            wl: WlKernel::new(&config.wl),
             validate: config.validate,
             state: PartialActionModelState::New,
             config: config.clone(),

@@ -7,7 +7,7 @@ use crate::{
             state_space_model_config::StateSpaceModelConfig,
             Evaluate, Train, TrainingInstance,
         },
-        WlKernel,
+        wl::WlKernel,
     },
     search::{successor_generators::SuccessorGeneratorName, Action, DBState, Task},
 };
@@ -72,7 +72,7 @@ impl StateSpaceModel {
     pub fn new(py: Python<'static>, config: StateSpaceModelConfig) -> Self {
         Self {
             model: MlModel::new(py, config.model),
-            wl: WlKernel::new(config.iters),
+            wl: WlKernel::new(&config.wl),
             successor_generator_name: config.successor_generator,
             validate: config.validate,
             state: ModelState::New,

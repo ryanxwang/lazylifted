@@ -1,8 +1,10 @@
 [partial-action-model]
 successor-generator = "full-reducer"
 graph-compiler = "rslg"
-iters = 3
 validate = false
 
 [partial-action-model.model]
 ranker-name = "ranksvm"
+
+[partial-action-model.wl]
+iters = 3

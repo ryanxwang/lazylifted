@@ -2,6 +2,7 @@ use crate::{
     learning::{
         graphs::PartialActionCompilerName,
         ml::{MlModelName, RegressorName},
+        wl::WlConfig,
     },
     search::successor_generators::SuccessorGeneratorName,
 };
@@ -15,13 +16,16 @@ pub struct PartialActionModelConfig {
     pub model: MlModelName,
     pub successor_generator: SuccessorGeneratorName,
     pub graph_compiler: PartialActionCompilerName,
-    pub iters: usize,
+    pub wl: WlConfig,
     pub validate: bool,
 }
 
 impl PartialActionModelConfig {
     pub fn with_iters(self, iters: usize) -> Self {
-        Self { iters, ..self }
+        Self {
+            wl: self.wl.with_iters(iters),
+            ..self
+        }
     }
 
     pub fn with_alpha(self, alpha: f64) -> Self {

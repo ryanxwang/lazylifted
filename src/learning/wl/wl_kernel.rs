@@ -1,4 +1,7 @@
-use crate::learning::{graphs::CGraph, WlStatistics};
+use crate::learning::{
+    graphs::CGraph,
+    wl::{Neighbourhood, NeighbourhoodFactory, WlConfig, WlStatistics},
+};
 use numpy::{PyArray2, PyArrayMethods};
 use pyo3::{Bound, Python};
 use serde::{Deserialize, Serialize};
@@ -11,26 +14,6 @@ enum Mode {
     Evaluate,
 }
 
-/// A neighbourhood of a node in a graph, useful for just the Weisfeiler-Lehman
-/// to hash down to a single value. Note that unlike the GOOSE implementation,
-/// this does not include the edge colours to the neighbours.
-#[derive(Debug, Clone, Hash, Eq, PartialEq, Serialize, Deserialize)]
-pub struct Neighbourhood {
-    node_colour: i32,
-    neighbour_colours: Vec<(i32, i32)>,
-}
-
-impl Neighbourhood {
-    fn new(node_colour: i32, mut neighbour_colours: Vec<(i32, i32)>) -> Self {
-        neighbour_colours.sort();
-        // neighbour_colours.dedup();
-        Self {
-            node_colour,
-            neighbour_colours,
-        }
-    }
-}
-
 /// A Weisfeiler-Lehman kernel.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct WlKernel {
@@ -38,6 +21,8 @@ pub struct WlKernel {
     /// hashes for unseen subgraphs. In evaluation mode, the kernel will
     /// record statistics about the kernel but will not create new hashes.
     mode: Mode,
+    /// The factory for creating neighbourhoods.
+    neighbourhood_factory: NeighbourhoodFactory,
     /// Dimension of the Weisfeiler-Lehman algorithm.
     k: usize,
     /// The number of iterations to run the Weisfeiler-Lehman algorithm for.
@@ -50,19 +35,12 @@ pub struct WlKernel {
 }
 
 impl WlKernel {
-    /// Create a new [`WLKernel`] in training mode. See [`WLKernel::iters`] for
-    /// more information on the arguments.
-    pub fn new(iters: usize) -> Self {
-        Self::new_generalised(1, iters)
-    }
-
-    /// Create a new [`WLKernel`] in training mode with a generalised
-    /// Weisfeiler-Lehman algorithm, i.e. k > 1.
-    pub fn new_generalised(k: usize, iters: usize) -> Self {
+    pub fn new(config: &WlConfig) -> Self {
         Self {
             mode: Mode::Train,
-            k,
-            iters,
+            neighbourhood_factory: NeighbourhoodFactory::new(config.set_or_multiset),
+            k: 1, // UNIMPLEMENTED: Implement k-WL for k > 1.
+            iters: config.iters,
             hashes: HashMap::new(),
             statistics: WlStatistics::new(),
         }
@@ -99,8 +77,11 @@ impl WlKernel {
             // Add the colours of the nodes to the hash map.
             if let Some(max_graph_colour) = max_graph_colour {
                 for colour in 0..=max_graph_colour {
-                    self.hashes
-                        .insert(Neighbourhood::new(colour, vec![]), colour);
+                    self.hashes.insert(
+                        self.neighbourhood_factory
+                            .create_neighbourhood(colour, vec![]),
+                        colour,
+                    );
                 }
             }
         }
@@ -111,7 +92,10 @@ impl WlKernel {
             let mut histogram = HashMap::new();
             let mut cur_colours = HashMap::new();
             for node in graph.node_indices() {
-                let colour_hash = self.get_hash_value(Neighbourhood::new(graph[node], vec![]));
+                let colour_hash = self.get_hash_value(
+                    self.neighbourhood_factory
+                        .create_neighbourhood(graph[node], vec![]),
+                );
                 cur_colours.insert(node, colour_hash);
                 histogram
                     .entry(colour_hash)
@@ -128,7 +112,9 @@ impl WlKernel {
                         neighbour_colours
                             .push((cur_colours[&neighbour], *graph.edge_weight(edge).unwrap()));
                     }
-                    let neighbourhood = Neighbourhood::new(cur_colours[&node], neighbour_colours);
+                    let neighbourhood = self
+                        .neighbourhood_factory
+                        .create_neighbourhood(cur_colours[&node], neighbour_colours);
                     let colour_hash = self.get_hash_value(neighbourhood);
                     new_colours.insert(node, colour_hash);
                     histogram
@@ -207,17 +193,29 @@ impl WlKernel {
 
 #[cfg(test)]
 mod tests {
+    use crate::learning::wl::SetOrMultiset;
+
     use super::*;
+
+    const SET_CONFIG: WlConfig = WlConfig {
+        set_or_multiset: SetOrMultiset::Set,
+        iters: 1,
+    };
+
+    const MULTISET_CONFIG: WlConfig = WlConfig {
+        set_or_multiset: SetOrMultiset::Multiset,
+        iters: 1,
+    };
 
     #[test]
     fn starts_in_train_mode() {
-        let kernel = WlKernel::new(1);
+        let kernel = WlKernel::new(&MULTISET_CONFIG);
         assert_eq!(kernel.mode, Mode::Train);
     }
 
     #[test]
     fn computing_histograms_changes_mode() {
-        let mut kernel = WlKernel::new(1);
+        let mut kernel = WlKernel::new(&MULTISET_CONFIG);
         let graphs = vec![];
         kernel.compute_histograms(&graphs);
         assert_eq!(kernel.mode, Mode::Evaluate);
@@ -228,8 +226,8 @@ mod tests {
     }
 
     #[test]
-    fn computes_histograms_correctly() {
-        let mut kernel = WlKernel::new(1);
+    fn computes_histograms_correctly_with_multiset() {
+        let mut kernel = WlKernel::new(&MULTISET_CONFIG);
         let mut graph = CGraph::new_undirected();
         let node_0 = graph.add_node(0);
         let node_1 = graph.add_node(1);
@@ -247,8 +245,8 @@ mod tests {
     }
 
     #[test]
-    fn computes_x_correctly() {
-        let mut kernel = WlKernel::new(1);
+    fn computes_x_correctly_with_multiset() {
+        let mut kernel = WlKernel::new(&MULTISET_CONFIG);
         let mut graph = CGraph::new_undirected();
         let node_0 = graph.add_node(0);
         let node_1 = graph.add_node(1);
@@ -275,6 +273,57 @@ mod tests {
         Python::with_gil(|py| {
             let x = kernel.compute_x(py, &histograms2);
             assert_eq!(unsafe { x.as_slice().unwrap() }, &[3.0, 1.0, 3.0, 0.0]);
+        });
+    }
+
+    #[test]
+    fn computes_histograms_correctly_with_set() {
+        let mut kernel = WlKernel::new(&SET_CONFIG);
+        let mut graph = CGraph::new_undirected();
+        let node_0 = graph.add_node(0);
+        let node_1 = graph.add_node(1);
+        let node_2 = graph.add_node(0);
+        graph.add_edge(node_0, node_1, 0);
+        graph.add_edge(node_1, node_2, 0);
+
+        let histograms = kernel.compute_histograms(&[graph.clone()]);
+        assert_eq!(histograms.len(), 1);
+        assert_eq!(histograms[0].len(), 4);
+
+        // Check that the histograms are the same when repeated.
+        let repeated_histograms = kernel.compute_histograms(&[graph.clone()]);
+        assert_eq!(histograms, repeated_histograms);
+    }
+
+    #[test]
+    fn computes_x_correctly_with_set() {
+        let mut kernel = WlKernel::new(&SET_CONFIG);
+        let mut graph = CGraph::new_undirected();
+        let node_0 = graph.add_node(0);
+        let node_1 = graph.add_node(1);
+        let node_2 = graph.add_node(0);
+        graph.add_edge(node_0, node_1, 0);
+        graph.add_edge(node_1, node_2, 0);
+
+        let histograms = kernel.compute_histograms(&[graph.clone()]);
+        Python::with_gil(|py| {
+            let x = kernel.compute_x(py, &histograms);
+            assert_eq!(unsafe { x.as_slice().unwrap() }, &[2.0, 1.0, 2.0, 1.0]);
+        });
+
+        let mut graph2 = CGraph::new_undirected();
+        let node_0 = graph2.add_node(0);
+        let node_1 = graph2.add_node(1);
+        let node_2 = graph2.add_node(0);
+        let node_3 = graph2.add_node(0);
+        graph2.add_edge(node_0, node_1, 0);
+        graph2.add_edge(node_1, node_2, 0);
+        graph2.add_edge(node_1, node_3, 0);
+
+        let histograms2 = kernel.compute_histograms(&[graph2.clone()]);
+        Python::with_gil(|py| {
+            let x = kernel.compute_x(py, &histograms2);
+            assert_eq!(unsafe { x.as_slice().unwrap() }, &[3.0, 1.0, 3.0, 1.0]);
         });
     }
 }

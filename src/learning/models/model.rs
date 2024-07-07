@@ -78,7 +78,7 @@ impl ModelConfig {
             }
             ModelConfig::PartialActionModel(config) => {
                 let config = if let Some(iters) = iters {
-                    PartialActionModelConfig { iters, ..config }
+                    config.with_iters(iters)
                 } else {
                     config
                 };
@@ -98,8 +98,10 @@ mod tests {
     use super::*;
     use crate::{
         learning::{
-            graphs::PartialActionCompilerName, ml::MlModelName,
+            graphs::PartialActionCompilerName,
+            ml::MlModelName,
             models::partial_action_model_config::PartialActionModelConfig,
+            wl::{SetOrMultiset, WlConfig},
         },
         search::successor_generators::SuccessorGeneratorName,
     };
@@ -111,7 +113,10 @@ mod tests {
         let config = ModelConfig::PartialActionModel(PartialActionModelConfig {
             model: MlModelName::RankerName(crate::learning::ml::RankerName::LP),
             graph_compiler: PartialActionCompilerName::Rslg,
-            iters: 4,
+            wl: WlConfig {
+                iters: 1,
+                set_or_multiset: SetOrMultiset::Multiset,
+            },
             validate: false,
             successor_generator: SuccessorGeneratorName::FullReducer,
         });

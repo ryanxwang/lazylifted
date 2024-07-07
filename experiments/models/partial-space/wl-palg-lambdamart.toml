@@ -1,8 +1,10 @@
 [partial-action-model]
 successor-generator = "full-reducer"
 graph-compiler = "palg"
-iters = 2
 validate = false
 
 [partial-action-model.model]
 ranker-name = "lambdamart"
+
+[partial-action-model.wl]
+iters = 2

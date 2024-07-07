@@ -1,5 +1,8 @@
 use crate::{
-    learning::ml::{MlModelName, RegressorName},
+    learning::{
+        ml::{MlModelName, RegressorName},
+        wl::WlConfig,
+    },
     search::successor_generators::SuccessorGeneratorName,
 };
 use serde::{Deserialize, Serialize};
@@ -11,13 +14,16 @@ use serde::{Deserialize, Serialize};
 pub struct StateSpaceModelConfig {
     pub model: MlModelName,
     pub successor_generator: SuccessorGeneratorName,
-    pub iters: usize,
+    pub wl: WlConfig,
     pub validate: bool,
 }
 
 impl StateSpaceModelConfig {
     pub fn with_iters(self, iters: usize) -> Self {
-        Self { iters, ..self }
+        Self {
+            wl: self.wl.with_iters(iters),
+            ..self
+        }
     }
 
     pub fn with_alpha(self, alpha: f64) -> Self {

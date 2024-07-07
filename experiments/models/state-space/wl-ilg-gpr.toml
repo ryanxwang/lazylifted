@@ -1,7 +1,9 @@
 [state-space-model]
 successor-generator = "full-reducer"
-iters = 4
 validate = false
 
 [state-space-model.model.regressor-name.gpr]
 alpha = 1e-7
+
+[state-space-model.wl]
+iters = 4

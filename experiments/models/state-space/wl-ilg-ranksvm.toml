@@ -1,7 +1,9 @@
 [state-space-model]
 successor-generator = "full-reducer"
-iters = 5
 validate = false
 
 [state-space-model.model]
 ranker-name = "ranksvm"
+
+[state-space-model.wl]
+iters = 5
