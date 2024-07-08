@@ -99,6 +99,8 @@ impl PartialActionModel {
     ) -> RankingTrainingData<Vec<CGraph>> {
         let mut graphs = Vec::new();
         let mut pairs = Vec::new();
+        // TODO: Implement group ids
+        let mut group_ids = Vec::new();
         for instance in training_data {
             let plan = &instance.plan;
             let task = &instance.task;
@@ -110,6 +112,7 @@ impl PartialActionModel {
             let mut cur_state = task.initial_state.clone();
 
             let mut predecessor_graph: Option<CGraph> = None;
+            let mut predecessor_group_id: Option<usize> = None;
             for chosen_action in plan.steps() {
                 let applicable_actions: Vec<Action> = task
                     .action_schemas()
@@ -125,6 +128,7 @@ impl PartialActionModel {
                     let graph = compiler.compile(&cur_state, &partial);
                     let cur_index = graphs.len();
                     graphs.push(graph.clone());
+                    group_ids.push(partial.group_id());
 
                     // First rank this partial action better than its predecessor
                     if let Some(predecessor_graph) = &predecessor_graph {
@@ -134,6 +138,7 @@ impl PartialActionModel {
                             relation: RankingRelation::Better,
                         });
                         graphs.push(predecessor_graph.clone());
+                        group_ids.push(predecessor_group_id.unwrap());
                     }
 
                     // Then rank this partial action better than its siblings
@@ -153,9 +158,11 @@ impl PartialActionModel {
                             relation: RankingRelation::BetterOrEqual,
                         });
                         graphs.push(compiler.compile(&cur_state, &sibling));
+                        group_ids.push(sibling.group_id());
                     }
 
                     predecessor_graph = Some(graph);
+                    predecessor_group_id = Some(partial.group_id());
                 }
 
                 cur_state = successor_generator.generate_successor(
@@ -169,6 +176,7 @@ impl PartialActionModel {
         RankingTrainingData {
             features: graphs,
             pairs,
+            group_ids: Some(group_ids),
         }
     }
 

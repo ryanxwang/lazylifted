@@ -1,7 +1,7 @@
 use numpy::PyArray1;
 use pyo3::{
-    types::{PyList, PyTuple},
-    Bound, Python,
+    types::{PyList, PyNone, PyTuple},
+    Bound, PyAny, Python,
 };
 
 #[derive(Debug)]
@@ -43,6 +43,11 @@ pub struct RankingPair {
 pub struct RankingTrainingData<F> {
     pub features: F,
     pub pairs: Vec<RankingPair>,
+    /// Optional group ids that identify which group each feature vector belongs
+    /// to. If provided, the ranking model may be able to specialise within each
+    /// group (i.e. treat them as different feature space and use different
+    /// weights for each group).
+    pub group_ids: Option<Vec<usize>>,
 }
 
 impl<F> RankingTrainingData<F> {
@@ -50,6 +55,7 @@ impl<F> RankingTrainingData<F> {
         RankingTrainingData {
             features,
             pairs: self.pairs,
+            group_ids: self.group_ids,
         }
     }
 
@@ -67,6 +73,17 @@ impl<F> RankingTrainingData<F> {
             })
             .collect();
         PyList::new_bound(py, py_tuples)
+    }
+
+    pub fn group_ids_for_python(&self) -> Bound<'static, PyAny> {
+        let py = unsafe { Python::assume_gil_acquired() };
+        match &self.group_ids {
+            Some(group_ids) => {
+                let py_list: Vec<usize> = group_ids.clone();
+                PyList::new_bound(py, py_list).into_any()
+            }
+            None => PyNone::get_bound(py).to_owned().into_any(),
+        }
     }
 }
 

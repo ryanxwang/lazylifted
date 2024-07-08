@@ -52,7 +52,7 @@ class RankingModel:
         else:
             self.weights = model.coef_
 
-    def fit(self, X, pairs):
+    def fit(self, X, pairs, group_ids):
         """
         Fit the ranking model to the given data.
 
@@ -65,13 +65,16 @@ class RankingModel:
             an integer describing how much better i is than j. For example, if
             the relation is 1, then i is strictly better than j, if the relation
             is 0, then i is better than or equal to j.
+        group_ids : list of integers indicating the group of each feature. Some
+            models may use this information to specialise the weights for each
+            group.
         """
         if self.model_str == "ranksvm":
             X, y = self._to_classification(X, pairs)
             self._train_ranksvm(X, y)
         elif self.model_str == "lp":
             lp = LP()
-            lp.fit(X, pairs)
+            lp.fit(X, pairs, group_ids)
             self.weights = lp.weights
         elif self.model_str == "lambdamart":
             raise ValueError("LambdaMART is no longer supported")
@@ -115,7 +118,8 @@ class LP:
     def __init__(self):
         pass
 
-    def fit(self, X, pairs, C=1.0):
+    def fit(self, X, pairs, group_ids, C=1.0):
+        # TODO: actually use the group_ids
         prob = LpProblem("Ranking", LpMinimize)
 
         weights = []

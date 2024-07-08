@@ -154,6 +154,15 @@ impl PartialAction {
                 .join(" ")
         )
     }
+
+    /// The group ID of a partial action describes which partial actions belong
+    /// in the same feature space. Here we consider partial actions with the
+    /// same schema and the same depth to be in the same group, so the group ID
+    /// is effectively a hash of the schema index and the depth.
+    pub fn group_id(&self) -> usize {
+        // As primitive as it gets
+        self.schema_index * 100 + self.partial_instantiation.len()
+    }
 }
 
 impl From<Action> for PartialAction {

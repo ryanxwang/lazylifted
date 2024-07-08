@@ -157,6 +157,7 @@ impl StateSpaceModel {
         RankingTrainingData {
             features: graphs,
             pairs,
+            group_ids: None,
         }
     }
 

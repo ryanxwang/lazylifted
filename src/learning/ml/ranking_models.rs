@@ -44,7 +44,11 @@ impl<'py> Ranker<'py> {
         self.model
             .getattr("fit")
             .unwrap()
-            .call1((&data.features, &data.pairs_for_python()))
+            .call1((
+                &data.features,
+                &data.pairs_for_python(),
+                &data.group_ids_for_python(),
+            ))
             .unwrap();
         info!(fitting_time = start_time.elapsed().as_secs_f64());
     }
@@ -142,7 +146,11 @@ mod tests {
             },
         ];
 
-        RankingTrainingData { features: x, pairs }
+        RankingTrainingData {
+            features: x,
+            pairs,
+            group_ids: None,
+        }
     }
 
     #[test]
