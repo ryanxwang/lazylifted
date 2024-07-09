@@ -324,26 +324,9 @@ impl Evaluate for StateSpaceModel {
         let graph = compiler.compile(state);
         let histograms = self.wl.compute_histograms(&[graph]);
         let x = self.wl.compute_x(self.py(), &histograms);
-        let y = self.model.predict(&x);
+        let y = self.model.predict(&x, None);
         let y: Vec<f64> = y.extract().unwrap();
         y[0]
-    }
-
-    fn evaluate_batch(&mut self, states: &[DBState]) -> Vec<f64> {
-        let compiler = match &self.state {
-            ModelState::Evaluating(compiler) => compiler,
-            _ => panic!("Model not ready for evaluation"),
-        };
-        // when evaluating in batch, we still do it sequentially for better
-        // cache locality
-        let graphs = states
-            .iter()
-            .map(|t| compiler.compile(t))
-            .collect::<Vec<_>>();
-        let histograms = self.wl.compute_histograms(&graphs);
-        let x = self.wl.compute_x(self.py(), &histograms);
-        let y = self.model.predict(&x);
-        y.extract().unwrap()
     }
 
     fn load(py: Python<'static>, path: &Path) -> Self {

@@ -1,10 +1,6 @@
 import numpy as np
-import sys
-from sklearn.exceptions import ConvergenceWarning
 from sklearn.svm import LinearSVC
-from sklearn.experimental import enable_halving_search_cv  # noqa
-from sklearn.model_selection import HalvingGridSearchCV
-import warnings
+from collections import defaultdict
 
 
 class RankingModel:
@@ -76,21 +72,26 @@ class RankingModel:
             lp = LP()
             lp.fit(X, pairs, group_ids)
             self.weights = lp.weights
+            print("LP weights: ", self.weights)
         elif self.model_str == "lambdamart":
             raise ValueError("LambdaMART is no longer supported")
         else:
             raise ValueError("Unknown ranking model: " + self.model_str)
 
-    def predict(self, X):
+    def predict(self, X, group_id):
+        # We require that all the features come from the same group
         if self.model_str == "ranksvm" or self.model_str == "lp":
-            return -np.dot(X, self.weights.T).astype(np.float64)
-
+            if type(self.weights) == dict:
+                # Can only predict for a single group on batch
+                return -np.dot(X, self.weights[group_id].T).astype(np.float64)
+            else:
+                return -np.dot(X, self.weights.T).astype(np.float64)
         elif self.model_str == "lambdamart":
             raise ValueError("LambdaMART is no longer supported")
         else:
             raise ValueError("Unknown ranking model: " + self.model_str)
 
-    def kendall_tau(self, X, pairs):
+    def kendall_tau(self, X, pairs, group_ids):
         concordant_pairs = 0
         discordant_pairs = 0
         total_pairs = 0
@@ -101,7 +102,13 @@ class RankingModel:
 
             total_pairs += 1
 
-            diff = self.predict(X[i]) - self.predict(X[j])
+            i_heuristic = self.predict(
+                X[i], group_ids[i] if group_ids is not None else None
+            )
+            j_heuristic = self.predict(
+                X[j], group_ids[j] if group_ids is not None else None
+            )
+            diff = i_heuristic - j_heuristic
             assert relation >= 0
             if (relation > 0 and diff < 0) or (relation == 0 and diff <= 0):
                 concordant_pairs += 1
@@ -119,36 +126,54 @@ class LP:
         pass
 
     def fit(self, X, pairs, group_ids, C=1.0):
-        # TODO: actually use the group_ids
         prob = LpProblem("Ranking", LpMinimize)
 
-        weights = []
-        for i in range(X.shape[1]):
-            # Dillon constrains the weights to be in {-1, 0, 1}, but it seems
-            # for us that takes too long to solve, so we make this an LP
-            weights.append(LpVariable("w" + str(i), cat=LpContinuous))
+        weights = defaultdict(list)
+        abs_weights = defaultdict(list)
 
-        abs_weights = [
-            LpVariable("abs_w" + str(i), lowBound=0) for i in range(X.shape[1])
-        ]
-        for i in range(X.shape[1]):
-            prob += abs_weights[i] >= weights[i]
-            prob += abs_weights[i] >= -weights[i]
+        is_using_groups = group_ids is not None
+        if group_ids is None:
+            MOCK_GROUP_ID = 0
+            group_ids = [MOCK_GROUP_ID] * X.shape[0]
+
+        for group_id in set(group_ids):
+            for i in range(X.shape[1]):
+                # Dillon constrains the weights to be in {-1, 0, 1}, but it seems
+                # for us that takes too long to solve, so we make this an LP
+                weights[group_id].append(
+                    LpVariable(f"w({group_id})({i})", cat=LpContinuous)
+                )
+
+            abs_weights[group_id] = [
+                LpVariable(f"abs_w({group_id})({i})", lowBound=0)
+                for i in range(X.shape[1])
+            ]
+            for i in range(X.shape[1]):
+                prob += abs_weights[group_id][i] >= weights[group_id][i]
+                prob += abs_weights[group_id][i] >= -weights[group_id][i]
 
         slacks = []
         for i, j, relation in pairs:
             if np.array_equal(X[i], X[j]):
                 continue
 
-            slack = LpVariable("z" + str(i) + "_" + str(j), lowBound=0)
+            slack = LpVariable(f"z{i}_{j}", lowBound=0)
             slacks.append(slack)
 
             prob += (
-                lpSum(weights[k] * (X[i][k] - X[j][k]) for k in range(X.shape[1]))
+                lpSum(
+                    weights[group_ids[i]][k] * X[i][k]
+                    - weights[group_ids[j]][k] * X[j][k]
+                    for k in range(X.shape[1])
+                )
                 >= relation - slack
             )
 
-        prob += C * lpSum(slacks) + lpSum(abs_weights)
+        prob += C * lpSum(slacks) + lpSum(
+            abs_weights[group_id][i]
+            for i in range(X.shape[1])
+            for group_id in set(group_ids)
+        )
 
         solver_list = listSolvers(onlyAvailable=True)
         if "CPLEX_PY" not in solver_list:
@@ -158,4 +183,10 @@ class LP:
 
         prob.solve(solver)
 
-        self.weights = np.array([w.varValue for w in weights])
+        if is_using_groups:
+            self.weights = {
+                group_id: np.array([w.varValue for w in weights[group_id]])
+                for group_id in set(group_ids)
+            }
+        else:
+            self.weights = np.array([w.varValue for w in weights[MOCK_GROUP_ID]])

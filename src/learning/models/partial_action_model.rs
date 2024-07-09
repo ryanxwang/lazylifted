@@ -413,23 +413,12 @@ impl Evaluate for PartialActionModel {
         let graph = compiler.compile(state, partial_action);
         let histograms = self.wl.compute_histograms(&[graph]);
         let x = self.wl.compute_x(self.py(), &histograms);
-        let y: Vec<f64> = self.model.predict(&x).extract().unwrap();
+        let y: Vec<f64> = self
+            .model
+            .predict(&x, Some(partial_action.group_id()))
+            .extract()
+            .unwrap();
         y[0]
-    }
-
-    fn evaluate_batch(&mut self, targets: &[Self::EvaluatedType<'_>]) -> Vec<f64> {
-        let compiler = match &self.state {
-            PartialActionModelState::Evaluating(compiler) => compiler,
-            _ => panic!("Model not ready for evaluation"),
-        };
-        let graphs = targets
-            .iter()
-            .map(|&(state, partial_action)| compiler.compile(state, partial_action))
-            .collect::<Vec<_>>();
-        let histograms = self.wl.compute_histograms(&graphs);
-        let x = self.wl.compute_x(self.py(), &histograms);
-        let y: Vec<f64> = self.model.predict(&x).extract().unwrap();
-        y
     }
 
     fn load(py: Python<'static>, path: &Path) -> Self {

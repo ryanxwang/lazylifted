@@ -42,10 +42,14 @@ impl<'py> MlModel<'py> {
         }
     }
 
-    pub fn predict(&self, x: &Bound<'py, PyArray2<f64>>) -> Bound<'py, PyArray1<f64>> {
+    pub fn predict(
+        &self,
+        x: &Bound<'py, PyArray2<f64>>,
+        group_id: Option<usize>,
+    ) -> Bound<'py, PyArray1<f64>> {
         match self {
             MlModel::Regressor(regressor) => regressor.predict(x),
-            MlModel::Ranker(ranker) => ranker.predict(x),
+            MlModel::Ranker(ranker) => ranker.predict(x, group_id),
         }
     }
 

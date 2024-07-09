@@ -18,7 +18,7 @@ pub trait Evaluate {
 
     fn evaluate(&mut self, t: &Self::EvaluatedType<'_>) -> f64;
 
-    fn evaluate_batch(&mut self, ts: &[Self::EvaluatedType<'_>]) -> Vec<f64>;
+    // fn evaluate_batch(&mut self, ts: &[Self::EvaluatedType<'_>]) -> Vec<f64>;
 
     fn load(py: Python<'static>, path: &Path) -> Self;
 }
