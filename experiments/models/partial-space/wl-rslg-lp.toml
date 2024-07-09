@@ -2,6 +2,7 @@
 successor-generator = "full-reducer"
 graph-compiler = "rslg"
 validate = false
+group-partial-actions = true
 
 [partial-action-model.model]
 ranker-name = "lp"

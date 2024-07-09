@@ -9,7 +9,7 @@ use crate::{
         },
         wl::WlKernel,
     },
-    search::{successor_generators::SuccessorGeneratorName, Action, DBState, Task},
+    search::{Action, DBState, Task},
 };
 use numpy::PyUntypedArrayMethods;
 use pyo3::{types::PyAnyMethods, Python};
@@ -51,9 +51,7 @@ pub struct StateSpaceModel {
     /// generator instead of the generator itself, but this is because 1)
     /// it is only used in training, and 2) each task requires its own successor
     /// generator, so we can't store a single instance of the generator.
-    successor_generator_name: SuccessorGeneratorName,
     wl: WlKernel,
-    validate: bool,
     state: ModelState,
     config: StateSpaceModelConfig,
 }
@@ -61,9 +59,7 @@ pub struct StateSpaceModel {
 /// Dummy struct to allow serialising/deserialising the model to disk.
 #[derive(Debug, Serialize, Deserialize)]
 struct SerialisableStateSpaceModel {
-    successor_generator_name: SuccessorGeneratorName,
     wl: WlKernel,
-    validate: bool,
     state: ModelState,
     config: StateSpaceModelConfig,
 }
@@ -73,8 +69,6 @@ impl StateSpaceModel {
         Self {
             model: MlModel::new(py, config.model),
             wl: WlKernel::new(&config.wl),
-            successor_generator_name: config.successor_generator,
-            validate: config.validate,
             state: ModelState::New,
             config: config.clone(),
         }
@@ -90,7 +84,7 @@ impl StateSpaceModel {
         for instance in training_data {
             let plan = &instance.plan;
             let task = &instance.task;
-            let successor_generator = self.successor_generator_name.create(task);
+            let successor_generator = self.config.successor_generator.create(task);
             let compiler = IlgCompiler::new(task);
 
             let mut cur_state = task.initial_state.clone();
@@ -170,7 +164,7 @@ impl StateSpaceModel {
         for instance in training_data {
             let plan = &instance.plan;
             let task = &instance.task;
-            let successor_generator = self.successor_generator_name.create(task);
+            let successor_generator = self.config.successor_generator.create(task);
             let compiler = IlgCompiler::new(task);
 
             let mut cur_state = task.initial_state.clone();
@@ -212,12 +206,12 @@ impl Train for StateSpaceModel {
     fn train(&mut self, train_instances: &[TrainingInstance]) {
         let py = self.py();
         assert_eq!(self.state, ModelState::New);
-        if self.validate {
+        if self.config.validate {
             info!("splitting training data into training and validation sets");
         } else {
             info!("training on full dataset");
         }
-        let (train_instances, val_instances) = match self.validate {
+        let (train_instances, val_instances) = match self.config.validate {
             true => train_instances.split_at((train_instances.len() as f64 * 0.8) as usize),
             // Without this trivial cast we get a dumb error message
             #[allow(trivial_casts)]
@@ -261,7 +255,7 @@ impl Train for StateSpaceModel {
         let train_score = self.model.score(&train_data);
         info!(train_score_time = train_score_start.elapsed().as_secs_f64());
         info!(train_score = train_score);
-        if self.validate {
+        if self.config.validate {
             let val_score_start = time::Instant::now();
             let val_score = self.model.score(&val_data);
             info!(val_score_time = val_score_start.elapsed().as_secs_f64());
@@ -280,9 +274,7 @@ impl Train for StateSpaceModel {
         self.model.pickle(pickle_file.path());
 
         let serialisable = SerialisableStateSpaceModel {
-            successor_generator_name: self.successor_generator_name,
             wl: self.wl.clone(),
-            validate: self.validate,
             state: self.state.clone(),
             config: self.config.clone(),
         };
@@ -341,9 +333,7 @@ impl Evaluate for StateSpaceModel {
 
         Self {
             model,
-            successor_generator_name: serialisable.successor_generator_name,
             wl: serialisable.wl,
-            validate: serialisable.validate,
             state: serialisable.state,
             config: serialisable.config,
         }

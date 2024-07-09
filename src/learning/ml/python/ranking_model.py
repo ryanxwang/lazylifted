@@ -79,7 +79,9 @@ class RankingModel:
             raise ValueError("Unknown ranking model: " + self.model_str)
 
     def predict(self, X, group_id):
-        # We require that all the features come from the same group
+        # We require that all the features come from the same group. In
+        # practice, this is okay because as of 2024/07/09, we call predict
+        # with a single feature at a time.
         if self.model_str == "ranksvm" or self.model_str == "lp":
             if type(self.weights) == dict:
                 # Can only predict for a single group on batch

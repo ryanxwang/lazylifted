@@ -119,6 +119,7 @@ mod tests {
             },
             validate: false,
             successor_generator: SuccessorGeneratorName::FullReducer,
+            group_partial_actions: false,
         });
 
         let serialised = toml::to_string(&config).unwrap();

@@ -1,6 +1,6 @@
 use crate::{
     learning::{
-        graphs::{CGraph, PartialActionCompiler, PartialActionCompilerName},
+        graphs::{CGraph, PartialActionCompiler},
         ml::MlModel,
         models::{
             model_utils::{extract_from_zip, zip_files, PICKLE_FILE_NAME, RON_FILE_NAME},
@@ -10,7 +10,7 @@ use crate::{
         },
         wl::{Neighbourhood, WlKernel},
     },
-    search::{successor_generators::SuccessorGeneratorName, Action, DBState, PartialAction, Task},
+    search::{Action, DBState, PartialAction, Task},
 };
 use numpy::PyUntypedArrayMethods;
 use pyo3::{prelude::*, Python};
@@ -50,10 +50,7 @@ impl PartialEq for PartialActionModelState {
 #[derive(Debug)]
 pub struct PartialActionModel {
     model: MlModel<'static>,
-    successor_generator_name: SuccessorGeneratorName,
-    graph_compiler_name: PartialActionCompilerName,
     wl: WlKernel,
-    validate: bool,
     state: PartialActionModelState,
     /// The configuration used to create the model, saved for later use such as
     /// deserialisation
@@ -62,10 +59,7 @@ pub struct PartialActionModel {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct SerialisablePartialActionModel {
-    successor_generator_name: SuccessorGeneratorName,
-    graph_compiler_name: PartialActionCompilerName,
     wl: WlKernel,
-    validate: bool,
     state: PartialActionModelState,
     config: PartialActionModelConfig,
 }
@@ -74,10 +68,7 @@ impl PartialActionModel {
     pub fn new(py: Python<'static>, config: PartialActionModelConfig) -> Self {
         Self {
             model: MlModel::new(py, config.model),
-            successor_generator_name: config.successor_generator,
-            graph_compiler_name: config.graph_compiler,
             wl: WlKernel::new(&config.wl),
-            validate: config.validate,
             state: PartialActionModelState::New,
             config: config.clone(),
         }
@@ -99,15 +90,15 @@ impl PartialActionModel {
     ) -> RankingTrainingData<Vec<CGraph>> {
         let mut graphs = Vec::new();
         let mut pairs = Vec::new();
-        // TODO: Implement group ids
         let mut group_ids = Vec::new();
         for instance in training_data {
             let plan = &instance.plan;
             let task = &instance.task;
-            let successor_generator = self.successor_generator_name.create(task);
+            let successor_generator = self.config.successor_generator.create(task);
             let compiler = self
-                .graph_compiler_name
-                .create(task, self.successor_generator_name);
+                .config
+                .graph_compiler
+                .create(task, self.config.successor_generator);
 
             let mut cur_state = task.initial_state.clone();
 
@@ -176,7 +167,11 @@ impl PartialActionModel {
         RankingTrainingData {
             features: graphs,
             pairs,
-            group_ids: Some(group_ids),
+            group_ids: if self.config.group_partial_actions {
+                Some(group_ids)
+            } else {
+                None
+            },
         }
     }
 
@@ -190,10 +185,11 @@ impl PartialActionModel {
         for instance in training_data {
             let plan = &instance.plan;
             let task = &instance.task;
-            let successor_generator = self.successor_generator_name.create(task);
+            let successor_generator = self.config.successor_generator.create(task);
             let compiler = self
-                .graph_compiler_name
-                .create(task, self.successor_generator_name);
+                .config
+                .graph_compiler
+                .create(task, self.config.successor_generator);
 
             let total_steps = plan.steps().len() as f64;
 
@@ -278,12 +274,12 @@ impl PartialActionModel {
 impl Train for PartialActionModel {
     fn train(&mut self, train_instances: &[TrainingInstance]) {
         assert_eq!(self.state, PartialActionModelState::New);
-        if self.validate {
+        if self.config.validate {
             info!("splitting training data into training and validation sets");
         } else {
             info!("training on full dataset");
         }
-        let (train_instances, val_instances) = match self.validate {
+        let (train_instances, val_instances) = match self.config.validate {
             true => train_instances.split_at((train_instances.len() as f64 * 0.8) as usize),
             // Without this trivial cast we get a dumb error message
             #[allow(trivial_casts)]
@@ -341,7 +337,7 @@ impl Train for PartialActionModel {
             MlModel::Ranker(_) => info!(kendall_tau = train_score),
         }
 
-        if self.validate {
+        if self.config.validate {
             let val_score_start = std::time::Instant::now();
             let val_score = self.model.score(&val_data);
             info!(val_score_time = val_score_start.elapsed().as_secs_f64());
@@ -363,10 +359,7 @@ impl Train for PartialActionModel {
         self.model.pickle(pickle_file.path());
 
         let serialisable = SerialisablePartialActionModel {
-            successor_generator_name: self.successor_generator_name,
-            graph_compiler_name: self.graph_compiler_name,
             wl: self.wl.clone(),
-            validate: self.validate,
             state: PartialActionModelState::Trained,
             config: self.config.clone(),
         };
@@ -397,8 +390,9 @@ impl Evaluate for PartialActionModel {
             }
             PartialActionModelState::Trained => {
                 self.state = PartialActionModelState::Evaluating(
-                    self.graph_compiler_name
-                        .create(task, self.successor_generator_name),
+                    self.config
+                        .graph_compiler
+                        .create(task, self.config.successor_generator),
                 );
             }
             PartialActionModelState::Evaluating(_) => {}
@@ -413,11 +407,14 @@ impl Evaluate for PartialActionModel {
         let graph = compiler.compile(state, partial_action);
         let histograms = self.wl.compute_histograms(&[graph]);
         let x = self.wl.compute_x(self.py(), &histograms);
-        let y: Vec<f64> = self
-            .model
-            .predict(&x, Some(partial_action.group_id()))
-            .extract()
-            .unwrap();
+
+        let group_id = if self.config.group_partial_actions {
+            Some(partial_action.group_id())
+        } else {
+            None
+        };
+
+        let y: Vec<f64> = self.model.predict(&x, group_id).extract().unwrap();
         y[0]
     }
 
@@ -433,10 +430,7 @@ impl Evaluate for PartialActionModel {
 
         Self {
             model,
-            successor_generator_name: serialisable.successor_generator_name,
-            graph_compiler_name: serialisable.graph_compiler_name,
             wl: serialisable.wl,
-            validate: serialisable.validate,
             state: serialisable.state,
             config: serialisable.config,
         }

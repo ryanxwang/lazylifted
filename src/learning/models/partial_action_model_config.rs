@@ -18,6 +18,7 @@ pub struct PartialActionModelConfig {
     pub graph_compiler: PartialActionCompilerName,
     pub wl: WlConfig,
     pub validate: bool,
+    pub group_partial_actions: bool,
 }
 
 impl PartialActionModelConfig {
