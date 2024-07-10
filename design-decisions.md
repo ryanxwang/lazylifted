@@ -19,6 +19,10 @@ than LambdaMart. LamdbdaMart however suffers from a lot of overfitting.
 
 Currently going with: LambdaMart
 
+Update: I probably did not understand LambdaMart very well, but essentially it
+doesn't seem to produce a global ranking, making it useless. We are now using
+ranksvm (both from sklearn and the QP formulation directly)
+
 ## Model training granularity
 
 This refers to how we should partition the data when training the ranking models
@@ -37,6 +41,12 @@ Ultimately, this comes down to which one can perform better. I am going with the
 single model approach first, as this allows that single model to see more data
 and potentially generalise better. It's also much, much nicer to have a global
 ranking.
+
+Update: when using the QP formulation of ranksvm, we can actually adapt the QP
+to have specialised weights for features from different feature spaces. In other
+words, we can learn a global ranking between features even if these features do
+not come from the same feature space. This makes the second option much more
+feasible, and it empirically seems to work?
 
 ## Grounding before or after ranking
 
