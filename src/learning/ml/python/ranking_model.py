@@ -177,11 +177,11 @@ class LP:
             for group_id in set(group_ids)
         )
 
-        solver_list = listSolvers(onlyAvailable=True)
-        if "CPLEX_PY" not in solver_list:
-            solver = PULP_CBC_CMD(msg=False, gapRel=0.01)
-        else:
-            solver = CPLEX_PY(msg=False, gapRel=0.01)
+        # solver_list = listSolvers(onlyAvailable=True)
+        # if "CPLEX_PY" not in solver_list:
+        solver = PULP_CBC_CMD(msg=False, gapRel=0.01)
+        # else:
+        #     solver = CPLEX_PY(msg=False, gapRel=0.01)
 
         prob.solve(solver)
 
