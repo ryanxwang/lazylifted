@@ -38,14 +38,15 @@ impl WlStatistics {
         self.log_if_needed();
     }
 
+    // We do not log for hit/miss, as that we mean querying the time way too
+    // often
+
     pub fn increment_hit_colours(&mut self) {
         self.num_hit_colours += 1;
-        self.log_if_needed();
     }
 
     pub fn increment_miss_colours(&mut self) {
         self.num_miss_colours += 1;
-        self.log_if_needed();
     }
 
     fn log_if_needed(&mut self) {
