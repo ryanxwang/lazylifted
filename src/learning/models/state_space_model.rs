@@ -254,12 +254,18 @@ impl Train for StateSpaceModel {
         let train_score_start = time::Instant::now();
         let train_score = self.model.score(&train_data);
         info!(train_score_time = train_score_start.elapsed().as_secs_f64());
-        info!(train_score = train_score);
+        match &self.model {
+            MlModel::Regressor(_) => info!(train_score = train_score),
+            MlModel::Ranker(_) => info!(kendall_tau = train_score),
+        }
         if self.config.validate {
             let val_score_start = time::Instant::now();
             let val_score = self.model.score(&val_data);
             info!(val_score_time = val_score_start.elapsed().as_secs_f64());
-            info!(val_score = val_score);
+            match &self.model {
+                MlModel::Regressor(_) => info!(val_score = val_score),
+                MlModel::Ranker(_) => info!(kendall_tau = val_score),
+            }
         }
 
         self.state = ModelState::Trained;

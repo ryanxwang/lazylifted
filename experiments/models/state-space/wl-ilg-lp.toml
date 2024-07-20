@@ -1,0 +1,10 @@
+[state-space-model]
+successor-generator = "full-reducer"
+validate = false
+
+[state-space-model.model]
+ranker-name = "lp"
+
+[state-space-model.wl]
+iters = 2
+set-or-multiset = "set"
