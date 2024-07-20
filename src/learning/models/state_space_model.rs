@@ -11,7 +11,7 @@ use crate::{
     },
     search::{Action, DBState, Task},
 };
-use pyo3::{types::PyAnyMethods, Python};
+use pyo3::Python;
 use serde::{Deserialize, Serialize};
 use std::{io::Write, path::Path, time};
 use tempfile::NamedTempFile;
@@ -235,8 +235,8 @@ impl Train for StateSpaceModel {
         let val_histograms = self.wl.compute_histograms(val_graphs);
         info!("computed WL histograms");
 
-        let train_x = self.wl.compute_x(py, &train_histograms);
-        let val_x = self.wl.compute_x(py, &val_histograms);
+        let train_x = self.wl.convert_to_pyarray(py, &train_histograms);
+        let val_x = self.wl.convert_to_pyarray(py, &val_histograms);
         info!("computed WL features");
         self.wl.finalise();
 
@@ -321,9 +321,8 @@ impl Evaluate for StateSpaceModel {
         };
         let graph = compiler.compile(state);
         let histograms = self.wl.compute_histograms(&[graph]);
-        let x = self.wl.compute_x(self.py(), &histograms);
-        let y = self.model.predict(&x, None);
-        let y: Vec<f64> = y.extract().unwrap();
+        let x = self.wl.convert_to_ndarray(&histograms);
+        let y = self.model.predict_with_ndarray(&x, None);
         y[0]
     }
 

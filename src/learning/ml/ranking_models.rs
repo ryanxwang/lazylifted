@@ -1,9 +1,10 @@
 //! Wrapper around various Python learning-to-rank models
 use crate::learning::{ml::py_utils, models::RankingTrainingData};
-use numpy::{PyArray1, PyArray2};
-use pyo3::{prelude::*, types::PyNone};
+use ndarray::{Array1, Array2};
+use numpy::PyArray2;
+use pyo3::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::path::Path;
+use std::{collections::HashMap, path::Path};
 use tracing::info;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Deserialize, Serialize)]
@@ -27,8 +28,16 @@ impl RankerName {
 }
 
 #[derive(Debug)]
+enum RankerWeights {
+    None,
+    Vector(Array1<f64>),
+    VectorByGroup(HashMap<usize, Array1<f64>>),
+}
+
+#[derive(Debug)]
 pub struct Ranker<'py> {
     model: Bound<'py, PyAny>,
+    weights: RankerWeights,
 }
 
 impl<'py> Ranker<'py> {
@@ -36,10 +45,11 @@ impl<'py> Ranker<'py> {
         let py_model = py_utils::get_ranking_model(py);
         Self {
             model: py_model.call1((name.to_model_str(),)).unwrap(),
+            weights: RankerWeights::None,
         }
     }
 
-    pub fn fit(&self, data: &RankingTrainingData<Bound<'py, PyArray2<f64>>>) {
+    pub fn fit(&mut self, data: &RankingTrainingData<Bound<'py, PyArray2<f64>>>) {
         let start_time = std::time::Instant::now();
         self.model
             .getattr("fit")
@@ -51,25 +61,34 @@ impl<'py> Ranker<'py> {
             ))
             .unwrap();
         info!(fitting_time = start_time.elapsed().as_secs_f64());
+
+        let weights = self.model.getattr("get_weights").unwrap().call0().unwrap();
+        match weights.extract::<Vec<f64>>() {
+            Ok(weights) => self.weights = RankerWeights::Vector(Array1::from(weights)),
+            Err(_) => {
+                let weights = weights.extract::<HashMap<usize, Vec<f64>>>().unwrap();
+                self.weights = RankerWeights::VectorByGroup(
+                    weights
+                        .into_iter()
+                        .map(|(group_id, weights)| (group_id, Array1::from(weights)))
+                        .collect(),
+                );
+            }
+        }
     }
 
-    pub fn predict(
-        &self,
-        x: &Bound<'py, PyArray2<f64>>,
-        group_id: Option<usize>,
-    ) -> Bound<'py, PyArray1<f64>> {
-        let group_id = match group_id {
-            Some(group_id) => group_id.into_py(self.py()).into_bound(self.py()),
-            None => PyNone::get_bound(self.py()).to_owned().into_any(),
-        };
-
-        self.model
-            .getattr("predict")
-            .unwrap()
-            .call1((x, group_id))
-            .unwrap()
-            .extract()
-            .unwrap()
+    pub fn predict_with_ndarray(&self, x: &Array2<f64>, group_id: Option<usize>) -> Array1<f64> {
+        match &self.weights {
+            RankerWeights::Vector(weights) => x.dot(&weights.t()) * -1.0,
+            RankerWeights::VectorByGroup(weights) => {
+                let weights = match group_id {
+                    Some(group_id) => weights.get(&group_id).unwrap(),
+                    None => panic!("Group ID required for model with group weights"),
+                };
+                x.dot(&weights.t()) * -1.0
+            }
+            RankerWeights::None => panic!("Model has not been fit yet"),
+        }
     }
 
     pub fn kendall_tau(&self, data: &RankingTrainingData<Bound<'py, PyArray2<f64>>>) -> f64 {
@@ -92,7 +111,27 @@ impl<'py> Ranker<'py> {
 
     pub fn unpickle(py: Python<'py>, pickle_path: &Path) -> Self {
         let model = py_utils::unpickle(py, pickle_path);
-        Self { model }
+
+        let weights = model.getattr("weights").unwrap().call0().unwrap();
+
+        match weights.extract::<Vec<f64>>() {
+            Ok(weights) => Self {
+                model,
+                weights: RankerWeights::Vector(Array1::from(weights)),
+            },
+            Err(_) => {
+                let weights = weights.extract::<HashMap<usize, Vec<f64>>>().unwrap();
+                Self {
+                    model,
+                    weights: RankerWeights::VectorByGroup(
+                        weights
+                            .into_iter()
+                            .map(|(group_id, weights)| (group_id, Array1::from(weights)))
+                            .collect(),
+                    ),
+                }
+            }
+        }
     }
 
     pub fn py(&self) -> Python<'py> {
@@ -105,7 +144,6 @@ mod tests {
     use super::*;
     use crate::learning::models::{RankingPair, RankingRelation};
     use assert_approx_eq::assert_approx_eq;
-    use numpy::PyArrayMethods;
     use serial_test::serial;
 
     #[test]
@@ -196,16 +234,13 @@ mod tests {
     #[serial]
     fn test_fit_and_predict_for_ranksvm() {
         Python::with_gil(|py| {
-            let ranker = Ranker::new(py, RankerName::RankSVM);
+            let mut ranker = Ranker::new(py, RankerName::RankSVM);
             let data = test_data_without_groups(py);
             ranker.fit(&data);
 
-            let x =
-                PyArray2::from_vec2_bound(py, &[vec![1.1, 1.1], vec![2.1, 2.1], vec![1.0, 1.0]])
-                    .unwrap();
-            let y = ranker.predict(&x, None);
-            assert_eq!(y.len().unwrap(), 3);
-            let y = y.to_vec().unwrap();
+            let x = Array2::from_shape_vec((3, 2), vec![1.1, 1.1, 2.1, 2.1, 1.0, 1.0]).unwrap();
+            let y = ranker.predict_with_ndarray(&x, None);
+            assert_eq!(y.len(), 3);
             assert!(y[1] < y[0]);
             assert!(y[1] < y[2]);
 
@@ -218,16 +253,13 @@ mod tests {
     #[serial]
     fn test_fit_and_predict_for_lp_without_groups() {
         Python::with_gil(|py| {
-            let ranker = Ranker::new(py, RankerName::LP);
+            let mut ranker = Ranker::new(py, RankerName::LP);
             let data = test_data_without_groups(py);
             ranker.fit(&data);
 
-            let x =
-                PyArray2::from_vec2_bound(py, &[vec![1.1, 1.1], vec![2.1, 2.1], vec![1.0, 1.0]])
-                    .unwrap();
-            let y = ranker.predict(&x, None);
-            assert_eq!(y.len().unwrap(), 3);
-            let y = y.to_vec().unwrap();
+            let x = Array2::from_shape_vec((3, 2), vec![1.1, 1.1, 2.1, 2.1, 1.0, 1.0]).unwrap();
+            let y = ranker.predict_with_ndarray(&x, None);
+            assert_eq!(y.len(), 3);
             assert!(y[1] < y[0]);
             assert!(y[1] < y[2]);
 
@@ -240,27 +272,21 @@ mod tests {
     #[serial]
     fn test_fit_and_predict_for_lp_with_groups() {
         Python::with_gil(|py| {
-            let ranker = Ranker::new(py, RankerName::LP);
+            let mut ranker = Ranker::new(py, RankerName::LP);
             let data = test_data_with_groups(py);
             ranker.fit(&data);
 
             // check within group 0
-            let x_0 =
-                PyArray2::from_vec2_bound(py, &[vec![1.1, 1.1], vec![2.1, 2.1], vec![1.0, 1.0]])
-                    .unwrap();
-            let y_0 = ranker.predict(&x_0, Some(0));
-            assert_eq!(y_0.len().unwrap(), 3);
-            let y_0 = y_0.to_vec().unwrap();
+            let x_0 = Array2::from_shape_vec((3, 2), vec![1.1, 1.1, 2.1, 2.1, 1.0, 1.0]).unwrap();
+            let y_0 = ranker.predict_with_ndarray(&x_0, Some(0));
+            assert_eq!(y_0.len(), 3);
             assert!(y_0[1] < y_0[0]);
             assert!(y_0[1] < y_0[2]);
 
             // check within group 1
-            let x_1 =
-                PyArray2::from_vec2_bound(py, &[vec![1.1, 1.1], vec![2.1, 2.1], vec![1.0, 1.0]])
-                    .unwrap();
-            let y_1 = ranker.predict(&x_1, Some(1));
-            assert_eq!(y_1.len().unwrap(), 3);
-            let y_1 = y_1.to_vec().unwrap();
+            let x_1 = Array2::from_shape_vec((3, 2), vec![1.1, 1.1, 2.1, 2.1, 1.0, 1.0]).unwrap();
+            let y_1 = ranker.predict_with_ndarray(&x_1, Some(1));
+            assert_eq!(y_1.len(), 3);
             assert!(y_1[1] < y_1[0]);
             assert!(y_1[1] < y_1[2]);
 

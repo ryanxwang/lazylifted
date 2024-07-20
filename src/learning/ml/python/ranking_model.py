@@ -97,6 +97,9 @@ class RankingModel:
         else:
             raise ValueError("Unknown ranking model: " + self.model_str)
 
+    def get_weights(self):
+        return self.weights
+
     def kendall_tau(self, X, pairs, group_ids):
         concordant_pairs = 0
         discordant_pairs = 0

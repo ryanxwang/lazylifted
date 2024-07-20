@@ -12,7 +12,7 @@ use crate::{
     },
     search::{Action, DBState, PartialAction, Task},
 };
-use pyo3::{prelude::*, Python};
+use pyo3::Python;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, io::Write, path::Path};
 use tempfile::NamedTempFile;
@@ -303,8 +303,8 @@ impl Train for PartialActionModel {
         let val_histograms = self.wl.compute_histograms(val_graphs);
         info!("computed histograms");
 
-        let train_x = self.wl.compute_x(self.py(), &train_histograms);
-        let val_x = self.wl.compute_x(self.py(), &val_histograms);
+        let train_x = self.wl.convert_to_pyarray(self.py(), &train_histograms);
+        let val_x = self.wl.convert_to_pyarray(self.py(), &val_histograms);
         info!("computed WL features");
         self.wl.finalise();
 
@@ -406,7 +406,7 @@ impl Evaluate for PartialActionModel {
         };
         let graph = compiler.compile(state, partial_action);
         let histograms = self.wl.compute_histograms(&[graph]);
-        let x = self.wl.compute_x(self.py(), &histograms);
+        let x = self.wl.convert_to_ndarray(&histograms);
 
         let group_id = if self.config.group_partial_actions {
             Some(partial_action.group_id())
@@ -414,7 +414,7 @@ impl Evaluate for PartialActionModel {
             None
         };
 
-        let y: Vec<f64> = self.model.predict(&x, group_id).extract().unwrap();
+        let y = self.model.predict_with_ndarray(&x, group_id);
         y[0]
     }
 

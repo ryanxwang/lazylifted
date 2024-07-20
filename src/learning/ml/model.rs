@@ -4,7 +4,8 @@ use crate::learning::{
     ml::{Ranker, RankerName, Regressor, RegressorName},
     models::TrainingData,
 };
-use numpy::{PyArray1, PyArray2};
+use ndarray::{Array1, Array2};
+use numpy::PyArray2;
 use pyo3::{Bound, Python};
 use serde::{Deserialize, Serialize};
 
@@ -29,7 +30,7 @@ impl<'py> MlModel<'py> {
         }
     }
 
-    pub fn fit(&self, training_data: &TrainingData<Bound<'py, PyArray2<f64>>>) {
+    pub fn fit(&mut self, training_data: &TrainingData<Bound<'py, PyArray2<f64>>>) {
         match self {
             MlModel::Regressor(regressor) => match training_data {
                 TrainingData::Regression(data) => regressor.fit(data),
@@ -42,14 +43,10 @@ impl<'py> MlModel<'py> {
         }
     }
 
-    pub fn predict(
-        &self,
-        x: &Bound<'py, PyArray2<f64>>,
-        group_id: Option<usize>,
-    ) -> Bound<'py, PyArray1<f64>> {
+    pub fn predict_with_ndarray(&self, x: &Array2<f64>, group_id: Option<usize>) -> Array1<f64> {
         match self {
             MlModel::Regressor(regressor) => regressor.predict(x),
-            MlModel::Ranker(ranker) => ranker.predict(x, group_id),
+            MlModel::Ranker(ranker) => ranker.predict_with_ndarray(x, group_id),
         }
     }
 

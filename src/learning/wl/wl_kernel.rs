@@ -2,6 +2,7 @@ use crate::learning::{
     graphs::CGraph,
     wl::{Neighbourhood, NeighbourhoodFactory, WlConfig, WlStatistics},
 };
+use ndarray::Array2;
 use numpy::{PyArray2, PyArrayMethods};
 use pyo3::{Bound, Python};
 use serde::{Deserialize, Serialize};
@@ -137,7 +138,7 @@ impl WlKernel {
     /// Convert the computed histograms to a feature matrix X as a 2D numpy
     /// array. The rows of the array correspond to the histograms of the graphs
     /// and the columns correspond to the counts in the histogram.
-    pub fn compute_x<'py>(
+    pub fn convert_to_pyarray<'py>(
         &self,
         py: Python<'py>,
         histograms: &[HashMap<i32, usize>],
@@ -152,6 +153,21 @@ impl WlKernel {
                     continue;
                 }
                 *features_readwrite.get_mut([i, hash as usize]).unwrap() = cnt as f64;
+            }
+        }
+        features
+    }
+
+    pub fn convert_to_ndarray(&self, histograms: &[HashMap<i32, usize>]) -> Array2<f64> {
+        let n = histograms.len();
+        let d = self.hashes.len();
+        let mut features = Array2::zeros((n, d));
+        for (i, histogram) in histograms.iter().enumerate() {
+            for (&hash, &cnt) in histogram.iter() {
+                if hash < 0 {
+                    continue;
+                }
+                features[[i, hash as usize]] = cnt as f64;
             }
         }
         features
@@ -256,7 +272,7 @@ mod tests {
 
         let histograms = kernel.compute_histograms(&[graph.clone()]);
         Python::with_gil(|py| {
-            let x = kernel.compute_x(py, &histograms);
+            let x = kernel.convert_to_pyarray(py, &histograms);
             assert_eq!(unsafe { x.as_slice().unwrap() }, &[2.0, 1.0, 2.0, 1.0]);
         });
 
@@ -271,7 +287,7 @@ mod tests {
 
         let histograms2 = kernel.compute_histograms(&[graph2.clone()]);
         Python::with_gil(|py| {
-            let x = kernel.compute_x(py, &histograms2);
+            let x = kernel.convert_to_pyarray(py, &histograms2);
             assert_eq!(unsafe { x.as_slice().unwrap() }, &[3.0, 1.0, 3.0, 0.0]);
         });
     }
@@ -307,7 +323,7 @@ mod tests {
 
         let histograms = kernel.compute_histograms(&[graph.clone()]);
         Python::with_gil(|py| {
-            let x = kernel.compute_x(py, &histograms);
+            let x = kernel.convert_to_pyarray(py, &histograms);
             assert_eq!(unsafe { x.as_slice().unwrap() }, &[2.0, 1.0, 2.0, 1.0]);
         });
 
@@ -322,7 +338,7 @@ mod tests {
 
         let histograms2 = kernel.compute_histograms(&[graph2.clone()]);
         Python::with_gil(|py| {
-            let x = kernel.compute_x(py, &histograms2);
+            let x = kernel.convert_to_pyarray(py, &histograms2);
             assert_eq!(unsafe { x.as_slice().unwrap() }, &[3.0, 1.0, 3.0, 1.0]);
         });
     }
