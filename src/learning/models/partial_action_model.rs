@@ -12,7 +12,6 @@ use crate::{
     },
     search::{Action, DBState, PartialAction, Task},
 };
-use numpy::PyUntypedArrayMethods;
 use pyo3::{prelude::*, Python};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, io::Write, path::Path};
@@ -309,14 +308,15 @@ impl Train for PartialActionModel {
         info!("computed WL features");
         self.wl.finalise();
 
-        info!(
-            train_x_shape = format!("{:?}", train_x.shape()),
-            val_x_shape = format!("{:?}", val_x.shape()),
-        );
-        info!("fitting model on training data");
-
         let train_data = train_data.with_features(train_x);
         let val_data = val_data.with_features(val_x);
+
+        info!("logging training data");
+        train_data.log();
+        info!("logging validation data");
+        val_data.log();
+
+        info!("fitting model on training data");
         self.model.fit(&train_data);
 
         if let Some(weights) = self.model.get_weights(self.config.model) {

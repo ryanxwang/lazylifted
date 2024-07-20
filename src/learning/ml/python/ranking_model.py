@@ -72,7 +72,6 @@ class RankingModel:
             lp = LP()
             lp.fit(X, pairs, group_ids)
             self.weights = lp.weights
-            print("LP weights: ", self.weights)
         elif self.model_str == "lambdamart":
             raise ValueError("LambdaMART is no longer supported")
         else:
@@ -84,6 +83,11 @@ class RankingModel:
         # with a single feature at a time.
         if self.model_str == "ranksvm" or self.model_str == "lp":
             if type(self.weights) == dict:
+                # this means we never saw this group during training, we can
+                # only assume it's the worst
+                if group_id not in self.weights:
+                    return np.array([1000000.0])
+
                 # Can only predict for a single group on batch
                 return -np.dot(X, self.weights[group_id].T).astype(np.float64)
             else:

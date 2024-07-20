@@ -11,7 +11,6 @@ use crate::{
     },
     search::{Action, DBState, Task},
 };
-use numpy::PyUntypedArrayMethods;
 use pyo3::{types::PyAnyMethods, Python};
 use serde::{Deserialize, Serialize};
 use std::{io::Write, path::Path, time};
@@ -241,12 +240,13 @@ impl Train for StateSpaceModel {
         info!("computed WL features");
         self.wl.finalise();
 
-        info!(
-            train_x_shape = format!("{:?}", train_x.shape()),
-            val_x_shape = format!("{:?}", val_x.shape()),
-        );
         let train_data = train_data.with_features(train_x);
         let val_data = val_data.with_features(val_x);
+
+        info!("logging training data");
+        train_data.log();
+        info!("logging validation data");
+        val_data.log();
 
         info!("fitting model on training data");
         self.model.fit(&train_data);

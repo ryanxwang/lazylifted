@@ -1,14 +1,23 @@
-use numpy::PyArray1;
+use numpy::{PyArray1, PyArray2, PyUntypedArrayMethods};
 use pyo3::{
     types::{PyList, PyNone, PyTuple},
     Bound, PyAny, Python,
 };
+use tracing::info;
 
 #[derive(Debug)]
 pub struct RegressionTrainingData<F> {
     pub features: F,
     pub labels: Vec<f64>,
     pub noise: Option<Vec<f64>>,
+}
+
+impl<'a> RegressionTrainingData<Bound<'a, PyArray2<f64>>> {
+    pub fn log(&self) {
+        info!(feature_shape = format!("{:?}", self.features.shape()));
+        info!(labels_count = self.labels.len());
+        info!(noise = self.noise.is_some());
+    }
 }
 
 impl<F> RegressionTrainingData<F> {
@@ -48,6 +57,25 @@ pub struct RankingTrainingData<F> {
     /// group (i.e. treat them as different feature space and use different
     /// weights for each group).
     pub group_ids: Option<Vec<usize>>,
+}
+
+impl<'a> RankingTrainingData<Bound<'a, PyArray2<f64>>> {
+    pub fn log(&self) {
+        info!(feature_shape = format!("{:?}", self.features.shape()));
+        info!(pairs_count = self.pairs.len());
+
+        match &self.group_ids {
+            Some(group_ids) => {
+                let unique_groups = group_ids.iter().collect::<std::collections::HashSet<_>>();
+
+                info!(unique_groups_count = unique_groups.len());
+                info!(unique_groups = format!("{:?}", unique_groups));
+            }
+            None => {
+                info!(unique_groups_count = "None");
+            }
+        }
+    }
 }
 
 impl<F> RankingTrainingData<F> {
@@ -91,6 +119,15 @@ impl<F> RankingTrainingData<F> {
 pub enum TrainingData<F> {
     Regression(RegressionTrainingData<F>),
     Ranking(RankingTrainingData<F>),
+}
+
+impl<'a> TrainingData<Bound<'a, PyArray2<f64>>> {
+    pub fn log(&self) {
+        match self {
+            TrainingData::Regression(data) => data.log(),
+            TrainingData::Ranking(data) => data.log(),
+        }
+    }
 }
 
 impl<F> TrainingData<F> {

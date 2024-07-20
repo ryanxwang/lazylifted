@@ -8,5 +8,5 @@ group-partial-actions = true
 ranker-name = "lp"
 
 [partial-action-model.wl]
-iters = 3
-set-or-multiset = "multiset"
+iters = 2
+set-or-multiset = "set"
