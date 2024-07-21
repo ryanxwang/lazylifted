@@ -1,7 +1,7 @@
 use crate::search::{
     states::{SparsePackedState, SparseStatePacker},
-    Action, DBState, Heuristic, Plan, SearchNode, SearchNodeStatus, SearchProblem, SearchSpace,
-    SearchStatistics, StateId, SuccessorGenerator, Task,
+    Action, DBState, Heuristic, NodeId, Plan, SearchNode, SearchNodeStatus, SearchProblem,
+    SearchSpace, SearchStatistics, SuccessorGenerator, Task,
 };
 use std::rc::Rc;
 
@@ -50,14 +50,14 @@ impl SearchProblem<SparsePackedState, Action> for StateSpaceProblem {
         self.search_space.get_root_node()
     }
 
-    fn is_goal(&self, state_id: StateId) -> bool {
-        let state = self.packer.unpack(self.search_space.get_state(state_id));
+    fn is_goal(&self, node_id: NodeId) -> bool {
+        let state = self.packer.unpack(self.search_space.get_state(node_id));
         self.task.goal.is_satisfied(&state)
     }
 
-    fn expand(&mut self, state_id: StateId) -> Vec<&SearchNode<Action>> {
+    fn expand(&mut self, node_id: NodeId) -> Vec<&SearchNode<Action>> {
         let node: &SearchNode<Action> = {
-            let node = self.search_space.get_node_mut(state_id);
+            let node = self.search_space.get_node_mut(node_id);
             if node.get_status() == SearchNodeStatus::Closed {
                 return vec![];
             }
@@ -69,7 +69,7 @@ impl SearchProblem<SparsePackedState, Action> for StateSpaceProblem {
         let h_value = node.get_h();
         self.statistics.register_heuristic_value(h_value);
 
-        let state = self.packer.unpack(self.search_space.get_state(state_id));
+        let state = self.packer.unpack(self.search_space.get_state(node_id));
 
         let (new_states, new_ids, ids_to_reopen) = {
             let mut new_states = Vec::new();
@@ -86,7 +86,7 @@ impl SearchProblem<SparsePackedState, Action> for StateSpaceProblem {
                     let child_node = self.search_space.insert_or_get_node(
                         self.packer.pack(&successor),
                         action.clone(),
-                        state_id,
+                        node_id,
                     );
 
                     // Partition the children into new nodes and those that were
@@ -96,10 +96,10 @@ impl SearchProblem<SparsePackedState, Action> for StateSpaceProblem {
                     // allows batch evaluation of the heuristic.
                     if child_node.get_status() == SearchNodeStatus::New {
                         new_states.push(successor);
-                        new_ids.push(child_node.get_state_id());
+                        new_ids.push(child_node.get_node_id());
                     } else if REOPEN && g_value + 1. < child_node.get_g() {
-                        child_node.update_parent(state_id, action);
-                        ids_to_reopen.push(child_node.get_state_id());
+                        child_node.update_parent(node_id, action);
+                        ids_to_reopen.push(child_node.get_node_id());
                     }
                 }
             }
@@ -129,7 +129,7 @@ impl SearchProblem<SparsePackedState, Action> for StateSpaceProblem {
         child_nodes
     }
 
-    fn extract_plan(&self, goal_id: StateId) -> Plan {
+    fn extract_plan(&self, goal_id: NodeId) -> Plan {
         self.statistics.finalise_search();
         self.search_space
             .extract_plan(self.search_space.get_node(goal_id))

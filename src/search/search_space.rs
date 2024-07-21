@@ -1,36 +1,12 @@
 use crate::search::{
-    states::SchemaOrInstantiation, Action, PartialActionDiff, Plan, SearchNode, Transition,
+    states::SchemaOrInstantiation, Action, NodeId, PartialActionDiff, Plan, SearchNode,
+    SearchNodeFactory, Transition, NO_NODE,
 };
 use segvec::{Linear, SegVec};
 use std::{
     collections::HashMap,
     hash::{BuildHasher, Hash, RandomState},
-    sync::atomic::AtomicUsize,
 };
-
-/// [`StateId`] are used to uniquely identify states in the search space.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct StateId(usize);
-
-impl StateId {
-    /// Create a new state id, starting from 0. Each call to this function will
-    /// return a new unique id.
-    pub fn new() -> Self {
-        static COUNTER: AtomicUsize = AtomicUsize::new(0);
-        Self(COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed))
-    }
-}
-
-impl Default for StateId {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-/// [`NO_STATE`] is a special state id that should only be used to indicate that
-/// a node has no parent. We use this instead of an [`Option<StateId>`] to avoid
-/// the overhead of an [`Option`] type.
-pub const NO_STATE: StateId = StateId(usize::MAX);
 
 /// A [`SearchSpace`] is a data structure for managing the states and nodes
 /// during a search. Here state and state transitions are both abstract. That
@@ -38,11 +14,12 @@ pub const NO_STATE: StateId = StateId(usize::MAX);
 /// the [`Transition`] trait.
 #[derive(Debug)]
 pub struct SearchSpace<S: Hash, T: Transition> {
-    root_state_id: StateId,
+    root_node_id: NodeId,
     nodes: SegVec<SearchNode<T>, Linear>,
     states: SegVec<S, Linear>,
-    registered_states: HashMap<u64, StateId>,
+    registered_nodes: HashMap<u64, NodeId>,
     state_build_hasher: RandomState,
+    search_node_factory: SearchNodeFactory,
 }
 
 impl<S: Hash, T: Transition> SearchSpace<S, T> {
@@ -52,19 +29,22 @@ impl<S: Hash, T: Transition> SearchSpace<S, T> {
         let mut nodes = SegVec::new();
         let mut states = SegVec::new();
         let mut registered_states = HashMap::new();
+        let mut search_node_factory = SearchNodeFactory::new();
 
-        let root_node = SearchNode::new_without_parent();
-        let root_state_id = root_node.get_state_id();
-        registered_states.insert(state_build_hasher.hash_one(&initial_state), root_state_id);
+        let root_node = search_node_factory.new_root_node();
+        let root_node_id = root_node.get_node_id();
+        print!("Root state id: {:?}", root_node_id);
+        registered_states.insert(state_build_hasher.hash_one(&initial_state), root_node_id);
         nodes.push(root_node);
         states.push(initial_state);
 
         Self {
-            root_state_id,
+            root_node_id,
             nodes,
             states,
-            registered_states,
+            registered_nodes: registered_states,
             state_build_hasher,
+            search_node_factory,
         }
     }
 
@@ -72,47 +52,49 @@ impl<S: Hash, T: Transition> SearchSpace<S, T> {
         &mut self,
         state: S,
         transition: T,
-        parent_id: StateId,
+        parent_id: NodeId,
     ) -> &mut SearchNode<T> {
         let state_hash = self.state_build_hasher.hash_one(&state);
-        match self.registered_states.get(&state_hash) {
-            Some(&state_id) => {
-                return self.get_node_mut(state_id);
+        match self.registered_nodes.get(&state_hash) {
+            Some(&node_id) => {
+                return self.get_node_mut(node_id);
             }
             None => {
                 self.states.push(state);
-                let new_node = SearchNode::new_with_parent(parent_id, transition);
-                let state_id = new_node.get_state_id();
+                let new_node = self.search_node_factory.new_node(parent_id, transition);
+                let node_id = new_node.get_node_id();
+                print!("New state id: {:?}", node_id);
                 self.nodes.push(new_node);
-                self.registered_states.insert(state_hash, state_id);
-                return self.get_node_mut(state_id);
+                self.registered_nodes.insert(state_hash, node_id);
+                return self.get_node_mut(node_id);
             }
         }
     }
 
     #[inline(always)]
     pub fn get_root_node(&self) -> &SearchNode<T> {
-        self.get_node(self.root_state_id)
+        self.get_node(self.root_node_id)
     }
 
     #[inline(always)]
     pub fn get_root_node_mut(&mut self) -> &mut SearchNode<T> {
-        self.get_node_mut(self.root_state_id)
+        self.get_node_mut(self.root_node_id)
     }
 
     #[inline(always)]
-    pub fn get_node(&self, state_id: StateId) -> &SearchNode<T> {
-        self.nodes.get(state_id.0).expect("Invalid state id")
+    pub fn get_node(&self, node_id: NodeId) -> &SearchNode<T> {
+        self.nodes.get(node_id.id()).expect("Invalid state id")
     }
 
     #[inline(always)]
-    pub fn get_node_mut(&mut self, state_id: StateId) -> &mut SearchNode<T> {
-        self.nodes.get_mut(state_id.0).expect("Invalid state id")
+    pub fn get_node_mut(&mut self, node_id: NodeId) -> &mut SearchNode<T> {
+        print!("State id: {:?}", node_id);
+        self.nodes.get_mut(node_id.id()).expect("Invalid state id")
     }
 
     #[inline(always)]
-    pub fn get_state(&self, state_id: StateId) -> &S {
-        self.states.get(state_id.0).expect("Invalid state id")
+    pub fn get_state(&self, node_id: NodeId) -> &S {
+        self.states.get(node_id.id()).expect("Invalid state id")
     }
 }
 
@@ -120,7 +102,7 @@ impl<S: Hash> SearchSpace<S, Action> {
     pub fn extract_plan(&self, goal_node: &SearchNode<Action>) -> Plan {
         let mut steps = vec![];
         let mut current_node = goal_node;
-        while NO_STATE != current_node.get_parent_id() {
+        while NO_NODE != current_node.get_parent_id() {
             steps.push(current_node.get_transition().clone());
             current_node = self.get_node(current_node.get_parent_id());
         }
@@ -134,7 +116,7 @@ impl<S: Hash> SearchSpace<S, PartialActionDiff> {
         let mut steps = vec![];
         let mut current_node = goal_node;
 
-        while NO_STATE != current_node.get_parent_id() {
+        while NO_NODE != current_node.get_parent_id() {
             let mut instantiations = vec![];
             while let PartialActionDiff::Instantiation(object_index) = current_node.get_transition()
             {
@@ -162,7 +144,7 @@ impl<S: Hash> SearchSpace<S, SchemaOrInstantiation> {
         let mut steps = vec![];
         let mut current_node = goal_node;
 
-        while NO_STATE != current_node.get_parent_id() {
+        while NO_NODE != current_node.get_parent_id() {
             match current_node.get_transition() {
                 SchemaOrInstantiation::Instantiation(action) => {
                     steps.push(action.clone());

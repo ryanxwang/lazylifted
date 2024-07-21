@@ -1,7 +1,7 @@
 use crate::search::{
     states::{SchemaDecomposedState, SchemaOrInstantiation, SparseStatePacker},
-    DBState, Heuristic, Plan, SearchNode, SearchNodeStatus, SearchProblem, SearchSpace,
-    SearchStatistics, StateId, SuccessorGenerator, Task,
+    DBState, Heuristic, NodeId, Plan, SearchNode, SearchNodeStatus, SearchProblem, SearchSpace,
+    SearchStatistics, SuccessorGenerator, Task,
 };
 use std::rc::Rc;
 
@@ -48,8 +48,8 @@ impl SchemaDecomposedProblem {
         }
     }
 
-    fn get_transitions(&mut self, state_id: StateId) -> Vec<SchemaOrInstantiation> {
-        let schema_decomposed_state = self.search_space.get_state(state_id);
+    fn get_transitions(&mut self, node_id: NodeId) -> Vec<SchemaOrInstantiation> {
+        let schema_decomposed_state = self.search_space.get_state(node_id);
         let state = self.packer.unpack(schema_decomposed_state.state());
         let mut transitions = Vec::new();
 
@@ -78,10 +78,10 @@ impl SchemaDecomposedProblem {
 
     fn apply_transition(
         &self,
-        state_id: StateId,
+        node_id: NodeId,
         transition: &SchemaOrInstantiation,
     ) -> (DBState, Option<usize>) {
-        let schema_decomposed_state = self.search_space.get_state(state_id);
+        let schema_decomposed_state = self.search_space.get_state(node_id);
         let state = self.packer.unpack(schema_decomposed_state.state());
 
         match transition {
@@ -104,8 +104,8 @@ impl SearchProblem<SchemaDecomposedState, SchemaOrInstantiation> for SchemaDecom
         self.search_space.get_root_node()
     }
 
-    fn is_goal(&self, state_id: StateId) -> bool {
-        let schema_decomposed_state = self.search_space.get_state(state_id);
+    fn is_goal(&self, node_id: NodeId) -> bool {
+        let schema_decomposed_state = self.search_space.get_state(node_id);
         if schema_decomposed_state.schema().is_none() {
             self.task
                 .goal
@@ -115,9 +115,9 @@ impl SearchProblem<SchemaDecomposedState, SchemaOrInstantiation> for SchemaDecom
         }
     }
 
-    fn expand(&mut self, state_id: StateId) -> Vec<&SearchNode<SchemaOrInstantiation>> {
+    fn expand(&mut self, node_id: NodeId) -> Vec<&SearchNode<SchemaOrInstantiation>> {
         let node: &SearchNode<SchemaOrInstantiation> = {
-            let node = self.search_space.get_node_mut(state_id);
+            let node = self.search_space.get_node_mut(node_id);
             if node.get_status() == SearchNodeStatus::Closed {
                 return vec![];
             }
@@ -129,7 +129,7 @@ impl SearchProblem<SchemaDecomposedState, SchemaOrInstantiation> for SchemaDecom
         let h_value = node.get_h();
         self.statistics.register_heuristic_value(h_value);
 
-        let transitions = self.get_transitions(state_id);
+        let transitions = self.get_transitions(node_id);
         self.statistics
             .increment_generated_actions(transitions.len());
 
@@ -139,19 +139,19 @@ impl SearchProblem<SchemaDecomposedState, SchemaOrInstantiation> for SchemaDecom
             let mut ids_to_reopen = Vec::new();
 
             for transition in transitions {
-                let (new_state, schema_index) = self.apply_transition(state_id, &transition);
+                let (new_state, schema_index) = self.apply_transition(node_id, &transition);
                 let child_node = self.search_space.insert_or_get_node(
                     SchemaDecomposedState::new(self.packer.pack(&new_state), schema_index),
                     transition.clone(),
-                    state_id,
+                    node_id,
                 );
 
                 if child_node.get_status() == SearchNodeStatus::New {
                     new_states.push((new_state, schema_index));
-                    new_ids.push(child_node.get_state_id());
+                    new_ids.push(child_node.get_node_id());
                 } else if REOPEN && g_value + 1. < child_node.get_g() {
-                    child_node.update_parent(state_id, transition);
-                    ids_to_reopen.push(child_node.get_state_id());
+                    child_node.update_parent(node_id, transition);
+                    ids_to_reopen.push(child_node.get_node_id());
                 }
             }
 
@@ -181,7 +181,7 @@ impl SearchProblem<SchemaDecomposedState, SchemaOrInstantiation> for SchemaDecom
         child_nodes
     }
 
-    fn extract_plan(&self, goal_id: StateId) -> Plan {
+    fn extract_plan(&self, goal_id: NodeId) -> Plan {
         self.statistics.finalise_search();
         self.search_space
             .extract_plan(self.search_space.get_node(goal_id))
@@ -190,12 +190,11 @@ impl SearchProblem<SchemaDecomposedState, SchemaOrInstantiation> for SchemaDecom
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::{
         search::{heuristics::ZeroHeuristic, successor_generators::SuccessorGeneratorName},
         test_utils::{BLOCKSWORLD_DOMAIN_TEXT, BLOCKSWORLD_PROBLEM13_TEXT},
     };
-
-    use super::*;
 
     fn create_problem() -> SchemaDecomposedProblem {
         let task = Rc::new(Task::from_text(
@@ -215,7 +214,7 @@ mod tests {
         let mut problem = create_problem();
         let root_node = problem.search_space.get_root_node();
 
-        let transitions = problem.get_transitions(root_node.get_state_id());
+        let transitions = problem.get_transitions(root_node.get_node_id());
         assert_eq!(transitions.len(), 1);
     }
 }

@@ -1,7 +1,7 @@
 use crate::search::{
     states::{SparsePackedState, SparseStatePacker},
-    Action, DBState, Heuristic, HeuristicValue, PartialAction, PartialActionDiff, Plan, SearchNode,
-    SearchNodeStatus, SearchProblem, SearchSpace, SearchStatistics, StateId, SuccessorGenerator,
+    Action, DBState, Heuristic, HeuristicValue, NodeId, PartialAction, PartialActionDiff, Plan,
+    SearchNode, SearchNodeStatus, SearchProblem, SearchSpace, SearchStatistics, SuccessorGenerator,
     Task, NO_PARTIAL,
 };
 use ordered_float::Float;
@@ -46,8 +46,8 @@ impl PartialActionProblem {
         }
     }
 
-    fn get_transitions(&mut self, state_id: StateId) -> HashSet<PartialActionDiff> {
-        let (state, partial) = self.search_space.get_state(state_id);
+    fn get_transitions(&mut self, node_id: NodeId) -> HashSet<PartialActionDiff> {
+        let (state, partial) = self.search_space.get_state(node_id);
         if *partial == NO_PARTIAL || partial.is_complete(&self.task) {
             let state = if *partial == NO_PARTIAL {
                 self.packer.unpack(state)
@@ -96,10 +96,10 @@ impl PartialActionProblem {
 
     fn apply_transition(
         &self,
-        state_id: StateId,
+        node_id: NodeId,
         transition: &PartialActionDiff,
     ) -> (DBState, PartialAction) {
-        let (state, partial) = self.search_space.get_state(state_id);
+        let (state, partial) = self.search_space.get_state(node_id);
         match transition {
             PartialActionDiff::Schema(schema_index) => {
                 let new_state = if *partial == NO_PARTIAL {
@@ -127,8 +127,8 @@ impl SearchProblem<(SparsePackedState, PartialAction), PartialActionDiff> for Pa
         self.search_space.get_root_node()
     }
 
-    fn is_goal(&self, state_id: StateId) -> bool {
-        let (state, partial) = self.search_space.get_state(state_id);
+    fn is_goal(&self, node_id: NodeId) -> bool {
+        let (state, partial) = self.search_space.get_state(node_id);
         if *partial == NO_PARTIAL {
             let state = self.packer.unpack(state);
             return self.task.goal.is_satisfied(&state);
@@ -145,9 +145,9 @@ impl SearchProblem<(SparsePackedState, PartialAction), PartialActionDiff> for Pa
         }
     }
 
-    fn expand(&mut self, state_id: StateId) -> Vec<&SearchNode<PartialActionDiff>> {
+    fn expand(&mut self, node_id: NodeId) -> Vec<&SearchNode<PartialActionDiff>> {
         let node = {
-            let node = self.search_space.get_node_mut(state_id);
+            let node = self.search_space.get_node_mut(node_id);
             if node.get_status() == SearchNodeStatus::Closed {
                 return vec![];
             }
@@ -159,34 +159,34 @@ impl SearchProblem<(SparsePackedState, PartialAction), PartialActionDiff> for Pa
         let h_value = node.get_h();
         self.statistics.register_heuristic_value(h_value);
 
-        let transitions = self.get_transitions(state_id);
+        let transitions = self.get_transitions(node_id);
         self.statistics
             .increment_generated_actions(transitions.len());
 
         if transitions.len() == 1 {
             self.statistics.increment_skipped_evaluations();
             let transition = transitions.iter().next().unwrap();
-            let (new_state, new_partial) = self.apply_transition(state_id, transition);
+            let (new_state, new_partial) = self.apply_transition(node_id, transition);
             let child_node = self.search_space.insert_or_get_node(
                 (self.packer.pack(&new_state), new_partial.clone()),
                 *transition,
-                state_id,
+                node_id,
             );
 
-            let child_id: Option<StateId> = if child_node.get_status() == SearchNodeStatus::New {
+            let child_id: Option<NodeId> = if child_node.get_status() == SearchNodeStatus::New {
                 // In this case, we technically should evaluate and give the
                 // children a heuristic value. But since we want to skip
                 // evaluations, we just use the same value as its parent, i.e.
                 // the current node.
                 self.statistics.increment_generated_nodes(1);
                 child_node.open(g_value + 1., h_value);
-                Some(child_node.get_state_id())
+                Some(child_node.get_node_id())
             } else if REOPEN && g_value + 1. < child_node.get_g() {
                 // We don't count this into the reopened nodes statistic, so
                 // that the number of reopened nodes is not inflated.
-                child_node.update_parent(state_id, *transition);
+                child_node.update_parent(node_id, *transition);
                 child_node.open(g_value + 1., child_node.get_h());
-                Some(child_node.get_state_id())
+                Some(child_node.get_node_id())
             } else {
                 None
             };
@@ -209,19 +209,19 @@ impl SearchProblem<(SparsePackedState, PartialAction), PartialActionDiff> for Pa
             let mut ids_to_reopen = Vec::new();
 
             for transition in transitions {
-                let (new_state, new_partial) = self.apply_transition(state_id, &transition);
+                let (new_state, new_partial) = self.apply_transition(node_id, &transition);
                 let child_node = self.search_space.insert_or_get_node(
                     (self.packer.pack(&new_state), new_partial.clone()),
                     transition,
-                    state_id,
+                    node_id,
                 );
 
                 if child_node.get_status() == SearchNodeStatus::New {
                     new_states.push((new_state, new_partial));
-                    new_ids.push(child_node.get_state_id());
+                    new_ids.push(child_node.get_node_id());
                 } else if REOPEN && g_value + 1. < child_node.get_g() {
-                    child_node.update_parent(state_id, transition);
-                    ids_to_reopen.push(child_node.get_state_id());
+                    child_node.update_parent(node_id, transition);
+                    ids_to_reopen.push(child_node.get_node_id());
                 }
             }
 
@@ -250,7 +250,7 @@ impl SearchProblem<(SparsePackedState, PartialAction), PartialActionDiff> for Pa
         child_nodes
     }
 
-    fn extract_plan(&self, goal_id: StateId) -> Plan {
+    fn extract_plan(&self, goal_id: NodeId) -> Plan {
         self.statistics.finalise_search();
         self.search_space
             .extract_plan(self.search_space.get_node(goal_id))
@@ -282,7 +282,7 @@ mod tests {
         let mut problem = create_problem();
         let root_node = problem.initial_state();
 
-        let transitions = problem.get_transitions(root_node.get_state_id());
+        let transitions = problem.get_transitions(root_node.get_node_id());
         assert_eq!(transitions.len(), 1);
     }
 }

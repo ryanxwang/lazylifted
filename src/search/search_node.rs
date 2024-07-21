@@ -1,5 +1,22 @@
-use crate::search::{HeuristicValue, StateId, Transition, NO_STATE};
+use crate::search::{HeuristicValue, Transition};
 use ordered_float::Float;
+use std::sync::atomic::AtomicUsize;
+
+/// [`NodeId`] are used to uniquely identify nodes in the search space.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct NodeId(usize);
+
+impl NodeId {
+    #[inline(always)]
+    pub fn id(&self) -> usize {
+        self.0
+    }
+}
+
+/// [`NO_NODE`] is a special state id that should only be used to indicate that
+/// a node has no parent. We use this instead of an [`Option<NodeId>`] to avoid
+/// the overhead of an [`Option`] type.
+pub const NO_NODE: NodeId = NodeId(usize::MAX);
 
 /// The status of a search node.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -23,7 +40,7 @@ where
     T: Transition,
 {
     /// Unique identifier of the state
-    state_id: StateId,
+    node_id: NodeId,
     /// Status of the node
     status: SearchNodeStatus,
     /// F-value of the node, different depending on the search algorithm.
@@ -38,7 +55,8 @@ where
     /// Transition that led to this node
     transition: T,
     /// Parent state
-    parent_id: StateId,
+    parent_id: NodeId,
+    // TODO: this is outdated, delete
     /// Whether the node is preferred by the parent node
     is_preferred: bool,
 }
@@ -47,43 +65,11 @@ impl<T> SearchNode<T>
 where
     T: Transition,
 {
-    /// Create a new search node with no parent. This should only be used for
-    /// the root node of the search space. For non-root nodes see
-    /// [`SearchNode::new_with_parent`].
-    pub fn new_without_parent() -> Self {
-        Self {
-            state_id: StateId::new(),
-            status: SearchNodeStatus::New,
-            f: HeuristicValue::infinity(),
-            g: HeuristicValue::infinity(),
-            h: HeuristicValue::infinity(),
-            transition: T::no_transition(),
-            parent_id: NO_STATE,
-            is_preferred: false,
-        }
-    }
-
-    /// Create a new search node with a parent. This should be used for all
-    /// nodes that are not the root node. For root nodes see
-    /// [`SearchNode::new_without_parent`].
-    pub fn new_with_parent(parent_id: StateId, transition: T) -> Self {
-        Self {
-            state_id: StateId::new(),
-            status: SearchNodeStatus::New,
-            f: HeuristicValue::infinity(),
-            g: HeuristicValue::infinity(),
-            h: HeuristicValue::infinity(),
-            transition,
-            parent_id,
-            is_preferred: false,
-        }
-    }
-
     pub fn set_is_preferred(&mut self, is_preferred: bool) {
         self.is_preferred = is_preferred;
     }
 
-    pub fn update_parent(&mut self, parent_id: StateId, transition: T) {
+    pub fn update_parent(&mut self, parent_id: NodeId, transition: T) {
         self.parent_id = parent_id;
         self.transition = transition;
     }
@@ -118,8 +104,8 @@ where
         self.status
     }
 
-    pub fn get_state_id(&self) -> StateId {
-        self.state_id
+    pub fn get_node_id(&self) -> NodeId {
+        self.node_id
     }
 
     pub fn get_f(&self) -> HeuristicValue {
@@ -134,7 +120,7 @@ where
         self.h
     }
 
-    pub fn get_parent_id(&self) -> StateId {
+    pub fn get_parent_id(&self) -> NodeId {
         self.parent_id
     }
 
@@ -144,5 +130,71 @@ where
 
     pub fn is_preferred(&self) -> bool {
         self.is_preferred
+    }
+}
+
+/// This generator is used to create unique node ids.
+#[derive(Debug)]
+struct NodeIdGenerator {
+    counter: AtomicUsize,
+}
+
+impl NodeIdGenerator {
+    fn new() -> Self {
+        Self {
+            counter: AtomicUsize::new(0),
+        }
+    }
+
+    fn next_node_id(&self) -> NodeId {
+        NodeId(
+            self.counter
+                .fetch_add(1, std::sync::atomic::Ordering::Relaxed),
+        )
+    }
+}
+
+#[derive(Debug)]
+pub struct SearchNodeFactory {
+    id_generator: NodeIdGenerator,
+}
+
+impl SearchNodeFactory {
+    pub fn new() -> Self {
+        Self {
+            id_generator: NodeIdGenerator::new(),
+        }
+    }
+
+    pub fn new_node<T>(&mut self, parent_id: NodeId, transition: T) -> SearchNode<T>
+    where
+        T: Transition,
+    {
+        SearchNode {
+            node_id: self.id_generator.next_node_id(),
+            status: SearchNodeStatus::New,
+            f: HeuristicValue::infinity(),
+            g: HeuristicValue::infinity(),
+            h: HeuristicValue::infinity(),
+            transition,
+            parent_id,
+            is_preferred: false,
+        }
+    }
+
+    pub fn new_root_node<T>(&mut self) -> SearchNode<T>
+    where
+        T: Transition,
+    {
+        SearchNode {
+            node_id: self.id_generator.next_node_id(),
+            status: SearchNodeStatus::New,
+            f: HeuristicValue::infinity(),
+            g: HeuristicValue::infinity(),
+            h: HeuristicValue::infinity(),
+            transition: T::no_transition(),
+            parent_id: NO_NODE,
+            is_preferred: false,
+        }
     }
 }

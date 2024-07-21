@@ -35,8 +35,8 @@ pub(crate) use partial_action::{PartialAction, PartialActionDiff, PartialEffects
 pub use plan::Plan;
 pub use predicate::Predicate;
 pub(crate) use problem_formulations::SearchProblem;
-pub(crate) use search_node::{SearchNode, SearchNodeStatus};
-pub(crate) use search_space::{SearchSpace, StateId, NO_STATE};
+pub(crate) use search_node::{NodeId, SearchNode, SearchNodeFactory, SearchNodeStatus, NO_NODE};
+pub(crate) use search_space::SearchSpace;
 pub(crate) use search_statistics::SearchStatistics;
 pub use states::DBState;
 pub use successor_generators::SuccessorGenerator;

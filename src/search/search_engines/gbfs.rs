@@ -5,7 +5,7 @@ use priority_queue::PriorityQueue;
 
 use crate::search::{
     search_engines::{SearchEngine, SearchResult},
-    HeuristicValue, SearchProblem, StateId, Transition,
+    HeuristicValue, NodeId, SearchProblem, Transition,
 };
 use std::cmp::Reverse;
 
@@ -25,7 +25,7 @@ where
     fn search(&self, mut problem: Box<dyn SearchProblem<S, T>>) -> SearchResult {
         let mut priority_queue = PriorityQueue::new();
         priority_queue.push(
-            problem.initial_state().get_state_id(),
+            problem.initial_state().get_node_id(),
             Reverse(OrderedFloat(0.)),
         );
 
@@ -36,10 +36,10 @@ where
                 return SearchResult::Success(problem.extract_plan(sid));
             }
 
-            let successors_ids_and_h_values: Vec<(StateId, HeuristicValue)> = problem
+            let successors_ids_and_h_values: Vec<(NodeId, HeuristicValue)> = problem
                 .expand(sid)
                 .iter()
-                .map(|successor| (successor.get_state_id(), successor.get_h()))
+                .map(|successor| (successor.get_node_id(), successor.get_h()))
                 .collect();
 
             for (id, h_value) in successors_ids_and_h_values {
