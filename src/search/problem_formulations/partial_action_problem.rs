@@ -242,7 +242,7 @@ impl SearchProblem<(SparsePackedState, PartialAction), PartialActionDiff> for Pa
             child_node.open(g_value + 1., child_node.get_h());
         }
 
-        let mut child_nodes = Vec::with_capacity(new_ids.len());
+        let mut child_nodes = Vec::with_capacity(new_ids.len() + ids_to_reopen.len());
         for child_node_id in new_ids.into_iter().chain(ids_to_reopen.into_iter()) {
             child_nodes.push(self.search_space.get_node(child_node_id));
         }

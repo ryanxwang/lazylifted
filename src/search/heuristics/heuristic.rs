@@ -98,3 +98,31 @@ impl PartialActionHeuristicNames {
         }
     }
 }
+
+#[derive(clap::ValueEnum, Debug, Clone, Copy)]
+#[clap(rename_all = "kebab-case")]
+pub enum SchemaDecomposedHeuristicNames {
+    #[clap(
+        name = "wl",
+        help = "The WL heuristic, requires a model file with a trained schema decomposed model."
+    )]
+    Wl,
+    #[clap(name = "zero", help = "The zero heuristic.")]
+    ZeroHeuristic,
+}
+
+impl SchemaDecomposedHeuristicNames {
+    pub fn create(
+        &self,
+        _task: Rc<Task>,
+        _successor_generator_name: SuccessorGeneratorName,
+        _saved_model: Option<&Path>,
+    ) -> Box<dyn Heuristic<(DBState, Option<usize>)>> {
+        match self {
+            SchemaDecomposedHeuristicNames::Wl => {
+                todo!("implement this")
+            }
+            SchemaDecomposedHeuristicNames::ZeroHeuristic => Box::new(ZeroHeuristic::new()),
+        }
+    }
+}
