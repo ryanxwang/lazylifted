@@ -53,9 +53,13 @@ def main():
             continue
         log_path = os.path.join(args.log_dir, log_file)
 
-        processed_log = process_log(log_path)
-
         print(f"Processing found log file {log_file}")
+        
+        try:
+            processed_log = process_log(log_path)
+        except Exception as e:
+            print(f"Error processing log file {log_file}, skipping: {e}")
+            continue
 
         found_plan = False
         plan_length = None
