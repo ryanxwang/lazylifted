@@ -56,19 +56,12 @@ where
     transition: T,
     /// Parent state
     parent_id: NodeId,
-    // TODO: this is outdated, delete
-    /// Whether the node is preferred by the parent node
-    is_preferred: bool,
 }
 
 impl<T> SearchNode<T>
 where
     T: Transition,
 {
-    pub fn set_is_preferred(&mut self, is_preferred: bool) {
-        self.is_preferred = is_preferred;
-    }
-
     pub fn update_parent(&mut self, parent_id: NodeId, transition: T) {
         self.parent_id = parent_id;
         self.transition = transition;
@@ -127,10 +120,6 @@ where
     pub fn get_transition(&self) -> &T {
         &self.transition
     }
-
-    pub fn is_preferred(&self) -> bool {
-        self.is_preferred
-    }
 }
 
 /// This generator is used to create unique node ids.
@@ -178,7 +167,6 @@ impl SearchNodeFactory {
             h: HeuristicValue::infinity(),
             transition,
             parent_id,
-            is_preferred: false,
         }
     }
 
@@ -194,7 +182,6 @@ impl SearchNodeFactory {
             h: HeuristicValue::infinity(),
             transition: T::no_transition(),
             parent_id: NO_NODE,
-            is_preferred: false,
         }
     }
 }
