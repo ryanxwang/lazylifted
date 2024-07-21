@@ -112,7 +112,7 @@ impl<'py> Ranker<'py> {
     pub fn unpickle(py: Python<'py>, pickle_path: &Path) -> Self {
         let model = py_utils::unpickle(py, pickle_path);
 
-        let weights = model.getattr("weights").unwrap().call0().unwrap();
+        let weights = model.getattr("get_weights").unwrap().call0().unwrap();
 
         match weights.extract::<Vec<f64>>() {
             Ok(weights) => Self {
