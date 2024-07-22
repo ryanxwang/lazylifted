@@ -36,6 +36,8 @@ if [ "$model_type" == "partial-space" ]; then
     subcommand="partial-action-search"
 elif [ "$model_type" == "state-space" ]; then
     subcommand="state-space-search"
+elif [ "$model_type" == "schema-decomposed" ]; then
+    subcommand="schema-decomposed-search"
 else
     echo "Unsupported model type"
     exit 1

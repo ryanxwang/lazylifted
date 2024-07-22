@@ -1,6 +1,7 @@
 mod goal_counting;
 mod heuristic;
 mod wl_partial;
+mod wl_schema;
 mod wl_state;
 mod zero_heuristic;
 

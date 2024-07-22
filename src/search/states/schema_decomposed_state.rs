@@ -1,39 +1,45 @@
-use crate::search::{states::SparsePackedState, Action, Transition};
+use crate::search::{Action, Transition};
 
 /// A [`SchemaDecomposedState`] is a search state where we first decide which
 /// schema then which action to apply. It is in-between the normal planning
 /// search state and the partial action search state.
 #[derive(Hash, Debug, Clone, Eq, PartialEq)]
-pub struct SchemaDecomposedState {
-    state: SparsePackedState,
+pub struct SchemaDecomposedState<S> {
+    state: S,
     schema: Option<usize>,
 }
 
-impl SchemaDecomposedState {
-    pub fn new(state: SparsePackedState, schema: Option<usize>) -> Self {
+impl<S> SchemaDecomposedState<S> {
+    pub fn new(state: S, schema: Option<usize>) -> Self {
         Self { state, schema }
     }
 
-    pub fn without_schema(state: SparsePackedState) -> Self {
+    pub fn without_schema(state: S) -> Self {
         Self {
             state,
             schema: None,
         }
     }
 
-    pub fn with_schema(state: SparsePackedState, schema: usize) -> Self {
+    pub fn with_schema(state: S, schema: usize) -> Self {
         Self {
             state,
             schema: Some(schema),
         }
     }
 
-    pub fn state(&self) -> &SparsePackedState {
+    pub fn state(&self) -> &S {
         &self.state
     }
 
     pub fn schema(&self) -> Option<usize> {
         self.schema
+    }
+
+    /// The group ID is used for grouping states when ranking. The group ID of a
+    /// schema decomposed state effectively a hash of the schema field.
+    pub fn group_id(&self) -> usize {
+        self.schema.unwrap_or(usize::MAX)
     }
 }
 
@@ -53,5 +59,14 @@ const NO_SCHEMA_OR_INSTANTIATION: SchemaOrInstantiation = SchemaOrInstantiation:
 impl Transition for SchemaOrInstantiation {
     fn no_transition() -> Self {
         NO_SCHEMA_OR_INSTANTIATION
+    }
+}
+
+impl SchemaOrInstantiation {
+    pub fn from_action(action: &Action) -> Vec<Self> {
+        vec![
+            SchemaOrInstantiation::Schema(action.index),
+            SchemaOrInstantiation::Instantiation(action.clone()),
+        ]
     }
 }

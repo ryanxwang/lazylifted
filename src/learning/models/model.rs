@@ -3,7 +3,8 @@
 use crate::learning::models::{
     partial_action_model::PartialActionModel,
     partial_action_model_config::PartialActionModelConfig,
-    state_space_model_config::StateSpaceModelConfig, StateSpaceModel,
+    schema_decomposed_model_config::SchemaDecomposedModelConfig,
+    state_space_model_config::StateSpaceModelConfig, SchemaDecomposedModel, StateSpaceModel,
 };
 use crate::search::{Plan, Task};
 use pyo3::Python;
@@ -47,6 +48,7 @@ pub trait Train {
 pub enum ModelConfig {
     StateSpaceModel(StateSpaceModelConfig),
     PartialActionModel(PartialActionModelConfig),
+    SchemaDecomposedModel(SchemaDecomposedModelConfig),
 }
 
 impl ModelConfig {
@@ -88,6 +90,16 @@ impl ModelConfig {
                     config
                 };
                 Box::new(PartialActionModel::new(py, config))
+            }
+            ModelConfig::SchemaDecomposedModel(config) => {
+                let config = if let Some(iters) = iters {
+                    config.with_iters(iters)
+                } else {
+                    config
+                };
+                // SchemaDecomposedModel only uses rankers, so alpha gets
+                // ignored here
+                Box::new(SchemaDecomposedModel::new(py, config))
             }
         }
     }

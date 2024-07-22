@@ -1,5 +1,5 @@
 use crate::search::{
-    states::{SchemaDecomposedState, SchemaOrInstantiation, SparseStatePacker},
+    states::{SchemaDecomposedState, SchemaOrInstantiation, SparsePackedState, SparseStatePacker},
     DBState, Heuristic, NodeId, Plan, SearchNode, SearchNodeStatus, SearchProblem, SearchSpace,
     SearchStatistics, SuccessorGenerator, Task,
 };
@@ -13,10 +13,10 @@ pub struct SchemaDecomposedProblem {
     statistics: SearchStatistics,
     packer: SparseStatePacker,
     generator: Box<dyn SuccessorGenerator>,
-    search_space: SearchSpace<SchemaDecomposedState, SchemaOrInstantiation>,
+    search_space: SearchSpace<SchemaDecomposedState<SparsePackedState>, SchemaOrInstantiation>,
     /// A heuristic that can evaluate a state and a schema index to a heuristic
     /// value.
-    heuristic: Box<dyn Heuristic<(DBState, Option<usize>)>>,
+    heuristic: Box<dyn Heuristic<SchemaDecomposedState<DBState>>>,
 }
 
 impl SchemaDecomposedProblem {
@@ -25,7 +25,7 @@ impl SchemaDecomposedProblem {
     pub fn new(
         task: Rc<Task>,
         generator: Box<dyn SuccessorGenerator>,
-        mut heuristic: Box<dyn Heuristic<(DBState, Option<usize>)>>,
+        mut heuristic: Box<dyn Heuristic<SchemaDecomposedState<DBState>>>,
     ) -> Self {
         let mut statistics = SearchStatistics::new();
         let packer = SparseStatePacker::new(&task);
@@ -34,7 +34,10 @@ impl SchemaDecomposedProblem {
         ));
 
         let root_node = search_space.get_root_node_mut();
-        let initial_heuristic = heuristic.evaluate(&(task.initial_state.clone(), None), &task);
+        let initial_heuristic = heuristic.evaluate(
+            &SchemaDecomposedState::without_schema(task.initial_state.clone()),
+            &task,
+        );
         statistics.register_heuristic_value(initial_heuristic);
         root_node.open((0.).into(), initial_heuristic);
 
@@ -99,7 +102,9 @@ impl SchemaDecomposedProblem {
     }
 }
 
-impl SearchProblem<SchemaDecomposedState, SchemaOrInstantiation> for SchemaDecomposedProblem {
+impl SearchProblem<SchemaDecomposedState<SparsePackedState>, SchemaOrInstantiation>
+    for SchemaDecomposedProblem
+{
     fn initial_state(&self) -> &SearchNode<SchemaOrInstantiation> {
         self.search_space.get_root_node()
     }
@@ -147,7 +152,7 @@ impl SearchProblem<SchemaDecomposedState, SchemaOrInstantiation> for SchemaDecom
                 );
 
                 if child_node.get_status() == SearchNodeStatus::New {
-                    new_states.push((new_state, schema_index));
+                    new_states.push(SchemaDecomposedState::new(new_state, schema_index));
                     new_ids.push(child_node.get_node_id());
                 } else if REOPEN && g_value + 1. < child_node.get_g() {
                     child_node.update_parent(node_id, transition);
@@ -201,7 +206,7 @@ mod tests {
             BLOCKSWORLD_DOMAIN_TEXT,
             BLOCKSWORLD_PROBLEM13_TEXT,
         ));
-        let heuristic: Box<dyn Heuristic<(DBState, Option<usize>)>> =
+        let heuristic: Box<dyn Heuristic<SchemaDecomposedState<DBState>>> =
             Box::new(ZeroHeuristic::new());
         let successor_generator =
             SuccessorGeneratorName::create(&SuccessorGeneratorName::FullReducer, &task);

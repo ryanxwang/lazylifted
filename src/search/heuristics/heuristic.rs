@@ -1,7 +1,9 @@
 use crate::search::heuristics::goal_counting::GoalCounting;
 use crate::search::heuristics::wl_partial::WlPartialHeuristic;
+use crate::search::heuristics::wl_schema::WlSchemaDecomposedHeuristic;
 use crate::search::heuristics::wl_state::WlStateHeuristic;
 use crate::search::heuristics::zero_heuristic::ZeroHeuristic;
+use crate::search::states::SchemaDecomposedState;
 use crate::search::successor_generators::SuccessorGeneratorName;
 use crate::search::{DBState, PartialAction, Task};
 use ordered_float::OrderedFloat;
@@ -55,7 +57,7 @@ impl StateHeuristicNames {
             StateHeuristicNames::Wl => {
                 let saved_model = saved_model
                     .as_ref()
-                    .expect("No saved model provided for WL-ILG heuristic");
+                    .expect("No saved model provided for WL heuristic");
                 Box::new(WlStateHeuristic::load(saved_model))
             }
             StateHeuristicNames::ZeroHeuristic => Box::new(ZeroHeuristic::new()),
@@ -88,7 +90,7 @@ impl PartialActionHeuristicNames {
             PartialActionHeuristicNames::Wl => {
                 let saved_model = saved_model
                     .as_ref()
-                    .expect("No saved model provided for WL-PALG heuristic");
+                    .expect("No saved model provided for WL heuristic");
                 Box::new(WlPartialHeuristic::load(saved_model))
             }
             PartialActionHeuristicNames::ZeroHeuristic => Box::new(ZeroHeuristic::new()),
@@ -116,11 +118,14 @@ impl SchemaDecomposedHeuristicNames {
         &self,
         _task: Rc<Task>,
         _successor_generator_name: SuccessorGeneratorName,
-        _saved_model: Option<&Path>,
-    ) -> Box<dyn Heuristic<(DBState, Option<usize>)>> {
+        saved_model: Option<&Path>,
+    ) -> Box<dyn Heuristic<SchemaDecomposedState<DBState>>> {
         match self {
             SchemaDecomposedHeuristicNames::Wl => {
-                todo!("implement this")
+                let saved_model = saved_model
+                    .as_ref()
+                    .expect("No saved model provided for WL heuristic");
+                Box::new(WlSchemaDecomposedHeuristic::load(saved_model))
             }
             SchemaDecomposedHeuristicNames::ZeroHeuristic => Box::new(ZeroHeuristic::new()),
         }

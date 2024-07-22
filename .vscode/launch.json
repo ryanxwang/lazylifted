@@ -37,12 +37,12 @@
             },
             "args": [
                 "${workspaceFolder}/benchmarks/ipc23-learning/blocksworld/domain.pddl",
-                "${workspaceFolder}/benchmarks/ipc23-learning/blocksworld/training/easy/p01.pddl",
-                "partial-action-search",
-                "--heuristic",
-                "wl-palg",
+                "${workspaceFolder}/benchmarks/ipc23-learning/blocksworld/testing/easy/p01.pddl",
                 "--model",
-                "${workspaceFolder}/trained_models/wl-palg-lambdamart-blocksworld",
+                "${workspaceFolder}/trained_models/schema-decomposed-wl-ilg-lp-blocksworld.model",
+                "schema-decomposed-search",
+                "--heuristic",
+                "wl",
             ],
             "cwd": "${workspaceFolder}"
         },
@@ -112,7 +112,7 @@
                 "--data",
                 "${workspaceFolder}/experiments/ipc23-learning/blocksworld.toml",
                 "--model",
-                "${workspaceFolder}/experiments/models/wl-palg-lambdamart.toml"
+                "${workspaceFolder}/experiments/models/schema-decomposed/wl-ilg-lp.toml",
             ],
             "cwd": "${workspaceFolder}"
         },

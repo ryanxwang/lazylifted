@@ -33,7 +33,6 @@ impl<S: Hash, T: Transition> SearchSpace<S, T> {
 
         let root_node = search_node_factory.new_root_node();
         let root_node_id = root_node.get_node_id();
-        print!("Root state id: {:?}", root_node_id);
         registered_states.insert(state_build_hasher.hash_one(&initial_state), root_node_id);
         nodes.push(root_node);
         states.push(initial_state);
@@ -63,7 +62,6 @@ impl<S: Hash, T: Transition> SearchSpace<S, T> {
                 self.states.push(state);
                 let new_node = self.search_node_factory.new_node(parent_id, transition);
                 let node_id = new_node.get_node_id();
-                print!("New state id: {:?}", node_id);
                 self.nodes.push(new_node);
                 self.registered_nodes.insert(state_hash, node_id);
                 return self.get_node_mut(node_id);
@@ -88,7 +86,6 @@ impl<S: Hash, T: Transition> SearchSpace<S, T> {
 
     #[inline(always)]
     pub fn get_node_mut(&mut self, node_id: NodeId) -> &mut SearchNode<T> {
-        print!("State id: {:?}", node_id);
         self.nodes.get_mut(node_id.id()).expect("Invalid state id")
     }
 

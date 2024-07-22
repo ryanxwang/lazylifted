@@ -64,8 +64,15 @@ impl<'py> Ranker<'py> {
 
         let weights = self.model.getattr("get_weights").unwrap().call0().unwrap();
         match weights.extract::<Vec<f64>>() {
-            Ok(weights) => self.weights = RankerWeights::Vector(Array1::from(weights)),
+            Ok(weights) => {
+                print!("{:?}", weights);
+                self.weights = RankerWeights::Vector(Array1::from(weights))
+            }
             Err(_) => {
+                print!(
+                    "{:?}",
+                    weights.extract::<HashMap<usize, Vec<f64>>>().unwrap()
+                );
                 let weights = weights.extract::<HashMap<usize, Vec<f64>>>().unwrap();
                 self.weights = RankerWeights::VectorByGroup(
                     weights
