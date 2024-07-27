@@ -134,7 +134,7 @@ class LP:
     def __init__(self):
         pass
 
-    def fit(self, X, pairs, group_ids, C=1.0):
+    def fit(self, X, pairs, group_ids, C=10):
         prob = LpProblem("Ranking", LpMinimize)
 
         weights = defaultdict(list)
@@ -186,7 +186,7 @@ class LP:
 
         # solver_list = listSolvers(onlyAvailable=True)
         # if "CPLEX_PY" not in solver_list:
-        solver = PULP_CBC_CMD(msg=False, gapRel=0.01)
+        solver = PULP_CBC_CMD(msg=False)
         # else:
         #     solver = CPLEX_PY(msg=False, gapRel=0.01)
 

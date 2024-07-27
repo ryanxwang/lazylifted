@@ -12,6 +12,7 @@ assert_approx_eq = "1.1.0"
 clap = { version = "4.5.9", features = ["derive"] }
 console = "0.15.8"
 dialoguer = { version = "0.11.0", features = ["history"] }
+itertools = "0.13.0"
 lazy_static = "1.5.0"
 ndarray = "0.15.6"
 nom = "7.1.3"

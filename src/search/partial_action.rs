@@ -49,6 +49,11 @@ impl PartialAction {
         self.partial_instantiation.as_slice()
     }
 
+    #[inline(always)]
+    pub fn depth(&self) -> usize {
+        self.partial_instantiation.len()
+    }
+
     pub fn is_complete(&self, task: &Task) -> bool {
         self.partial_instantiation.len()
             == task.action_schemas()[self.schema_index].parameters().len()
@@ -161,7 +166,8 @@ impl PartialAction {
     /// is effectively a hash of the schema index and the depth.
     pub fn group_id(&self) -> usize {
         // As primitive as it gets
-        self.schema_index * 100 + self.partial_instantiation.len()
+        // self.schema_index * 100 + self.partial_instantiation.len()
+        0
     }
 }
 

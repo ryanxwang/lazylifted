@@ -12,9 +12,10 @@ use crate::{
     },
     search::{Action, DBState, PartialAction, Task},
 };
+use itertools::Itertools;
 use pyo3::Python;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashSet, io::Write, path::Path};
+use std::{io::Write, path::Path};
 use tempfile::NamedTempFile;
 use tracing::info;
 
@@ -101,8 +102,7 @@ impl PartialActionModel {
 
             let mut cur_state = task.initial_state.clone();
 
-            let mut predecessor_graph: Option<CGraph> = None;
-            let mut predecessor_group_id: Option<usize> = None;
+            let mut predecessor_index: Option<usize> = None;
             for chosen_action in plan.steps() {
                 let applicable_actions: Vec<Action> = task
                     .action_schemas()
@@ -112,47 +112,58 @@ impl PartialActionModel {
                     })
                     .collect();
 
-                for partial_depth in 0..=(chosen_action.instantiation.len()) {
-                    let partial = PartialAction::from_action(chosen_action, partial_depth);
+                let partial_actions: Vec<PartialAction> = applicable_actions
+                    .iter()
+                    .flat_map(|action| {
+                        (0..=action.instantiation.len())
+                            .map(|depth| PartialAction::from_action(action, depth))
+                            .collect::<Vec<PartialAction>>()
+                    })
+                    .unique()
+                    .collect();
 
-                    let graph = compiler.compile(&cur_state, &partial);
+                for partial_depth in 0..=(chosen_action.instantiation.len()) {
+                    let chosen_partial = PartialAction::from_action(chosen_action, partial_depth);
+
+                    let graph = compiler.compile(&cur_state, &chosen_partial);
                     let cur_index = graphs.len();
                     graphs.push(graph.clone());
-                    group_ids.push(partial.group_id());
+                    group_ids.push(chosen_partial.group_id());
 
                     // First rank this partial action better than its predecessor
-                    if let Some(predecessor_graph) = &predecessor_graph {
+                    if let Some(predecessor_index) = &predecessor_index {
                         pairs.push(RankingPair {
                             i: cur_index,
-                            j: graphs.len(),
+                            j: *predecessor_index,
                             relation: RankingRelation::Better,
                         });
-                        graphs.push(predecessor_graph.clone());
-                        group_ids.push(predecessor_group_id.unwrap());
                     }
 
-                    // Then rank this partial action better than its siblings
-                    let siblings: HashSet<PartialAction> =
-                        Self::get_siblings(&applicable_actions, &partial, partial_depth);
-                    assert!(siblings.contains(&partial));
-                    if siblings.len() == 1 {
-                        continue;
-                    }
-                    for sibling in siblings {
-                        if sibling == partial {
-                            continue;
+                    // Then rank this partial action better than or equal to its
+                    // siblings. Note that siblings are every other partial at
+                    // the same depth, even if they have different parent
+                    // partials. If the chosen partial is a full action, we also
+                    // include every other partial with greater depth. This way,
+                    // every partial is included somewhere in the ranking.
+                    let is_final_partial = partial_depth == chosen_action.instantiation.len();
+                    for partial in &partial_actions {
+                        if is_final_partial
+                            && partial.depth()
+                                == task.action_schemas()[partial.schema_index()]
+                                    .parameters()
+                                    .len()
+                        {
+                            pairs.push(RankingPair {
+                                i: cur_index,
+                                j: graphs.len(),
+                                relation: RankingRelation::BetterOrEqual,
+                            });
+                            graphs.push(compiler.compile(&cur_state, partial));
+                            group_ids.push(partial.group_id());
                         }
-                        pairs.push(RankingPair {
-                            i: cur_index,
-                            j: graphs.len(),
-                            relation: RankingRelation::BetterOrEqual,
-                        });
-                        graphs.push(compiler.compile(&cur_state, &sibling));
-                        group_ids.push(sibling.group_id());
                     }
 
-                    predecessor_graph = Some(graph);
-                    predecessor_group_id = Some(partial.group_id());
+                    predecessor_index = Some(cur_index);
                 }
 
                 cur_state = successor_generator.generate_successor(
@@ -231,37 +242,6 @@ impl PartialActionModel {
                 TrainingData::Regression(self.prepare_regression_data(training_data))
             }
             MlModel::Ranker(_) => TrainingData::Ranking(self.prepare_ranking_data(training_data)),
-        }
-    }
-
-    fn get_siblings(
-        applicable_actions: &[Action],
-        chosen_partial: &PartialAction,
-        partial_depth: usize,
-    ) -> HashSet<PartialAction> {
-        // The siblings are all applicable partial actions that have the same
-        // prefix as the chosen partial action for depth partial_depth - 1.
-        if partial_depth == 0 {
-            applicable_actions
-                .iter()
-                .map(|action| PartialAction::from_action(action, 0))
-                .collect()
-        } else {
-            applicable_actions
-                .iter()
-                .filter_map(|action| {
-                    if action.index != chosen_partial.schema_index() {
-                        return None;
-                    }
-
-                    let partial = PartialAction::from_action(action, partial_depth - 1);
-                    if partial.is_superset_of(chosen_partial) {
-                        Some(PartialAction::from_action(action, partial_depth))
-                    } else {
-                        None
-                    }
-                })
-                .collect()
         }
     }
 
