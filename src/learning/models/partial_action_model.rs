@@ -103,6 +103,7 @@ impl PartialActionModel {
             let mut cur_state = task.initial_state.clone();
 
             let mut predecessor_index: Option<usize> = None;
+            let mut prev_state_index: Option<usize> = None;
             for chosen_action in plan.steps() {
                 let applicable_actions: Vec<Action> = task
                     .action_schemas()
@@ -138,20 +139,30 @@ impl PartialActionModel {
                             relation: RankingRelation::Better,
                         });
                     }
+                    predecessor_index = Some(cur_index);
 
-                    // Then rank this partial action better than or equal to its
-                    // siblings. Note that siblings are every other partial at
-                    // the same depth, even if they have different parent
-                    // partials. If the chosen partial is a full action, we also
-                    // include every other partial with greater depth. This way,
-                    // every partial is included somewhere in the ranking.
-                    let is_final_partial = partial_depth == chosen_action.instantiation.len();
+                    // Only compare with siblings for the final partial
+                    if partial_depth != chosen_action.instantiation.len() {
+                        continue;
+                    }
+
+                    // Compare directly with the previous state, to make the
+                    // state space dataset a subset of the partial action
+                    // dataset
+                    if let Some(prev_state_index) = prev_state_index {
+                        pairs.push(RankingPair {
+                            i: cur_index,
+                            j: prev_state_index,
+                            relation: RankingRelation::Better,
+                        });
+                    }
+                    prev_state_index = Some(cur_index);
+
                     for partial in &partial_actions {
-                        if is_final_partial
-                            && partial.depth()
-                                == task.action_schemas()[partial.schema_index()]
-                                    .parameters()
-                                    .len()
+                        if partial.depth()
+                            == task.action_schemas()[partial.schema_index()]
+                                .parameters()
+                                .len()
                         {
                             pairs.push(RankingPair {
                                 i: cur_index,
@@ -162,8 +173,6 @@ impl PartialActionModel {
                             group_ids.push(partial.group_id());
                         }
                     }
-
-                    predecessor_index = Some(cur_index);
                 }
 
                 cur_state = successor_generator.generate_successor(
