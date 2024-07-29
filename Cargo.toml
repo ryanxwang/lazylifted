@@ -30,7 +30,7 @@ smallvec = { version = "1.13.2", features = ["serde", "union"] }
 strum = "0.26.3"
 strum_macros = "0.26.4"
 tempfile = "3.10.1"
-thiserror = "1.0.62"
+thiserror = "1.0.63"
 toml = "0.8.15"
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
