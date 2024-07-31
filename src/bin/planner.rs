@@ -1,9 +1,7 @@
 use clap::{Parser, Subcommand};
 use lazylifted::search::{
-    heuristics::{
-        PartialActionHeuristicNames, SchemaDecomposedHeuristicNames, StateHeuristicNames,
-    },
-    problem_formulations::{PartialActionProblem, SchemaDecomposedProblem, StateSpaceProblem},
+    heuristics::{PartialActionHeuristicNames, StateHeuristicNames},
+    problem_formulations::{PartialActionProblem, StateSpaceProblem},
     search_engines::{SearchEngineName, SearchResult},
     successor_generators::SuccessorGeneratorName,
     validate, Task, Verbosity,
@@ -96,15 +94,6 @@ enum Commands {
         )]
         heuristic_name: PartialActionHeuristicNames,
     },
-    SchemaDecomposedSearch {
-        #[arg(
-            value_enum,
-            help = "The heuristic evaluator to use",
-            long = "heuristic",
-            id = "HEURISTIC"
-        )]
-        heuristic_name: SchemaDecomposedHeuristicNames,
-    },
 }
 
 fn main() {
@@ -146,16 +135,6 @@ fn plan(cli: Cli, task: Task) {
                 cli.saved_model.as_deref(),
             );
             let problem = PartialActionProblem::new(task.clone(), successor_generator, heuristic);
-            cli.search_engine_name.search(Box::new(problem))
-        }
-        Commands::SchemaDecomposedSearch { heuristic_name } => {
-            let heuristic = heuristic_name.create(
-                task.clone(),
-                cli.successor_generator_name,
-                cli.saved_model.as_deref(),
-            );
-            let problem =
-                SchemaDecomposedProblem::new(task.clone(), successor_generator, heuristic);
             cli.search_engine_name.search(Box::new(problem))
         }
     };

@@ -1,9 +1,7 @@
 use crate::search::heuristics::goal_counting::GoalCounting;
 use crate::search::heuristics::wl_partial::WlPartialHeuristic;
-use crate::search::heuristics::wl_schema::WlSchemaDecomposedHeuristic;
 use crate::search::heuristics::wl_state::WlStateHeuristic;
 use crate::search::heuristics::zero_heuristic::ZeroHeuristic;
-use crate::search::states::SchemaDecomposedState;
 use crate::search::successor_generators::SuccessorGeneratorName;
 use crate::search::{DBState, PartialAction, Task};
 use ordered_float::OrderedFloat;
@@ -97,37 +95,6 @@ impl PartialActionHeuristicNames {
             PartialActionHeuristicNames::GoalCounting => {
                 Box::new(GoalCounting::new(task.clone(), successor_generator_name))
             }
-        }
-    }
-}
-
-#[derive(clap::ValueEnum, Debug, Clone, Copy)]
-#[clap(rename_all = "kebab-case")]
-pub enum SchemaDecomposedHeuristicNames {
-    #[clap(
-        name = "wl",
-        help = "The WL heuristic, requires a model file with a trained schema decomposed model."
-    )]
-    Wl,
-    #[clap(name = "zero", help = "The zero heuristic.")]
-    ZeroHeuristic,
-}
-
-impl SchemaDecomposedHeuristicNames {
-    pub fn create(
-        &self,
-        _task: Rc<Task>,
-        _successor_generator_name: SuccessorGeneratorName,
-        saved_model: Option<&Path>,
-    ) -> Box<dyn Heuristic<SchemaDecomposedState<DBState>>> {
-        match self {
-            SchemaDecomposedHeuristicNames::Wl => {
-                let saved_model = saved_model
-                    .as_ref()
-                    .expect("No saved model provided for WL heuristic");
-                Box::new(WlSchemaDecomposedHeuristic::load(saved_model))
-            }
-            SchemaDecomposedHeuristicNames::ZeroHeuristic => Box::new(ZeroHeuristic::new()),
         }
     }
 }

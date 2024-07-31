@@ -2,9 +2,7 @@
 
 use crate::learning::models::{
     partial_action_model::PartialActionModel,
-    partial_action_model_config::PartialActionModelConfig,
-    schema_decomposed_model_config::SchemaDecomposedModelConfig, wl_model_config::WlModelConfig,
-    SchemaDecomposedModel, WlModel,
+    partial_action_model_config::PartialActionModelConfig, wl_model_config::WlModelConfig, WlModel,
 };
 use crate::search::{Plan, Task};
 use pyo3::Python;
@@ -47,7 +45,6 @@ pub trait Train {
 #[serde(rename_all = "kebab-case")]
 pub enum ModelConfig {
     PartialActionModel(PartialActionModelConfig),
-    SchemaDecomposedModel(SchemaDecomposedModelConfig),
     WlModel(WlModelConfig),
 }
 
@@ -77,16 +74,6 @@ impl ModelConfig {
                     config
                 };
                 Box::new(PartialActionModel::new(py, config))
-            }
-            ModelConfig::SchemaDecomposedModel(config) => {
-                let config = if let Some(iters) = iters {
-                    config.with_iters(iters)
-                } else {
-                    config
-                };
-                // SchemaDecomposedModel only uses rankers, so alpha gets
-                // ignored here
-                Box::new(SchemaDecomposedModel::new(py, config))
             }
             ModelConfig::WlModel(config) => {
                 let config = if let Some(iters) = iters {

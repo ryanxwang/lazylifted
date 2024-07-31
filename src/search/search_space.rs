@@ -1,6 +1,5 @@
 use crate::search::{
-    states::SchemaOrInstantiation, Action, NodeId, PartialActionDiff, Plan, SearchNode,
-    SearchNodeFactory, Transition, NO_NODE,
+    Action, NodeId, PartialActionDiff, Plan, SearchNode, SearchNodeFactory, Transition, NO_NODE,
 };
 use segvec::{Linear, SegVec};
 use std::{
@@ -131,26 +130,6 @@ impl<S: Hash> SearchSpace<S, PartialActionDiff> {
             }
             current_node = self.get_node(current_node.get_parent_id());
         }
-        steps.reverse();
-        Plan::new(steps)
-    }
-}
-
-impl<S: Hash> SearchSpace<S, SchemaOrInstantiation> {
-    pub fn extract_plan(&self, goal_node: &SearchNode<SchemaOrInstantiation>) -> Plan {
-        let mut steps = vec![];
-        let mut current_node = goal_node;
-
-        while NO_NODE != current_node.get_parent_id() {
-            match current_node.get_transition() {
-                SchemaOrInstantiation::Instantiation(action) => {
-                    steps.push(action.clone());
-                }
-                SchemaOrInstantiation::Schema(_schema_index) => {}
-            }
-            current_node = self.get_node(current_node.get_parent_id());
-        }
-
         steps.reverse();
         Plan::new(steps)
     }
