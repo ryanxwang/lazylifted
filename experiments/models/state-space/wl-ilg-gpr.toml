@@ -1,9 +1,11 @@
-[state-space-model]
-successor-generator = "full-reducer"
+[wl-model]
 validate = false
 
-[state-space-model.model.regressor-name.gpr]
+[wl-model.model.regressor-name.gpr]
 alpha = 1e-7
 
-[state-space-model.wl]
+[wl-model.wl]
 iters = 4
+
+[wl-model.data-generator.state-space-ilg-regression]
+successor-generator = "full-reducer"

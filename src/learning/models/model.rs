@@ -3,9 +3,8 @@
 use crate::learning::models::{
     partial_action_model::PartialActionModel,
     partial_action_model_config::PartialActionModelConfig,
-    schema_decomposed_model_config::SchemaDecomposedModelConfig,
-    state_space_model_config::StateSpaceModelConfig, wl_model_config::WlModelConfig,
-    SchemaDecomposedModel, StateSpaceModel, WlModel,
+    schema_decomposed_model_config::SchemaDecomposedModelConfig, wl_model_config::WlModelConfig,
+    SchemaDecomposedModel, WlModel,
 };
 use crate::search::{Plan, Task};
 use pyo3::Python;
@@ -47,7 +46,6 @@ pub trait Train {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum ModelConfig {
-    StateSpaceModel(StateSpaceModelConfig),
     PartialActionModel(PartialActionModelConfig),
     SchemaDecomposedModel(SchemaDecomposedModelConfig),
     WlModel(WlModelConfig),
@@ -67,19 +65,6 @@ impl ModelConfig {
         let py = unsafe { Python::assume_gil_acquired() };
 
         match self {
-            ModelConfig::StateSpaceModel(config) => {
-                let config = if let Some(iters) = iters {
-                    config.with_iters(iters)
-                } else {
-                    config
-                };
-                let config = if let Some(alpha) = alpha {
-                    config.with_alpha(alpha)
-                } else {
-                    config
-                };
-                Box::new(StateSpaceModel::new(py, config))
-            }
             ModelConfig::PartialActionModel(config) => {
                 let config = if let Some(iters) = iters {
                     config.with_iters(iters)

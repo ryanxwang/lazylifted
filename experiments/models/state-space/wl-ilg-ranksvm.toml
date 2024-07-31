@@ -1,9 +1,11 @@
-[state-space-model]
-successor-generator = "full-reducer"
+[wl-model]
 validate = false
 
-[state-space-model.model]
+[wl-model.model]
 ranker-name = "ranksvm"
 
-[state-space-model.wl]
+[wl-model.wl]
 iters = 5
+
+[wl-model.data-generator.state-space-ilg-ranking]
+successor-generator = "full-reducer"
