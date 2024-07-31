@@ -1,9 +1,13 @@
-use super::{wl_model_config::WlModelConfig, Train, TrainingInstance};
-use crate::learning::{
-    data_generators::DataGenerator,
-    ml::MlModel,
-    models::model_utils::{zip_files, PICKLE_FILE_NAME, RON_FILE_NAME},
-    wl::WlKernel,
+use crate::{
+    learning::{
+        data_generators::DataGenerator,
+        graphs::CGraph,
+        ml::MlModel,
+        models::model_utils::{extract_from_zip, zip_files, PICKLE_FILE_NAME, RON_FILE_NAME},
+        models::{wl_model_config::WlModelConfig, Evaluate, Train, TrainingInstance},
+        wl::WlKernel,
+    },
+    search::Task,
 };
 use pyo3::Python;
 use serde::{Deserialize, Serialize};
@@ -141,5 +145,38 @@ impl Train for WlModel {
                 (RON_FILE_NAME, ron_file.path()),
             ],
         );
+    }
+}
+
+impl Evaluate for WlModel {
+    type EvaluatedType<'a> = CGraph;
+
+    fn set_evaluating_task(&mut self, _task: &Task) {
+        // No-op
+    }
+
+    fn evaluate(&mut self, graph: &CGraph) -> f64 {
+        // TODO fix the need to clone by having this consume the graph
+        let histograms = self.wl.compute_histograms(&[graph.clone()]);
+        let x = self.wl.convert_to_ndarray(&histograms);
+        self.model.predict_with_ndarray(&x, None)[0]
+    }
+
+    fn load(py: Python<'static>, path: &Path) -> Self {
+        let ron_file = extract_from_zip(path, RON_FILE_NAME);
+        let data = std::fs::read_to_string(ron_file).expect("Failed to read model data");
+        let serialisable: SerialisableWlModel =
+            ron::from_str(&data).expect("Failed to deserialise model data");
+        assert_eq!(serialisable.state, WlModelState::Trained);
+
+        let pickle_file = extract_from_zip(path, PICKLE_FILE_NAME);
+        let model = MlModel::unpickle(serialisable.config.model, py, pickle_file.path());
+
+        Self {
+            model,
+            wl: serialisable.wl,
+            state: serialisable.state,
+            config: serialisable.config,
+        }
     }
 }

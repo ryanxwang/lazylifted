@@ -1,5 +1,5 @@
 mod data_generators;
-mod graphs;
+pub mod graphs;
 mod ml;
 pub mod models;
 mod wl;
