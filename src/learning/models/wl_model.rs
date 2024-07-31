@@ -1,13 +1,16 @@
 use crate::{
     learning::{
-        data_generators::DataGenerator,
-        graphs::CGraph,
+        data_generators::{DataGenerator, DataGeneratorConfig},
+        graphs::{CGraph, PartialActionCompilerName},
         ml::MlModel,
-        models::model_utils::{extract_from_zip, zip_files, PICKLE_FILE_NAME, RON_FILE_NAME},
-        models::{wl_model_config::WlModelConfig, Evaluate, Train, TrainingInstance},
+        models::{
+            model_utils::{extract_from_zip, zip_files, PICKLE_FILE_NAME, RON_FILE_NAME},
+            wl_model_config::WlModelConfig,
+            Evaluate, Train, TrainingInstance,
+        },
         wl::WlKernel,
     },
-    search::Task,
+    search::{successor_generators::SuccessorGeneratorName, Task},
 };
 use pyo3::Python;
 use serde::{Deserialize, Serialize};
@@ -52,6 +55,29 @@ impl WlModel {
 
     fn py(&self) -> Python<'static> {
         self.model.py()
+    }
+
+    /// When evaluating, the heuristic needs to know which compiler to use to
+    /// input the right graph
+    pub fn compiler_name(&self) -> Option<PartialActionCompilerName> {
+        match &self.config.data_generator {
+            DataGeneratorConfig::PartialSpaceRanking(config) => Some(config.graph_compiler),
+            DataGeneratorConfig::PartialSpaceRegression(config) => Some(config.graph_compiler),
+            DataGeneratorConfig::StateSpaceIlgRanking(_)
+            | DataGeneratorConfig::StateSpaceIlgRegression(_) => None,
+        }
+    }
+
+    pub fn successor_generator_name(&self) -> SuccessorGeneratorName {
+        match &self.config.data_generator {
+            // this code is a little silly, but we have to have each one of
+            // these lines because each of these "config"s are technically
+            // different types
+            DataGeneratorConfig::PartialSpaceRanking(config) => config.successor_generator,
+            DataGeneratorConfig::PartialSpaceRegression(config) => config.successor_generator,
+            DataGeneratorConfig::StateSpaceIlgRanking(config) => config.successor_generator,
+            DataGeneratorConfig::StateSpaceIlgRegression(config) => config.successor_generator,
+        }
     }
 }
 

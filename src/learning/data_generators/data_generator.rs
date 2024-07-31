@@ -1,5 +1,7 @@
 use crate::learning::{
     data_generators::{
+        partial_space_ranking::PartialSpaceRanking,
+        partial_space_regression::PartialSpaceRegression,
         state_space_ilg_ranking::StateSpaceIlgRanking,
         state_space_ilg_regression::StateSpaceIlgRegression, DataGeneratorConfig,
     },
@@ -19,6 +21,12 @@ impl dyn DataGenerator {
             }
             DataGeneratorConfig::StateSpaceIlgRegression(config) => {
                 Box::new(StateSpaceIlgRegression::new(config))
+            }
+            DataGeneratorConfig::PartialSpaceRegression(config) => {
+                Box::new(PartialSpaceRegression::new(config))
+            }
+            DataGeneratorConfig::PartialSpaceRanking(config) => {
+                Box::new(PartialSpaceRanking::new(config))
             }
         }
     }

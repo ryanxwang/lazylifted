@@ -1,9 +1,6 @@
 //! This module contains traits and structs for training and evaluating models.
 
-use crate::learning::models::{
-    partial_action_model::PartialActionModel,
-    partial_action_model_config::PartialActionModelConfig, wl_model_config::WlModelConfig, WlModel,
-};
+use crate::learning::models::{wl_model_config::WlModelConfig, WlModel};
 use crate::search::{Plan, Task};
 use pyo3::Python;
 use serde::{Deserialize, Serialize};
@@ -44,7 +41,6 @@ pub trait Train {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum ModelConfig {
-    PartialActionModel(PartialActionModelConfig),
     WlModel(WlModelConfig),
 }
 
@@ -62,19 +58,6 @@ impl ModelConfig {
         let py = unsafe { Python::assume_gil_acquired() };
 
         match self {
-            ModelConfig::PartialActionModel(config) => {
-                let config = if let Some(iters) = iters {
-                    config.with_iters(iters)
-                } else {
-                    config
-                };
-                let config = if let Some(alpha) = alpha {
-                    config.with_alpha(alpha)
-                } else {
-                    config
-                };
-                Box::new(PartialActionModel::new(py, config))
-            }
             ModelConfig::WlModel(config) => {
                 let config = if let Some(iters) = iters {
                     config.with_iters(iters)

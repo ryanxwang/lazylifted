@@ -102,10 +102,6 @@ impl<'py> Regressor<'py> {
             .unwrap()
     }
 
-    pub fn get_weights(&self) -> Vec<f64> {
-        self.weights.clone().unwrap().to_vec()
-    }
-
     pub fn pickle(&self, pickle_path: &Path) {
         py_utils::pickle(self.py(), &self.model, pickle_path);
     }
@@ -171,11 +167,6 @@ mod tests {
             assert_eq!(y.len(), 2);
             assert_approx_eq!(y[0], 3.0, 1e-5);
             assert_approx_eq!(y[1], 4.0, 1e-5);
-
-            // make sure we can get weights
-            let weights = regressor.get_weights();
-            assert_approx_eq!(weights[0], 0.0, 1e-5);
-            assert_approx_eq!(weights[1], 0.5, 1e-5);
         });
     }
 
@@ -198,10 +189,6 @@ mod tests {
             assert_eq!(y.len(), 2);
             assert_approx_eq!(y[0], 2.75, 1e-5);
             assert_approx_eq!(y[1], 3.75, 1e-5);
-
-            let weights = regressor.get_weights();
-            assert_approx_eq!(weights[0], 0.25, 1e-5);
-            assert_approx_eq!(weights[1], 0.25, 1e-5);
         });
     }
 }

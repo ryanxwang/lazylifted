@@ -1,12 +1,14 @@
-[partial-action-model]
-successor-generator = "full-reducer"
-graph-compiler = "rslg"
+[wl-model]
 validate = false
-group-partial-actions = false
 
-[partial-action-model.model]
+[wl-model.model]
 ranker-name = "lp"
 
-[partial-action-model.wl]
+[wl-model.wl]
 iters = 2
 set-or-multiset = "set"
+
+[wl-model.data-generator.partial-space-ranking]
+successor-generator = "full-reducer"
+graph-compiler = "rslg"
+group-partial-actions = false

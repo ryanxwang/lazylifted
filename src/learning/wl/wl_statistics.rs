@@ -64,8 +64,4 @@ impl WlStatistics {
                 / (self.num_hit_colours + self.num_miss_colours) as f64
         );
     }
-
-    pub fn finalise(&self) {
-        self.log();
-    }
 }

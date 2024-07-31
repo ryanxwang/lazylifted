@@ -1,4 +1,6 @@
 use crate::learning::data_generators::{
+    partial_space_ranking::PartialSpaceRankingConfig,
+    partial_space_regression::PartialSpaceRegressionConfig,
     state_space_ilg_ranking::StateSpaceIlgRankingConfig,
     state_space_ilg_regression::StateSpaceIlgRegressionConfig,
 };
@@ -9,4 +11,6 @@ use serde::{Deserialize, Serialize};
 pub enum DataGeneratorConfig {
     StateSpaceIlgRanking(StateSpaceIlgRankingConfig),
     StateSpaceIlgRegression(StateSpaceIlgRegressionConfig),
+    PartialSpaceRegression(PartialSpaceRegressionConfig),
+    PartialSpaceRanking(PartialSpaceRankingConfig),
 }

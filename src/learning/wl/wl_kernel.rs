@@ -7,7 +7,6 @@ use numpy::{PyArray2, PyArrayMethods};
 use pyo3::{Bound, Python};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tracing::info;
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 enum Mode {
@@ -45,18 +44,6 @@ impl WlKernel {
             hashes: HashMap::new(),
             statistics: WlStatistics::new(),
         }
-    }
-
-    /// Inspect the neighbourhood that hashes to a particular colour. This
-    /// should only be used for debugging and understand the kernel.
-    pub fn inspect_colour(&self, colour: i32) -> Option<&Neighbourhood> {
-        self.hashes.iter().find_map(|(neighbourhood, &hash)| {
-            if hash == colour {
-                Some(neighbourhood)
-            } else {
-                None
-            }
-        })
     }
 
     /// Compute colour histograms for some graph. This will run the
@@ -197,13 +184,6 @@ impl WlKernel {
                 }
             },
         }
-    }
-
-    /// Finalise the kernel, printing out the statistics. This should be called
-    /// after all graphs have been processed.
-    pub fn finalise(&self) {
-        info!(total_colours = self.hashes.len());
-        self.statistics.finalise();
     }
 }
 

@@ -63,19 +63,6 @@ impl<'py> MlModel<'py> {
         }
     }
 
-    pub fn get_weights(&self, model_name: MlModelName) -> Option<Vec<f64>> {
-        match model_name {
-            MlModelName::RegressorName(_regressor_name) => {
-                let regressor = match self {
-                    MlModel::Regressor(regressor) => regressor,
-                    _ => panic!("Model does not match provided model name"),
-                };
-                Some(regressor.get_weights())
-            }
-            MlModelName::RankerName(_ranker_name) => None,
-        }
-    }
-
     pub fn pickle(&self, path: &Path) {
         match self {
             MlModel::Regressor(regressor) => regressor.pickle(path),

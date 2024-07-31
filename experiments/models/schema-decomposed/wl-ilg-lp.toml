@@ -1,7 +1,0 @@
-[schema-decomposed-model]
-successor-generator = "full-reducer"
-validate = false
-
-[schema-decomposed-model.wl]
-iters = 2
-set-or-multiset = "set"
