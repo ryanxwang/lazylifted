@@ -10,7 +10,7 @@ use crate::{
         },
         wl::WlKernel,
     },
-    search::{successor_generators::SuccessorGeneratorName, Task},
+    search::successor_generators::SuccessorGeneratorName,
 };
 use pyo3::Python;
 use serde::{Deserialize, Serialize};
@@ -177,12 +177,7 @@ impl Train for WlModel {
 impl Evaluate for WlModel {
     type EvaluatedType<'a> = CGraph;
 
-    fn set_evaluating_task(&mut self, _task: &Task) {
-        // No-op
-    }
-
-    fn evaluate(&mut self, graph: &CGraph) -> f64 {
-        // TODO fix the need to clone by having this consume the graph
+    fn evaluate(&mut self, graph: CGraph) -> f64 {
         let histograms = self.wl.compute_histograms(&[graph.clone()]);
         let x = self.wl.convert_to_ndarray(&histograms);
         self.model.predict_with_ndarray(&x, None)[0]

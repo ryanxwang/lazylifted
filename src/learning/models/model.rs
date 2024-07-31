@@ -8,11 +8,8 @@ use std::path::Path;
 
 pub trait Evaluate {
     type EvaluatedType<'a>;
-    /// Set the task that is currently being evaluated. After the first call to
-    /// this method, further calls should be ignored.
-    fn set_evaluating_task(&mut self, task: &Task);
 
-    fn evaluate(&mut self, t: &Self::EvaluatedType<'_>) -> f64;
+    fn evaluate(&mut self, t: Self::EvaluatedType<'_>) -> f64;
 
     // fn evaluate_batch(&mut self, ts: &[Self::EvaluatedType<'_>]) -> Vec<f64>;
 
