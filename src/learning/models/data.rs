@@ -1,3 +1,4 @@
+use crate::learning::graphs::CGraph;
 use numpy::{PyArray1, PyArray2, PyUntypedArrayMethods};
 use pyo3::{
     types::{PyList, PyNone, PyTuple},
@@ -145,5 +146,12 @@ impl<F> TrainingData<F> {
             }
             TrainingData::Ranking(data) => TrainingData::Ranking(data.with_features(features)),
         }
+    }
+}
+
+impl TrainingData<Vec<CGraph>> {
+    pub fn mean_graph_size(&self) -> f64 {
+        let total_size: usize = self.features().iter().map(|graph| graph.node_count()).sum();
+        total_size as f64 / self.features().len() as f64
     }
 }

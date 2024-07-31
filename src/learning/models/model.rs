@@ -4,7 +4,8 @@ use crate::learning::models::{
     partial_action_model::PartialActionModel,
     partial_action_model_config::PartialActionModelConfig,
     schema_decomposed_model_config::SchemaDecomposedModelConfig,
-    state_space_model_config::StateSpaceModelConfig, SchemaDecomposedModel, StateSpaceModel,
+    state_space_model_config::StateSpaceModelConfig, wl_model_config::WlModelConfig,
+    SchemaDecomposedModel, StateSpaceModel, WlModel,
 };
 use crate::search::{Plan, Task};
 use pyo3::Python;
@@ -49,6 +50,7 @@ pub enum ModelConfig {
     StateSpaceModel(StateSpaceModelConfig),
     PartialActionModel(PartialActionModelConfig),
     SchemaDecomposedModel(SchemaDecomposedModelConfig),
+    WlModel(WlModelConfig),
 }
 
 impl ModelConfig {
@@ -101,6 +103,19 @@ impl ModelConfig {
                 // ignored here
                 Box::new(SchemaDecomposedModel::new(py, config))
             }
+            ModelConfig::WlModel(config) => {
+                let config = if let Some(iters) = iters {
+                    config.with_iters(iters)
+                } else {
+                    config
+                };
+                let config = if let Some(alpha) = alpha {
+                    config.with_alpha(alpha)
+                } else {
+                    config
+                };
+                Box::new(WlModel::new(py, config))
+            }
         }
     }
 }
@@ -110,9 +125,8 @@ mod tests {
     use super::*;
     use crate::{
         learning::{
-            graphs::PartialActionCompilerName,
+            data_generators::DataGeneratorConfig,
             ml::MlModelName,
-            models::partial_action_model_config::PartialActionModelConfig,
             wl::{SetOrMultiset, WlConfig},
         },
         search::successor_generators::SuccessorGeneratorName,
@@ -122,16 +136,18 @@ mod tests {
     // serialised model configs
     #[test]
     fn serialise_sample_model_config() {
-        let config = ModelConfig::PartialActionModel(PartialActionModelConfig {
+        let config = ModelConfig::WlModel(WlModelConfig {
             model: MlModelName::RankerName(crate::learning::ml::RankerName::LP),
-            graph_compiler: PartialActionCompilerName::Rslg,
             wl: WlConfig {
-                iters: 1,
-                set_or_multiset: SetOrMultiset::Multiset,
+                iters: 2,
+                set_or_multiset: SetOrMultiset::Set,
             },
-            validate: false,
-            successor_generator: SuccessorGeneratorName::FullReducer,
-            group_partial_actions: false,
+            validate: true,
+            data_generator: DataGeneratorConfig::StateSpaceIlgRanking(
+                crate::learning::data_generators::StateSpaceIlgRankingConfig {
+                    successor_generator: SuccessorGeneratorName::FullReducer,
+                },
+            ),
         });
 
         let serialised = toml::to_string(&config).unwrap();

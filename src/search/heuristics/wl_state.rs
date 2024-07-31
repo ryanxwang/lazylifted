@@ -1,8 +1,3 @@
-//! A heuristic that uses the WL-ILG model to evaluate states. Note that we
-//! intentionally do not batch evaluate states, as batch evaluations seem to
-//! result in worse performance (10x), possibly due to worse cache locality.
-// TODO investigate cache performance
-
 use crate::learning::models::{Evaluate, StateSpaceModel};
 use crate::search::{DBState, Heuristic, HeuristicValue, Task};
 use pyo3::Python;
