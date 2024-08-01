@@ -1,0 +1,14 @@
+[wl-model]
+validate = false
+
+[wl-model.model]
+ranker-name = "lp"
+
+[wl-model.wl]
+iters = 2
+set-or-multiset = "set"
+
+[wl-model.data-generator.partial-space-ranking]
+successor-generator = "full-reducer"
+graph-compiler = "aoag"
+group-partial-actions = false
