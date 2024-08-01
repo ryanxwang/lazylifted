@@ -69,7 +69,7 @@ impl Name {
     ///
     /// This uses a simple binary search approach to identify the correct position of
     /// the input in question and inserts the element if it wasn't found before.
-    #[cfg_attr(not(feature = "interning"), inline(always))]
+    #[inline(always)]
     fn new_string_interned<S: Into<String> + AsRef<str>>(name: S) -> Self {
         let mut guard = STRING_INTERNING.lock().expect("failed to obtain lock");
         let name_ref = name.as_ref();

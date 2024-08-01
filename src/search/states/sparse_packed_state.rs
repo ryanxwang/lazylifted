@@ -33,6 +33,7 @@ impl SparsePackedState {}
 /// Its internal data structures have the following structure:
 /// - First dimension: predicate index.
 /// - Second dimension: type index (for each one of the predicate arguments).
+///
 /// The remaining dimensions are self-explanatory.
 #[derive(Debug)]
 pub struct SparseStatePacker {
