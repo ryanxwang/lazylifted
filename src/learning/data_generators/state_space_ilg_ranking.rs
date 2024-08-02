@@ -54,6 +54,7 @@ impl DataGenerator for StateSpaceIlgRanking {
                         i: cur_index,
                         j: graphs.len(),
                         relation: RankingRelation::Better,
+                        importance: 1.0,
                     });
                     graphs.push(predecessor_graph.clone());
                 }
@@ -65,6 +66,7 @@ impl DataGenerator for StateSpaceIlgRanking {
                             i: cur_index,
                             j: graphs.len(),
                             relation: RankingRelation::BetterOrEqual,
+                            importance: 1.0,
                         });
                         graphs.push(sibling_graph.clone());
                     }

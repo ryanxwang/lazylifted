@@ -1,7 +1,7 @@
 use crate::learning::graphs::CGraph;
 use numpy::{PyArray1, PyArray2, PyUntypedArrayMethods};
 use pyo3::{
-    types::{PyList, PyNone, PyTuple},
+    types::{PyAnyMethods, PyList, PyNone, PyTuple},
     Bound, PyAny, Python,
 };
 use tracing::info;
@@ -46,7 +46,13 @@ pub enum RankingRelation {
 pub struct RankingPair {
     pub i: usize,
     pub j: usize,
+    /// The relation between the two items. If `Better`, then the model should
+    /// learn that `i` is better than `j`. If `BetterOrEqual`, then the model
+    /// should learn that `i` is better or equal to `j`.
     pub relation: RankingRelation,
+    /// A weight that is used to scale the importance of this pair. This can be
+    /// used to give more importance to some pairs than others.
+    pub importance: f64,
 }
 
 #[derive(Debug)]
@@ -90,7 +96,7 @@ impl<F> RankingTrainingData<F> {
 
     pub fn pairs_for_python(&self) -> Bound<'static, PyList> {
         let py = unsafe { Python::assume_gil_acquired() };
-        let py_tuples: Vec<Bound<PyTuple>> = self
+        let py_tuples: Vec<Bound<PyAny>> = self
             .pairs
             .iter()
             .map(|pair| {
@@ -98,7 +104,13 @@ impl<F> RankingTrainingData<F> {
                     RankingRelation::Better => 1,
                     RankingRelation::BetterOrEqual => 0,
                 };
-                PyTuple::new_bound(py, [pair.i, pair.j, relation])
+                let tuple = PyTuple::new_bound(py, [pair.i, pair.j, relation]);
+                // Can't add importance when constructing since it is a
+                // different type, which python allows but rust doesn't
+                let tuple = tuple
+                    .add(PyTuple::new_bound(py, [pair.importance]))
+                    .unwrap();
+                tuple
             })
             .collect();
         PyList::new_bound(py, py_tuples)

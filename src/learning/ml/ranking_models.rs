@@ -183,26 +183,31 @@ mod tests {
                 i: 1,
                 j: 0,
                 relation: RankingRelation::Better,
+                importance: 1.0,
             },
             RankingPair {
                 i: 1,
                 j: 2,
                 relation: RankingRelation::Better,
+                importance: 1.0,
             },
             RankingPair {
                 i: 1,
                 j: 3,
                 relation: RankingRelation::Better,
+                importance: 1.0,
             },
             RankingPair {
                 i: 1,
                 j: 4,
                 relation: RankingRelation::Better,
+                importance: 1.0,
             },
             RankingPair {
                 i: 5,
                 j: 6,
                 relation: RankingRelation::Better,
+                importance: 1.0,
             },
         ]
     }
@@ -223,11 +228,13 @@ mod tests {
             i: 5,
             j: 1,
             relation: RankingRelation::Better,
+            importance: 1.0,
         });
         pairs.push(RankingPair {
             i: 6,
             j: 1,
             relation: RankingRelation::Better,
+            importance: 1.0,
         });
 
         RankingTrainingData {

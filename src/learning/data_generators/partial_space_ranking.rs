@@ -82,6 +82,7 @@ impl DataGenerator for PartialSpaceRanking {
                             i: cur_index,
                             j: *predecessor_index,
                             relation: RankingRelation::Better,
+                            importance: 1.,
                         });
                     }
 
@@ -100,6 +101,7 @@ impl DataGenerator for PartialSpaceRanking {
                                 i: cur_index,
                                 j: graphs.len(),
                                 relation: RankingRelation::BetterOrEqual,
+                                importance: 1.,
                             });
                             graphs.push(compiler.compile(&cur_state, partial));
                             group_ids.push(partial.group_id());

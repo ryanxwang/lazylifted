@@ -20,7 +20,7 @@ class RankingModel:
     def _to_classification(self, X, pairs):
         X_new = []
         y_new = []
-        for i, j, relation in pairs:
+        for i, j, relation, importance in pairs:
             if np.array_equal(X[i], X[j]):
                 continue
 
@@ -105,11 +105,11 @@ class RankingModel:
         discordant_pairs = 0
         total_pairs = 0
 
-        for i, j, relation in pairs:
+        for i, j, relation, importance in pairs:
             if np.array_equal(X[i], X[j]):
                 continue
 
-            total_pairs += 1
+            total_pairs += importance
 
             i_heuristic = self.predict(
                 X[i], group_ids[i] if group_ids is not None else None
@@ -120,9 +120,9 @@ class RankingModel:
             diff = i_heuristic - j_heuristic
             assert relation >= 0
             if (relation > 0 and diff < 0) or (relation == 0 and diff <= 0):
-                concordant_pairs += 1
+                concordant_pairs += importance
             else:
-                discordant_pairs += 1
+                discordant_pairs += importance
 
         return (concordant_pairs - discordant_pairs) / total_pairs
 
@@ -162,12 +162,12 @@ class LP:
                 prob += abs_weights[group_id][i] >= -weights[group_id][i]
 
         slacks = []
-        for i, j, relation in pairs:
+        for i, j, relation, importance in pairs:
             if np.array_equal(X[i], X[j]):
                 continue
 
             slack = LpVariable(f"z{i}_{j}", lowBound=0)
-            slacks.append(slack)
+            slacks.append((slack, importance))
 
             prob += (
                 lpSum(
@@ -178,7 +178,7 @@ class LP:
                 >= relation - slack
             )
 
-        prob += C * lpSum(slacks) + lpSum(
+        prob += C * lpSum(importance * slack for (slack, importance) in slacks) + lpSum(
             abs_weights[group_id][i]
             for i in range(X.shape[1])
             for group_id in set(group_ids)
