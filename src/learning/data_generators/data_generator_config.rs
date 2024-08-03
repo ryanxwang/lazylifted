@@ -1,6 +1,7 @@
 use crate::learning::data_generators::{
     partial_space_ranking::PartialSpaceRankingConfig,
     partial_space_regression::PartialSpaceRegressionConfig,
+    partial_space_weighted_ranking::PartialSpaceWeightedRankingConfig,
     state_space_ilg_ranking::StateSpaceIlgRankingConfig,
     state_space_ilg_regression::StateSpaceIlgRegressionConfig,
 };
@@ -13,4 +14,5 @@ pub enum DataGeneratorConfig {
     StateSpaceIlgRegression(StateSpaceIlgRegressionConfig),
     PartialSpaceRegression(PartialSpaceRegressionConfig),
     PartialSpaceRanking(PartialSpaceRankingConfig),
+    PartialSpaceWeightedRanking(PartialSpaceWeightedRankingConfig),
 }

@@ -1,0 +1,16 @@
+[wl-model]
+validate = false
+
+[wl-model.model]
+ranker-name = "lp"
+
+[wl-model.wl]
+iters = 2
+set-or-multiset = "set"
+
+[wl-model.data-generator.partial-space-weighted-ranking]
+successor-generator = "full-reducer"
+graph-compiler = "rslg"
+group-partial-actions = false
+predecessor-weight = 3.0
+sibling-weight = 1.0
