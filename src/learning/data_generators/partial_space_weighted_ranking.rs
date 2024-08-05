@@ -93,6 +93,7 @@ impl DataGenerator for PartialSpaceWeightedRanking {
                         });
                         predecessor_pairs_count += 1;
                     }
+                    predecessor_index = Some(cur_index);
 
                     // Only compare to siblings if both are final
                     let is_final_partial = partial_depth == chosen_action.instantiation.len();
@@ -116,8 +117,6 @@ impl DataGenerator for PartialSpaceWeightedRanking {
                             sibling_pairs_count += 1;
                         }
                     }
-
-                    predecessor_index = Some(cur_index);
                 }
 
                 cur_state = successor_generator.generate_successor(
