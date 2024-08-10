@@ -1,5 +1,6 @@
 use crate::learning::{
     data_generators::{
+        partial_space_dense_ranking::PartialSpaceDenseRanking,
         partial_space_ranking::PartialSpaceRanking,
         partial_space_regression::PartialSpaceRegression,
         partial_space_weighted_ranking::PartialSpaceWeightedRanking,
@@ -31,6 +32,9 @@ impl dyn DataGenerator {
             }
             DataGeneratorConfig::PartialSpaceWeightedRanking(config) => {
                 Box::new(PartialSpaceWeightedRanking::new(config))
+            }
+            DataGeneratorConfig::PartialSpaceDenseRanking(config) => {
+                Box::new(PartialSpaceDenseRanking::new(config))
             }
         }
     }

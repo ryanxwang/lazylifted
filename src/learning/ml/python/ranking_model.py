@@ -1,6 +1,7 @@
 import numpy as np
 from sklearn.svm import LinearSVC
 from collections import defaultdict
+from uuid import uuid4
 
 
 class RankingModel:
@@ -162,11 +163,18 @@ class LP:
                 prob += abs_weights[group_id][i] >= -weights[group_id][i]
 
         slacks = []
+        seen_pairs = set()
         for i, j, relation, importance in pairs:
             if np.array_equal(X[i], X[j]):
                 continue
 
-            slack = LpVariable(f"z{i}_{j}", lowBound=0)
+            # generally, we try and make variable names concise and meaningful,
+            # but in the rare case of duplicate relation between variables, we
+            # just add a UUID to the end
+            if (i, j) in seen_pairs:
+                slack = LpVariable(f"z{i}_{j}_{uuid4()}", lowBound=0)
+            else:
+                slack = LpVariable(f"z{i}_{j}", lowBound=0)
             slacks.append((slack, importance))
 
             prob += (
@@ -177,6 +185,7 @@ class LP:
                 )
                 >= relation - slack
             )
+            seen_pairs.add((i, j))
 
         prob += C * lpSum(importance * slack for (slack, importance) in slacks) + lpSum(
             abs_weights[group_id][i]
@@ -186,10 +195,9 @@ class LP:
 
         # solver_list = listSolvers(onlyAvailable=True)
         # if "CPLEX_PY" not in solver_list:
-        solver = PULP_CBC_CMD(msg=False)
+        solver = PULP_CBC_CMD(msg=True)
         # else:
         #     solver = CPLEX_PY(msg=False, gapRel=0.01)
-
         prob.solve(solver)
 
         if is_using_groups:
