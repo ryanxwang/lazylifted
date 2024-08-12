@@ -193,9 +193,11 @@ class LP:
             for group_id in set(group_ids)
         )
 
-        # solver_list = listSolvers(onlyAvailable=True)
-        # if "CPLEX_PY" not in solver_list:
-        solver = PULP_CBC_CMD(msg=True)
+        # solver_list = listSolvers(onlyAvailable=True) if "CPLEX_PY" not in
+
+        # fix seed for deterministic results, note that 0 results in using time
+        # of day
+        solver = PULP_CBC_CMD(msg=True, options=[f"RandomS 2024"])
         # else:
         #     solver = CPLEX_PY(msg=False, gapRel=0.01)
         prob.solve(solver)
