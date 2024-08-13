@@ -9,7 +9,7 @@ use std::path::Path;
 pub trait Evaluate {
     type EvaluatedType<'a>;
 
-    fn evaluate(&mut self, t: Self::EvaluatedType<'_>) -> f64;
+    fn evaluate(&mut self, t: Self::EvaluatedType<'_>, group_id: Option<usize>) -> f64;
 
     // fn evaluate_batch(&mut self, ts: &[Self::EvaluatedType<'_>]) -> Vec<f64>;
 

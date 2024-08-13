@@ -44,6 +44,6 @@ impl Heuristic<(DBState, PartialAction)> for WlPartialHeuristic {
             );
         }
         let graph = self.compiler.as_ref().unwrap().compile(state, partial);
-        self.model.evaluate(graph).into()
+        self.model.evaluate(graph, Some(partial.group_id())).into()
     }
 }

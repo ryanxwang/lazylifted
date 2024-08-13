@@ -166,8 +166,7 @@ impl PartialAction {
     /// is effectively a hash of the schema index and the depth.
     pub fn group_id(&self) -> usize {
         // As primitive as it gets
-        // self.schema_index * 100 + self.partial_instantiation.len()
-        0
+        self.schema_index * 100 + self.partial_instantiation.len()
     }
 }
 

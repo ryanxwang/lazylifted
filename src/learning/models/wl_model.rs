@@ -181,10 +181,10 @@ impl Train for WlModel {
 impl Evaluate for WlModel {
     type EvaluatedType<'a> = CGraph;
 
-    fn evaluate(&mut self, graph: CGraph) -> f64 {
+    fn evaluate(&mut self, graph: CGraph, group_id: Option<usize>) -> f64 {
         let histograms = self.wl.compute_histograms(&[graph.clone()]);
         let x = self.wl.convert_to_ndarray(&histograms);
-        self.model.predict_with_ndarray(&x, None)[0]
+        self.model.predict_with_ndarray(&x, group_id)[0]
     }
 
     fn load(py: Python<'static>, path: &Path) -> Self {
