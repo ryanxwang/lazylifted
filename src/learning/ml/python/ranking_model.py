@@ -199,7 +199,7 @@ class LP:
         # of day
         solver = PULP_CBC_CMD(msg=True, options=[f"RandomS 2024"])
         # else:
-        #     solver = CPLEX_PY(msg=False, gapRel=0.01)
+        # solver = CPLEX_PY(msg=False)
         prob.solve(solver)
 
         if is_using_groups:

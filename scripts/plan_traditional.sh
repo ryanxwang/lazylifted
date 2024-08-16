@@ -41,6 +41,13 @@ else
     exit 1
 fi
 
+if [ $domain == *"-htg" ]; then
+    domain=$(sed 's/-htg$//' <<< $domain)
+    echo "Domain is $domain"
+else
+
+exit
+
 cmd="./$planner_bin benchmarks/ipc23-learning/$domain/domain.pddl benchmarks/ipc23-learning/$domain/$instance.pddl -o $plan_file $subcommand --heuristic $heuristic"
 err_log=$log_dir/$instance_str.err
 out_log=$log_dir/$instance_str.out

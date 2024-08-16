@@ -75,6 +75,11 @@ impl<'py> Ranker<'py> {
                 );
             }
         }
+
+        // TODO: This doesn't actually print out the entire weights array. This
+        // is for now just for sanity checking. If we want to actually make this
+        // a feature, we should have this be optional and the printed result
+        // easy to access
         print!("Weights: {:?}", self.weights);
     }
 

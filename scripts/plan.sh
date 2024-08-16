@@ -14,6 +14,13 @@ model_str=$(sed 's/-/_/g' <<< $model_type)-$(sed 's/-/_/g' <<< $model)
 log_dir=planning_logs/$model_str/$domain
 plan_dir=plans/$model_str/$domain
 
+HTG_REGEX=".*-htg$"
+if [[ $domain =~ $HTG_REGEX ]]; then
+    domain_no_suffix=$(sed 's/-htg$//' <<< $domain)
+    domain_dir=benchmarks/htg/$domain_no_suffix
+else
+    domain_dir=benchmarks/ipc23-learning/$domain
+fi
 
 echo "This script will overwrite previous logs for the same experiment at $log_dir"
 
@@ -43,7 +50,8 @@ else
     exit 1
 fi
 
-cmd="./$planner_bin benchmarks/ipc23-learning/$domain/domain.pddl benchmarks/ipc23-learning/$domain/$instance.pddl -o $plan_file --model trained_models/$model_type-$model-$domain.model $subcommand --heuristic wl"
+
+cmd="./$planner_bin $domain_dir/domain.pddl $domain_dir/$instance.pddl -o $plan_file --model trained_models/$model_type-$model-$domain.model $subcommand --heuristic wl"
 err_log=$log_dir/$instance_str.err
 out_log=$log_dir/$instance_str.out
 echo "Planning for domain $domain with command: $cmd, saving logs to $err_log and $out_log and plan to $plan_file"

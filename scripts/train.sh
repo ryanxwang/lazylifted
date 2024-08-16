@@ -9,7 +9,7 @@ model=$2
 domain=$3
 
 model_dir=experiments/models
-data_dir=experiments/ipc23-learning
+data_dir=experiments/domains
 log_dir=training_logs
 
 if [[ $TRAINER_BIN ]]; then
