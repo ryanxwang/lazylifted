@@ -2,7 +2,7 @@
 validate = false
 
 [wl-model.model]
-ranker-name = "lp"
+ranker-name = "ranksvm"
 
 [wl-model.wl]
 iters = 2
