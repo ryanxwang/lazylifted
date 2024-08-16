@@ -21,29 +21,33 @@ class RankingModel:
     def _to_classification(self, X, pairs):
         X_new = []
         y_new = []
+        sample_weight = []
         for i, j, relation, importance in pairs:
             if np.array_equal(X[i], X[j]):
                 continue
 
             # go both ways to make sure the data is balanced
             X_new.append(X[i] - X[j])
-            y_new.append(np.sign(1))
+            y_new.append(1)
+            sample_weight.append(importance)
 
             X_new.append(X[j] - X[i])
-            y_new.append(np.sign(-1))
+            y_new.append(-1)
+            sample_weight.append(importance)
 
-        return np.array(X_new), np.array(y_new)
+        return np.array(X_new), np.array(y_new), np.array(sample_weight)
 
-    def _train_ranksvm(self, X, y):
+    def _train_ranksvm(self, X, y, sample_weight):
         model = LinearSVC(
-            loss="hinge",
+            penalty="l1",
+            loss="squared_hinge",
             max_iter=30000,
-            dual=True,
+            dual=False,
             fit_intercept=False,
             C=1,
             tol=1e-3,
         )
-        model.fit(X, y)
+        model.fit(X, y, sample_weight=sample_weight)
         if model.coef_.shape[0] == 1:
             self.weights = model.coef_[0]
         else:
@@ -67,8 +71,8 @@ class RankingModel:
             group.
         """
         if self.model_str == "ranksvm":
-            X, y = self._to_classification(X, pairs)
-            self._train_ranksvm(X, y)
+            data = self._to_classification(X, pairs)
+            self._train_ranksvm(*data)
         elif self.model_str == "lp":
             lp = LP()
             lp.fit(X, pairs, group_ids)
