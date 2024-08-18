@@ -100,6 +100,8 @@ mod tests {
                     successor_generator: SuccessorGeneratorName::FullReducer,
                 },
             ),
+            preprocessing_option:
+                crate::learning::models::preprocessor::PreprocessingOption::DivByStd,
         });
 
         let serialised = toml::to_string(&config).unwrap();

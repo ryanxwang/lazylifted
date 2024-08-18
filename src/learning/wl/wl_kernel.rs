@@ -128,7 +128,7 @@ impl WlKernel {
     pub fn convert_to_pyarray<'py>(
         &self,
         py: Python<'py>,
-        histograms: &[HashMap<i32, usize>],
+        histograms: &[HashMap<i32, f64>],
     ) -> Bound<'py, PyArray2<f64>> {
         let n = histograms.len();
         let d = self.hashes.len();
@@ -139,13 +139,13 @@ impl WlKernel {
                 if hash < 0 {
                     continue;
                 }
-                *features_readwrite.get_mut([i, hash as usize]).unwrap() = cnt as f64;
+                *features_readwrite.get_mut([i, hash as usize]).unwrap() = cnt;
             }
         }
         features
     }
 
-    pub fn convert_to_ndarray(&self, histograms: &[HashMap<i32, usize>]) -> Array2<f64> {
+    pub fn convert_to_ndarray(&self, histograms: &[HashMap<i32, f64>]) -> Array2<f64> {
         let n = histograms.len();
         let d = self.hashes.len();
         let mut features = Array2::zeros((n, d));
@@ -154,7 +154,7 @@ impl WlKernel {
                 if hash < 0 {
                     continue;
                 }
-                features[[i, hash as usize]] = cnt as f64;
+                features[[i, hash as usize]] = cnt;
             }
         }
         features
@@ -189,9 +189,9 @@ impl WlKernel {
 
 #[cfg(test)]
 mod tests {
-    use crate::learning::wl::SetOrMultiset;
-
     use super::*;
+    use crate::learning::models::{PreprocessingOption, Preprocessor};
+    use crate::learning::wl::SetOrMultiset;
 
     const SET_CONFIG: WlConfig = WlConfig {
         set_or_multiset: SetOrMultiset::Set,
@@ -243,6 +243,9 @@ mod tests {
     #[test]
     fn computes_x_correctly_with_multiset() {
         let mut kernel = WlKernel::new(&MULTISET_CONFIG);
+        // Need this to help convert to f64
+        let mut preprocessor = Preprocessor::new(PreprocessingOption::None);
+
         let mut graph = CGraph::new_undirected();
         let node_0 = graph.add_node(0);
         let node_1 = graph.add_node(1);
@@ -252,7 +255,7 @@ mod tests {
 
         let histograms = kernel.compute_histograms(&[graph.clone()]);
         Python::with_gil(|py| {
-            let x = kernel.convert_to_pyarray(py, &histograms);
+            let x = kernel.convert_to_pyarray(py, &preprocessor.preprocess(histograms, true));
             assert_eq!(unsafe { x.as_slice().unwrap() }, &[2.0, 1.0, 2.0, 1.0]);
         });
 
@@ -267,7 +270,7 @@ mod tests {
 
         let histograms2 = kernel.compute_histograms(&[graph2.clone()]);
         Python::with_gil(|py| {
-            let x = kernel.convert_to_pyarray(py, &histograms2);
+            let x = kernel.convert_to_pyarray(py, &preprocessor.preprocess(histograms2, true));
             assert_eq!(unsafe { x.as_slice().unwrap() }, &[3.0, 1.0, 3.0, 0.0]);
         });
     }
@@ -294,6 +297,9 @@ mod tests {
     #[test]
     fn computes_x_correctly_with_set() {
         let mut kernel = WlKernel::new(&SET_CONFIG);
+        // Need this to help convert to f64
+        let mut preprocessor = Preprocessor::new(PreprocessingOption::None);
+
         let mut graph = CGraph::new_undirected();
         let node_0 = graph.add_node(0);
         let node_1 = graph.add_node(1);
@@ -303,7 +309,7 @@ mod tests {
 
         let histograms = kernel.compute_histograms(&[graph.clone()]);
         Python::with_gil(|py| {
-            let x = kernel.convert_to_pyarray(py, &histograms);
+            let x = kernel.convert_to_pyarray(py, &preprocessor.preprocess(histograms, true));
             assert_eq!(unsafe { x.as_slice().unwrap() }, &[2.0, 1.0, 2.0, 1.0]);
         });
 
@@ -318,7 +324,7 @@ mod tests {
 
         let histograms2 = kernel.compute_histograms(&[graph2.clone()]);
         Python::with_gil(|py| {
-            let x = kernel.convert_to_pyarray(py, &histograms2);
+            let x = kernel.convert_to_pyarray(py, &preprocessor.preprocess(histograms2, true));
             assert_eq!(unsafe { x.as_slice().unwrap() }, &[3.0, 1.0, 3.0, 1.0]);
         });
     }

@@ -1,10 +1,10 @@
-use serde::{Deserialize, Serialize};
-
 use crate::learning::{
     data_generators::DataGeneratorConfig,
     ml::{MlModelName, RegressorName},
+    models::preprocessor::PreprocessingOption,
     wl::WlConfig,
 };
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
@@ -13,6 +13,8 @@ pub struct WlModelConfig {
     pub wl: WlConfig,
     pub data_generator: DataGeneratorConfig,
     pub validate: bool,
+    #[serde(default)]
+    pub preprocessing_option: PreprocessingOption,
 }
 
 // This is an ugly way to allow for domain-custom model configurations :(

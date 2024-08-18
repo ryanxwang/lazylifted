@@ -5,6 +5,7 @@ use crate::{
         ml::MlModel,
         models::{
             model_utils::{extract_from_zip, zip_files, PICKLE_FILE_NAME, RON_FILE_NAME},
+            preprocessor::Preprocessor,
             wl_model_config::WlModelConfig,
             Evaluate, Train, TrainingInstance,
         },
@@ -30,6 +31,7 @@ enum WlModelState {
 pub struct WlModel {
     model: MlModel<'static>,
     wl: WlKernel,
+    preprocessor: Preprocessor,
     state: WlModelState,
     /// The configuration used to create the model, saved for later use such as
     /// deserialisation
@@ -39,6 +41,7 @@ pub struct WlModel {
 #[derive(Debug, Serialize, Deserialize)]
 struct SerialisableWlModel {
     wl: WlKernel,
+    preprocessor: Preprocessor,
     state: WlModelState,
     config: WlModelConfig,
 }
@@ -48,6 +51,7 @@ impl WlModel {
         Self {
             model: MlModel::new(py, config.model),
             wl: WlKernel::new(&config.wl),
+            preprocessor: Preprocessor::new(config.preprocessing_option),
             state: WlModelState::New,
             config,
         }
@@ -110,8 +114,12 @@ impl Train for WlModel {
             mean_val_graph_size = val_data.mean_graph_size(),
         );
 
-        let train_histograms = self.wl.compute_histograms(train_data.features());
-        let val_histograms = self.wl.compute_histograms(val_data.features());
+        let train_histograms = self
+            .preprocessor
+            .preprocess(self.wl.compute_histograms(train_data.features()), true);
+        let val_histograms = self
+            .preprocessor
+            .preprocess(self.wl.compute_histograms(val_data.features()), false);
         info!("computed histograms");
 
         let train_x = self.wl.convert_to_pyarray(self.py(), &train_histograms);
@@ -159,6 +167,7 @@ impl Train for WlModel {
 
         let serialisable = SerialisableWlModel {
             wl: self.wl.clone(),
+            preprocessor: self.preprocessor.clone(),
             state: WlModelState::Trained,
             config: self.config.clone(),
         };
@@ -182,7 +191,9 @@ impl Evaluate for WlModel {
     type EvaluatedType<'a> = CGraph;
 
     fn evaluate(&mut self, graph: CGraph, group_id: Option<usize>) -> f64 {
-        let histograms = self.wl.compute_histograms(&[graph.clone()]);
+        let histograms = self
+            .preprocessor
+            .preprocess(self.wl.compute_histograms(&[graph.clone()]), false);
         let x = self.wl.convert_to_ndarray(&histograms);
         self.model.predict_with_ndarray(&x, group_id)[0]
     }
@@ -200,6 +211,7 @@ impl Evaluate for WlModel {
         Self {
             model,
             wl: serialisable.wl,
+            preprocessor: serialisable.preprocessor,
             state: serialisable.state,
             config: serialisable.config,
         }
