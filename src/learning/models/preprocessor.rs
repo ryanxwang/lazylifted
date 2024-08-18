@@ -47,6 +47,7 @@ impl Preprocessor {
                 .into_iter()
                 .map(|hist| hist.into_iter().map(|(k, v)| (k, v as f64)).collect())
                 .collect(),
+            // TODO: figure out what to do when std is 0
             PreprocessingOption::DivByStd => {
                 if is_training {
                     self.compute_stats(&histograms);
