@@ -62,7 +62,7 @@ pub fn parse_problem<'a, T: Into<Span<'a>>>(input: T) -> ParseResult<'a, Problem
             Problem::new(
                 name,
                 domain,
-                reqs.unwrap_or(Requirements::new([])), // TODO: Do we need to imply STRIPS if empty?
+                reqs.unwrap_or(Requirements::new([])), // TODO-someday Do we need to imply STRIPS if empty?
                 objects.unwrap_or(Objects::default()),
                 init,
                 goal,

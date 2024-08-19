@@ -48,7 +48,7 @@ impl SclgCompiler {
         let mut graph = self.base_graph.clone().unwrap();
         let action_schema = &self.action_schemas[partial_action.schema_index()];
 
-        // TODO clean up this code, these should be typed as
+        // TODO-someday clean up this code, these should be typed as
         // Vec<Negatable<Atom>>
         let relevant_effects = self
             .successor_generator

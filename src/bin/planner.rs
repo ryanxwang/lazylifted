@@ -143,6 +143,7 @@ fn plan(cli: Cli, task: Task) {
         SearchResult::Success(plan) => {
             info!("validating plan");
             let generator = cli.successor_generator_name.create(&task);
+            // TODO-soon add option to use VAL for validation
             let validation_result = validate(&plan, &*generator, &task);
             match validation_result {
                 Ok(()) => info!("plan is valid"),

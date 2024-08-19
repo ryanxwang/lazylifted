@@ -73,7 +73,7 @@ impl Problem {
         Self {
             name: problem_name.into(),
             domain: domain_name.into(),
-            requires: Requirements::new([]), // TODO: Do we need to imply STRIPS?
+            requires: Requirements::new([]), // TODO-someday Do we need to imply STRIPS?
             objects: Objects::default(),
             init,
             goal,

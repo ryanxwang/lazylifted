@@ -94,7 +94,7 @@ impl SearchStatistics {
     }
 
     fn log(&self) {
-        // TODO(someday): would be nice to log memory usage, like FD does.
+        // TODO-soon would be nice to log memory usage, like FD does.
         // https://crates.io/crates/memory-stats seems like a decent tool for
         // this.
         info!(

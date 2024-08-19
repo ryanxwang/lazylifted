@@ -56,7 +56,7 @@ impl RslgCompiler {
         let mut graph = self.base_graph.clone().unwrap();
         let action_schema = &self.action_schemas[partial_action.schema_index()];
 
-        // TODO: instead of doing this filtering, we can just make the successor
+        // TODO-soon instead of doing this filtering, we can just make the successor
         // generator generate only for the partial action. This could be
         // decently meaning on domains where we spend a lot of time generating
         // successors, such as miconic

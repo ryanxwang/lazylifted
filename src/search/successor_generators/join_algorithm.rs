@@ -148,7 +148,7 @@ fn select_tuples(
         // variables. We then remove those tuples that are present in the
         // state.
 
-        // TODO: plenty of low-hanging optimisation fruits here
+        // TODO-soon plenty of low-hanging optimisation fruits here
         fn product(l: &HashSet<ObjectTuple>, r: HashSet<usize>) -> HashSet<ObjectTuple> {
             l.iter()
                 .flat_map(|x| {

@@ -56,8 +56,11 @@ impl DataGenerator for PartialSpaceRegression {
                     if partial_depth == chosen_action.instantiation.len() {
                         noise.push(0.0);
                     } else {
-                        // TODO we hardcode this value for now, but what should
-                        // it actually be?
+                        // we hardcode this value for now, but what should it
+                        // actually be?
+                        //
+                        // Update: for now ranking is clearly doing better than
+                        // regression, so this value doesn't really matter
                         noise.push(0.3);
                     }
                 }

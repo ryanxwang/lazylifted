@@ -45,7 +45,7 @@ pub enum Requirement {
     /// Allow numeric function definitions and use of effects using assignment operators and arithmetic
     /// preconditions.
     NumericFluents,
-    // TODO: document ObjectFluents
+    // TODO-someday document ObjectFluents
     ObjectFluents,
     /// Same as
     /// * [`Strips`](Self::Strips),

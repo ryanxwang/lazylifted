@@ -12,8 +12,8 @@ pub fn hash_semi_join(t1: &mut Table, t2: &Table) -> usize {
         return t1.tuples.len();
     }
 
-    // TODO: we don't actually need a [`HashMap`] here, a [`HashSet`] would be
-    // enough
+    // TODO-someday we don't actually need a [`HashMap`] here, a [`HashSet`]
+    // would be enough
     let mut hash_join_map = HashMap::new();
     for tuple_t2 in &t2.tuples {
         let key = matches
