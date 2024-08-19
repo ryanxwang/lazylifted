@@ -1,5 +1,6 @@
 //! Wrapper around various Python learning-to-rank models
-use crate::learning::{ml::py_utils, models::RankingTrainingData};
+use crate::learning::{ml::py_utils, models::RankingTrainingData, VERBOSE};
+use core::fmt::Debug;
 use ndarray::{Array1, Array2};
 use numpy::PyArray2;
 use pyo3::prelude::*;
@@ -27,11 +28,32 @@ impl RankerName {
     }
 }
 
-#[derive(Debug)]
 enum RankerWeights {
     None,
     Vector(Array1<f64>),
     VectorByGroup(HashMap<usize, Array1<f64>>),
+}
+
+impl Debug for RankerWeights {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RankerWeights::None => write!(f, "None"),
+            // The default debug implementation for Array1 is not very helpful
+            // as it only prints the first few elements and the last few
+            // elements. We convert it to a Vec to print the entire array
+            RankerWeights::Vector(weights) => write!(f, "Vector({:?})", weights.to_vec()),
+            RankerWeights::VectorByGroup(weights) => {
+                write!(
+                    f,
+                    "VectorByGroup({:?})",
+                    weights
+                        .iter()
+                        .map(|(group_id, weights)| (group_id, weights.to_vec()))
+                        .collect::<Vec<_>>()
+                )
+            }
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -44,7 +66,9 @@ impl<'py> Ranker<'py> {
     pub fn new(py: Python<'py>, name: RankerName) -> Self {
         let py_model = py_utils::get_ranking_model(py);
         Self {
-            model: py_model.call1((name.to_model_str(),)).unwrap(),
+            model: py_model
+                .call1((name.to_model_str(), *VERBOSE.get().unwrap_or(&false)))
+                .unwrap(),
             weights: RankerWeights::None,
         }
     }
@@ -76,11 +100,9 @@ impl<'py> Ranker<'py> {
             }
         }
 
-        // TODO-soon This doesn't actually print out the entire weights array. This
-        // is for now just for sanity checking. If we want to actually make this
-        // a feature, we should have this be optional and the printed result
-        // easy to access
-        print!("Weights: {:?}", self.weights);
+        if *VERBOSE.get().unwrap_or(&false) {
+            print!("Weights: {:?}", self.weights);
+        }
     }
 
     pub fn predict_with_ndarray(&self, x: &Array2<f64>, group_id: Option<usize>) -> Array1<f64> {

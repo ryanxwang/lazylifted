@@ -36,6 +36,8 @@ struct Args {
     save_path: PathBuf,
     #[arg(help = "Whether to use coloured output", short = 'c', long = "colour")]
     colour: bool,
+    #[arg(help = "Verbose output", short = 'v', long = "verbose")]
+    verbose: bool,
 }
 
 #[derive(Deserialize, Debug)]
@@ -93,6 +95,11 @@ fn main() {
         .with_writer(std::io::stderr)
         .compact()
         .init();
+
+    if args.verbose {
+        info!("Verbose output enabled");
+        lazylifted::learning::VERBOSE.set(true).unwrap();
+    }
 
     let data_config: DataConfig = toml::from_str(
         &fs::read_to_string(&args.data_config)

@@ -607,6 +607,7 @@ dependencies = [
  "nom-greedyerror",
  "nom_locate",
  "numpy",
+ "once_cell",
  "ordered-float",
  "petgraph",
  "priority-queue",

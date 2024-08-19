@@ -5,8 +5,9 @@ from uuid import uuid4
 
 
 class RankingModel:
-    def __init__(self, model_str):
+    def __init__(self, model_str, verbose):
         self.model_str = model_str
+        self.verbose = verbose
         if model_str == "ranksvm":
             # we create the model later
             pass
@@ -75,7 +76,7 @@ class RankingModel:
             self._train_ranksvm(*data)
         elif self.model_str == "lp":
             lp = LP()
-            lp.fit(X, pairs, group_ids)
+            lp.fit(X, pairs, group_ids, verbose=self.verbose)
             self.weights = lp.weights
         elif self.model_str == "lambdamart":
             raise ValueError("LambdaMART is no longer supported")
@@ -139,7 +140,7 @@ class LP:
     def __init__(self):
         pass
 
-    def fit(self, X, pairs, group_ids, C=10):
+    def fit(self, X, pairs, group_ids, C=10, verbose=False):
         prob = LpProblem("Ranking", LpMinimize)
 
         weights = defaultdict(list)
@@ -201,9 +202,9 @@ class LP:
 
         # fix seed for deterministic results, note that 0 results in using time
         # of day
-        solver = PULP_CBC_CMD(msg=True, options=[f"RandomS 2024"])
+        solver = PULP_CBC_CMD(msg=verbose, options=[f"RandomS 2024"])
         # else:
-        # solver = CPLEX_PY(msg=False)
+        # solver = CPLEX_PY(msg=verbose)
         prob.solve(solver)
 
         if is_using_groups:
