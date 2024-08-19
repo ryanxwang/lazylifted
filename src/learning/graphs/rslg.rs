@@ -165,6 +165,10 @@ impl RslgCompiler {
 
     #[inline(always)]
     fn get_object_colour() -> i32 {
+        // TODO-soon different objects can have different initial colours based
+        // on constants associated with them, such as if a child requires gluten
+        // free or not in childsnack. This information is currently not included
+        // as we don't include statics
         const START: i32 = 0;
         START
     }

@@ -47,7 +47,6 @@ impl Preprocessor {
                 .into_iter()
                 .map(|hist| hist.into_iter().map(|(k, v)| (k, v as f64)).collect())
                 .collect(),
-            // TODO: figure out what to do when std is 0
             PreprocessingOption::DivByStd => {
                 if is_training {
                     self.compute_stats(&histograms);
@@ -120,6 +119,13 @@ impl Preprocessor {
 
         for (_, val) in std.iter_mut() {
             *val = (*val / total).sqrt();
+
+            const EPSILON: f64 = 1e-6;
+            if -*val < EPSILON && *val < EPSILON {
+                // since we are going to divide by std, if std is zero, we set
+                // it to 1 such that the feature is not changed
+                *val = 1.0;
+            }
         }
 
         self.std = Some(std);
