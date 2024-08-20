@@ -22,7 +22,7 @@ numpy = "0.21.0"
 once_cell = "1.19.0"
 ordered-float = "4.2.2"
 petgraph = { version = "0.6.5", features = ["serde-1"] }
-priority-queue = "2.0.3"
+priority-queue = "2.1.0"
 pyo3 = { version = "0.21.2", features = ["auto-initialize", "serde"] }
 ron = "0.8.1"
 segvec = "0.2.0"
