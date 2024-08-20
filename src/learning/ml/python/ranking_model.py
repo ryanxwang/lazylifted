@@ -167,6 +167,8 @@ class LP:
                 prob += abs_weights[group_id][i] >= weights[group_id][i]
                 prob += abs_weights[group_id][i] >= -weights[group_id][i]
 
+        h_values = [lpDot(weights[group_ids[i]], X[i]) for i in range(X.shape[0])]
+
         slacks = []
         seen_pairs = set()
         for i, j, relation, importance in pairs:
@@ -182,14 +184,7 @@ class LP:
                 slack = LpVariable(f"z{i}_{j}", lowBound=0)
             slacks.append((slack, importance))
 
-            prob += (
-                lpSum(
-                    weights[group_ids[i]][k] * X[i][k]
-                    - weights[group_ids[j]][k] * X[j][k]
-                    for k in range(X.shape[1])
-                )
-                >= relation - slack
-            )
+            prob += h_values[i] - h_values[j] >= relation - slack
             seen_pairs.add((i, j))
 
         prob += C * lpSum(importance * slack for (slack, importance) in slacks) + lpSum(
