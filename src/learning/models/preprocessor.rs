@@ -58,8 +58,13 @@ impl Preprocessor {
                     .map(|hist| {
                         hist.into_iter()
                             .map(|(feature, count)| {
-                                let std = std.get(&feature).unwrap();
-                                (feature, (count as f64 / std))
+                                if feature < 0 {
+                                    // unseen feature
+                                    (feature, count as f64)
+                                } else {
+                                    let std = std.get(&feature).unwrap();
+                                    (feature, (count as f64 / std))
+                                }
                             })
                             .collect()
                     })
@@ -77,9 +82,14 @@ impl Preprocessor {
                     .map(|hist| {
                         hist.into_iter()
                             .map(|(feature, count)| {
-                                let mean = mean.get(&feature).unwrap();
-                                let std = std.get(&feature).unwrap();
-                                (feature, ((count as f64 - mean) / std))
+                                if feature < 0 {
+                                    // unseen feature
+                                    (feature, count as f64)
+                                } else {
+                                    let mean = mean.get(&feature).unwrap();
+                                    let std = std.get(&feature).unwrap();
+                                    (feature, ((count as f64 - mean) / std))
+                                }
                             })
                             .collect()
                     })
