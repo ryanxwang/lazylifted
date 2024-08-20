@@ -148,6 +148,11 @@ impl RslgCompiler {
             }
         }
 
+        // TODO-soon: for hard-to-ground problems, we probably only need to care
+        // about the connected component of the graph that includes goal atoms.
+        // This could significantly reduce the size of the graphs without losing
+        // much information. Although to be cautionary, it will likely not reduce the size of wl features much at all.
+
         graph
     }
 

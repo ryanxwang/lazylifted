@@ -15,8 +15,16 @@ pub struct Task {
     pub initial_state: DBState,
     action_schemas: Vec<ActionSchema>,
     pub predicates: Vec<Predicate>,
+    /// The predicate indices of all nullary predicates.
     pub nullary_predicates: HashSet<usize>,
+    /// The indices of objects per type. The index of the outer vector
+    /// corresponds to the type index, the inner sets contain the indices of the
+    /// objects of that type. These sets are not necessarily mutually disjoint
+    /// due to subtyping.
     objects_per_type: Vec<HashSet<usize>>,
+    /// The indices of static predicates that apply to an object. We only
+    /// consider static predicate with a single argument.
+    object_static_information: Vec<HashSet<usize>>,
 }
 
 impl Task {
@@ -72,7 +80,7 @@ impl Task {
             predicates.push(Predicate::new(index, predicate, &type_table));
         }
 
-        let action_schemas = domain
+        let action_schemas: Vec<ActionSchema> = domain
             .actions()
             .iter()
             .enumerate()
@@ -81,12 +89,15 @@ impl Task {
             })
             .collect();
 
+        let predicates = Self::mark_static_predicates(predicates, &action_schemas);
+
         let mut objects: Vec<Object> = problem
             .objects()
             .iter()
             .enumerate()
             .map(|(index, object)| Object::new(index, object, &type_table))
             .collect();
+
         domain
             .constants()
             .iter()
@@ -101,10 +112,15 @@ impl Task {
 
         let goal = Goal::new(problem.goals(), &predicate_table, &object_table);
 
+        let init_state = DBState::from_problem(&problem, &predicate_table, &object_table);
+
         let objects_per_type =
             Self::compute_objects_per_type(&type_table, domain.types(), &objects);
 
-        let mut result = Self {
+        let object_static_information =
+            Self::compute_object_static_information(&init_state, &predicates, &objects);
+
+        Self {
             domain_name: domain.name().clone(),
             problem_name: problem.name().clone(),
             types: domain.types().clone(),
@@ -115,10 +131,8 @@ impl Task {
             nullary_predicates,
             action_schemas,
             objects_per_type,
-        };
-        result.mark_static_predicates();
-
-        result
+            object_static_information,
+        }
     }
 
     fn parent_type(
@@ -163,19 +177,52 @@ impl Task {
         objects_per_type
     }
 
-    fn mark_static_predicates(&mut self) {
-        // basic determination of static predicates by simply checking if they
-        // are used in any effect
-        for predicate in &mut self.predicates {
-            if !self.action_schemas.iter().any(|action| {
-                action
-                    .effects()
+    fn compute_object_static_information(
+        init_state: &DBState,
+        predicates: &[Predicate],
+        object: &[Object],
+    ) -> Vec<HashSet<usize>> {
+        let mut object_static_information = vec![HashSet::new(); object.len()];
+
+        for predicate in predicates {
+            if predicate.arity != 1 || !predicate.is_static {
+                continue;
+            }
+
+            for (object_index, _object) in object.iter().enumerate() {
+                if init_state.relations[predicate.index]
+                    .tuples
                     .iter()
-                    .any(|atom| atom.predicate_index() == predicate.index)
-            }) {
-                predicate.mark_as_static();
+                    .any(|tuple| tuple[0] == object_index)
+                {
+                    object_static_information[object_index].insert(predicate.index);
+                }
             }
         }
+
+        object_static_information
+    }
+
+    fn mark_static_predicates(
+        predicates: Vec<Predicate>,
+        action_schemas: &[ActionSchema],
+    ) -> Vec<Predicate> {
+        // basic determination of static predicates by simply checking if they
+        // are used in any effect
+        predicates
+            .into_iter()
+            .map(|mut predicate| {
+                if !action_schemas.iter().any(|action| {
+                    action
+                        .effects()
+                        .iter()
+                        .any(|atom| atom.predicate_index() == predicate.index)
+                }) {
+                    predicate.mark_as_static();
+                }
+                predicate
+            })
+            .collect()
     }
 
     pub fn domain_name(&self) -> &str {
@@ -200,6 +247,10 @@ impl Task {
             .filter(|predicate| predicate.is_static)
             .map(|predicate| predicate.index)
             .collect()
+    }
+
+    pub fn object_static_information(&self) -> &[HashSet<usize>] {
+        self.object_static_information.as_slice()
     }
 }
 
@@ -248,15 +299,51 @@ mod tests {
     }
 
     #[test]
-    fn static_predicate_detection() {
+    fn static_predicate_detection_spanner() {
         let task = Task::from_text(SPANNER_DOMAIN_TEXT, SPANNER_PROBLEM10_TEXT);
 
-        assert_eq!(task.predicates.len(), 6);
-        assert!(!task.predicates[0].is_static); // at, not static
-        assert!(!task.predicates[1].is_static); // carrying, not static
-        assert!(!task.predicates[2].is_static); // usable, not static
-        assert!(task.predicates[3].is_static); // link, static
-        assert!(!task.predicates[4].is_static); // tightened, not static
-        assert!(!task.predicates[5].is_static); // loose, not static
+        let static_predicates = task.static_predicates();
+
+        // Only the "link" (3) predicate is static in spanner
+        assert_eq!(static_predicates, HashSet::from([3]));
+    }
+
+    #[test]
+    fn static_predicate_detection_childsnack() {
+        let task = Task::from_text(CHILDSNACK_DOMAIN_TEXT, CHILDSNACK_PROBLEM06_TEXT);
+
+        let static_predicates = task.static_predicates();
+
+        // In childsnack, predicates no_gluten_bread (3), no_gluten_content (4),
+        // allergic_gluten(7), not_allrgic_gluten(8), and waiting (10) are
+        // static.
+        assert_eq!(static_predicates, HashSet::from([3, 4, 7, 8, 10]));
+    }
+
+    #[test]
+    fn object_static_information() {
+        let task = Task::from_text(CHILDSNACK_DOMAIN_TEXT, CHILDSNACK_PROBLEM06_TEXT);
+
+        let object_static_information = task.object_static_information();
+
+        //  the 11 objects in the problem and then the constant kitchen
+        assert_eq!(object_static_information.len(), 12);
+        assert_eq!(
+            Vec::from(object_static_information),
+            vec![
+                HashSet::from([7]), // child1 is allergic to gluten
+                HashSet::from([8]), // child2 is not allergic to gluten
+                HashSet::from([]),  // tray1
+                HashSet::from([]),  // sandw1
+                HashSet::from([]),  // sandw2
+                HashSet::from([]),  // bread1
+                HashSet::from([3]), // bread2 is gluten-free
+                HashSet::from([]),  // content1
+                HashSet::from([4]), // content2 is gluten-free
+                HashSet::from([]),  // table1
+                HashSet::from([]),  // table2
+                HashSet::from([]),  // kitchen
+            ]
+        )
     }
 }
