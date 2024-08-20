@@ -8,7 +8,7 @@ use crate::search::{DBState, PartialAction, Task};
 use petgraph::{graph::Graph, Undirected};
 use serde::{Deserialize, Serialize};
 
-pub type CGraph = Graph<i32, i32, Undirected, u32>;
+pub type CGraph = Graph<usize, usize, Undirected, u32>;
 pub type NodeID = petgraph::graph::NodeIndex<u32>;
 
 pub trait Compiler<T>: Debug {

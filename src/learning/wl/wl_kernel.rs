@@ -67,8 +67,8 @@ impl WlKernel {
                 for colour in 0..=max_graph_colour {
                     self.hashes.insert(
                         self.neighbourhood_factory
-                            .create_neighbourhood(colour, vec![]),
-                        colour,
+                            .create_neighbourhood(colour as i32, vec![]),
+                        colour as i32,
                     );
                 }
             }
@@ -82,7 +82,7 @@ impl WlKernel {
             for node in graph.node_indices() {
                 let colour_hash = self.get_hash_value(
                     self.neighbourhood_factory
-                        .create_neighbourhood(graph[node], vec![]),
+                        .create_neighbourhood(graph[node] as i32, vec![]),
                 );
                 cur_colours.insert(node, colour_hash);
                 histogram
@@ -97,8 +97,10 @@ impl WlKernel {
                     let mut neighbour_colours = vec![];
                     for neighbour in graph.neighbors(node) {
                         let edge = graph.find_edge(node, neighbour).unwrap();
-                        neighbour_colours
-                            .push((cur_colours[&neighbour], *graph.edge_weight(edge).unwrap()));
+                        neighbour_colours.push((
+                            cur_colours[&neighbour],
+                            *graph.edge_weight(edge).unwrap() as i32,
+                        ));
                     }
                     let neighbourhood = self
                         .neighbourhood_factory
@@ -151,6 +153,9 @@ impl WlKernel {
         let mut features = Array2::zeros((n, d));
         for (i, histogram) in histograms.iter().enumerate() {
             for (&hash, &cnt) in histogram.iter() {
+                // it's intentional that we let hashes be negative and ignores
+                // the negative ones - they mean colours unseen from training
+                // time
                 if hash < 0 {
                     continue;
                 }

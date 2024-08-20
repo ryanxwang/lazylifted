@@ -70,7 +70,7 @@ impl AoagCompiler {
                 let node_id = graph.add_node(Self::get_action_colour(action.index));
                 for (arg_index, object_index) in action.instantiation.iter().enumerate() {
                     let object_node_id = self.object_index_to_node_index[object_index];
-                    graph.add_edge(node_id, object_node_id, arg_index as i32);
+                    graph.add_edge(node_id, object_node_id, arg_index);
                 }
             }
 
@@ -91,7 +91,7 @@ impl AoagCompiler {
                         .add_node(self.get_atom_colour(atom.predicate_index(), AtomType::NonGoal));
                     for (arg_index, object_index) in atom.arguments().iter().enumerate() {
                         let object_node_id = self.object_index_to_node_index[object_index];
-                        graph.add_edge(node_id, object_node_id, arg_index as i32);
+                        graph.add_edge(node_id, object_node_id, arg_index);
                     }
                 }
             }
@@ -125,7 +125,7 @@ impl AoagCompiler {
                 .add_node(self.get_atom_colour(atom.predicate_index(), AtomType::UnachievedGoal));
             for (arg_index, object_index) in atom.arguments().iter().enumerate() {
                 let object_node_id = self.object_index_to_node_index[object_index];
-                graph.add_edge(node_id, object_node_id, arg_index as i32);
+                graph.add_edge(node_id, object_node_id, arg_index);
             }
             self.goal_atom_to_node_index.insert(atom.clone(), node_id);
         }
@@ -134,21 +134,25 @@ impl AoagCompiler {
     }
 
     #[inline(always)]
-    fn get_object_colour() -> i32 {
-        const START: i32 = 0;
+    fn get_object_colour() -> usize {
+        // TODO-soon different objects can have different initial colours based
+        // on constants associated with them, such as if a child requires gluten
+        // free or not in childsnack. This information is currently not included
+        // as we don't include statics
+        const START: usize = 0;
         START
     }
 
     #[inline(always)]
-    fn get_action_colour(schema_index: usize) -> i32 {
-        const START: i32 = 1;
-        START + schema_index as i32
+    fn get_action_colour(schema_index: usize) -> usize {
+        const START: usize = 1;
+        START + schema_index
     }
 
     #[inline(always)]
-    fn get_atom_colour(&self, predicate_index: usize, atom_type: AtomType) -> i32 {
-        let start = 1 + self.action_schemas.len() as i32;
-        start + predicate_index as i32 * AtomType::COUNT as i32 + atom_type as i32
+    fn get_atom_colour(&self, predicate_index: usize, atom_type: AtomType) -> usize {
+        let start = 1 + self.action_schemas.len();
+        start + predicate_index * AtomType::COUNT + atom_type as usize
     }
 }
 
@@ -235,7 +239,7 @@ mod tests {
         assert_eq!(graph.node_count(), 16);
         assert_eq!(graph.edge_count(), 18);
 
-        fn count_nodes_with_colour(graph: &CGraph, colour: i32) -> usize {
+        fn count_nodes_with_colour(graph: &CGraph, colour: usize) -> usize {
             graph
                 .node_indices()
                 .filter(|node_id| graph[*node_id] == colour)

@@ -82,15 +82,15 @@ impl PalgCompiler {
                             partial_action.partial_instantiation().get(param_index)
                         {
                             let object_node_id = self.object_index_to_node_index[&object_index];
-                            graph.add_edge(node_id, object_node_id, arg_index as i32);
+                            graph.add_edge(node_id, object_node_id, arg_index);
                         } else {
                             let param_node_id = param_index_to_node_index[&param_index];
-                            graph.add_edge(node_id, param_node_id, arg_index as i32);
+                            graph.add_edge(node_id, param_node_id, arg_index);
                         }
                     }
                     SchemaArgument::Constant(object_index) => {
                         let object_node_id = self.object_index_to_node_index[&object_index];
-                        graph.add_edge(node_id, object_node_id, arg_index as i32);
+                        graph.add_edge(node_id, object_node_id, arg_index);
                     }
                 };
             }
@@ -184,7 +184,7 @@ impl PalgCompiler {
         let node_id = graph.add_node(Self::get_atom_colour(atom_type));
         for (arg_index, object_index) in atom.arguments().iter().enumerate() {
             let object_node_id = self.object_index_to_node_index[object_index];
-            graph.add_edge(node_id, object_node_id, arg_index as i32);
+            graph.add_edge(node_id, object_node_id, arg_index);
         }
         let pred_node_id = self.predicate_index_to_node_index[&atom.predicate_index()];
         graph.add_edge(node_id, pred_node_id, 0);
@@ -192,34 +192,34 @@ impl PalgCompiler {
     }
 
     #[inline(always)]
-    fn get_object_colour(_object: &Object) -> i32 {
-        const START: i32 = 0;
+    fn get_object_colour(_object: &Object) -> usize {
+        const START: usize = 0;
         START
     }
 
     #[inline(always)]
-    fn get_atom_colour(atom_type: AtomNodeType) -> i32 {
-        const START: i32 = 1;
-        START + atom_type as i32
+    fn get_atom_colour(atom_type: AtomNodeType) -> usize {
+        const START: usize = 1;
+        START + atom_type as usize
     }
 
     #[inline(always)]
-    fn get_schema_pred_colour(schema_pred_type: SchemaPredNodeType) -> i32 {
-        const START: i32 = 1 + AtomNodeType::COUNT as i32;
-        START + schema_pred_type as i32
+    fn get_schema_pred_colour(schema_pred_type: SchemaPredNodeType) -> usize {
+        const START: usize = 1 + AtomNodeType::COUNT;
+        START + schema_pred_type as usize
     }
 
     #[inline(always)]
-    fn get_param_colour(_param: &SchemaParameter) -> i32 {
-        const START: i32 = 1 + AtomNodeType::COUNT as i32 + SchemaPredNodeType::COUNT as i32;
+    fn get_param_colour(_param: &SchemaParameter) -> usize {
+        const START: usize = 1 + AtomNodeType::COUNT + SchemaPredNodeType::COUNT;
         START
     }
 
     // The number of predicate colours is dependent on the domain, so for
     // simplicity we leave it last
-    fn get_predicate_colour(pred: &Predicate) -> i32 {
-        const START: i32 = 2 + AtomNodeType::COUNT as i32 + SchemaPredNodeType::COUNT as i32;
-        START + pred.index as i32
+    fn get_predicate_colour(pred: &Predicate) -> usize {
+        const START: usize = 2 + AtomNodeType::COUNT + SchemaPredNodeType::COUNT;
+        START + pred.index
     }
 }
 

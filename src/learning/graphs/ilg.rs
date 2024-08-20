@@ -58,15 +58,19 @@ impl IlgCompiler {
     }
 
     #[inline(always)]
-    fn get_object_colour(_object: &Object) -> i32 {
-        const START: i32 = 0;
+    fn get_object_colour(_object: &Object) -> usize {
+        // TODO-soon different objects can have different initial colours based
+        // on constants associated with them, such as if a child requires gluten
+        // free or not in childsnack. This information is currently not included
+        // as we don't include statics
+        const START: usize = 0;
         START
     }
 
     #[inline(always)]
-    fn get_atom_colour(predicate_index: usize, atom_type: AtomNodeType) -> i32 {
-        const START: i32 = 1;
-        START + predicate_index as i32 * AtomNodeType::COUNT as i32 + atom_type as i32
+    fn get_atom_colour(predicate_index: usize, atom_type: AtomNodeType) -> usize {
+        const START: usize = 1;
+        START + predicate_index * AtomNodeType::COUNT + atom_type as usize
     }
 
     pub fn compile(&self, state: &DBState) -> CGraph {
@@ -92,7 +96,7 @@ impl IlgCompiler {
                     ));
                     for (arg_index, object_index) in atom.arguments().iter().enumerate() {
                         let object_node_id = self.object_index_to_node_index[object_index];
-                        graph.add_edge(node_id, object_node_id, arg_index as i32);
+                        graph.add_edge(node_id, object_node_id, arg_index);
                     }
                 }
             }
@@ -128,7 +132,7 @@ impl IlgCompiler {
             ));
             for (arg_index, object_index) in atom.arguments().iter().enumerate() {
                 let object_node_id = self.object_index_to_node_index[object_index];
-                graph.add_edge(node_id, object_node_id, arg_index as i32);
+                graph.add_edge(node_id, object_node_id, arg_index);
             }
             self.goal_atom_to_node_index.insert(atom.clone(), node_id);
         }

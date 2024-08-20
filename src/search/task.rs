@@ -203,6 +203,15 @@ impl Task {
         object_static_information
     }
 
+    /// The maximum number of object static information for any object in the
+    /// domain
+    pub fn max_static_information_count(&self) -> usize {
+        self.predicates
+            .iter()
+            .filter(|p| p.is_static && p.arity == 1)
+            .count()
+    }
+
     fn mark_static_predicates(
         predicates: Vec<Predicate>,
         action_schemas: &[ActionSchema],
@@ -306,6 +315,10 @@ mod tests {
 
         // Only the "link" (3) predicate is static in spanner
         assert_eq!(static_predicates, HashSet::from([3]));
+
+        // Even though there are static predicates, this only counts the number
+        // with arity 1
+        assert_eq!(task.max_static_information_count(), 0);
     }
 
     #[test]
@@ -318,6 +331,9 @@ mod tests {
         // allergic_gluten(7), not_allrgic_gluten(8), and waiting (10) are
         // static.
         assert_eq!(static_predicates, HashSet::from([3, 4, 7, 8, 10]));
+
+        // waiting doesn't have arity 1, so it doesn't count
+        assert_eq!(task.max_static_information_count(), 4);
     }
 
     #[test]

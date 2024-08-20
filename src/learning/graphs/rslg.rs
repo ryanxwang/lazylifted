@@ -10,7 +10,9 @@ use std::collections::{HashMap, HashSet};
 use strum::EnumCount;
 use strum_macros::{EnumCount as EnumCountMacro, FromRepr};
 
+// TODO-soon: make these runtime config options
 const NO_STATIC_PREDICATES: bool = true;
+const OBJECTS_COLOURED_BY_STATIC_PREDICATES: bool = true;
 
 #[derive(Debug)]
 pub struct RslgCompiler {
@@ -26,10 +28,38 @@ pub struct RslgCompiler {
     action_schemas: Vec<ActionSchema>,
     /// The static predicates of the task
     static_predicates: HashSet<usize>,
+    /// Object colours, which may depend on how static predicates apply to them,
+    /// indexed by object index
+    object_colours: Vec<usize>,
+    /// The maximum number of possible object colours - this is domain dependent
+    /// (so not a const unfortunately) but not instance dependent, so that
+    /// colours mean the same thing across instances
+    max_object_colours: usize,
 }
 
 impl RslgCompiler {
     pub fn new(task: &Task, successor_generator_name: SuccessorGeneratorName) -> Self {
+        // Fix here
+        let object_colours = task
+            .object_static_information()
+            .iter()
+            .map(|static_predicates| {
+                if OBJECTS_COLOURED_BY_STATIC_PREDICATES {
+                    let mut colour: usize = 0;
+                    for predicate_index in static_predicates {
+                        // negative so that colours don't overlap
+                        colour += 1 << predicate_index;
+                    }
+                    colour
+                } else {
+                    0
+                }
+            })
+            .collect();
+        // can't just use the maximum seen colour, as this needs to be instance
+        // agnostic
+        let max_object_colours = (2 << task.max_static_information_count()) - 1;
+
         let mut compiler = Self {
             successor_generator: successor_generator_name.create(task),
             base_graph: None,
@@ -45,6 +75,8 @@ impl RslgCompiler {
                 .collect(),
             action_schemas: task.action_schemas().to_owned(),
             static_predicates: task.static_predicates(),
+            object_colours,
+            max_object_colours,
         };
 
         compiler.precompile(task);
@@ -140,11 +172,11 @@ impl RslgCompiler {
             if NO_STATIC_PREDICATES && self.static_predicates.contains(&atom.predicate_index()) {
                 continue;
             }
-            let node_id = graph.add_node(Self::get_atom_colour(atom.predicate_index(), atom_type));
+            let node_id = graph.add_node(self.get_atom_colour(atom.predicate_index(), atom_type));
 
             for (arg_index, object_index) in atom.arguments().iter().enumerate() {
                 let object_node_id = self.object_index_to_node_index[object_index];
-                graph.add_edge(node_id, object_node_id, arg_index as i32);
+                graph.add_edge(node_id, object_node_id, arg_index);
             }
         }
 
@@ -161,27 +193,28 @@ impl RslgCompiler {
 
         // Object nodes
         for object in &task.objects {
-            self.object_index_to_node_index
-                .insert(object.index, graph.add_node(Self::get_object_colour()));
+            self.object_index_to_node_index.insert(
+                object.index,
+                graph.add_node(self.get_object_colour(object.index)),
+            );
         }
 
         self.base_graph = Some(graph);
     }
 
     #[inline(always)]
-    fn get_object_colour() -> i32 {
+    fn get_object_colour(&self, object_index: usize) -> usize {
         // TODO-soon different objects can have different initial colours based
         // on constants associated with them, such as if a child requires gluten
         // free or not in childsnack. This information is currently not included
         // as we don't include statics
-        const START: i32 = 0;
-        START
+        self.object_colours[object_index]
     }
 
     #[inline(always)]
-    fn get_atom_colour(predicate_index: usize, atom_type: AtomType) -> i32 {
-        const START: i32 = 1;
-        START + predicate_index as i32 * AtomType::COUNT as i32 + atom_type.into_repr()
+    fn get_atom_colour(&self, predicate_index: usize, atom_type: AtomType) -> usize {
+        let start = self.max_object_colours + 1;
+        start + predicate_index * AtomType::COUNT + atom_type.into_repr()
     }
 }
 
@@ -249,8 +282,8 @@ impl AtomType {
 
     pub const COUNT: usize = AtomGoalType::COUNT * AtomStatusType::COUNT;
 
-    pub fn into_repr(self) -> i32 {
-        self.atom_goal_type as i32 * AtomStatusType::COUNT as i32 + self.atom_status_type as i32
+    pub fn into_repr(self) -> usize {
+        self.atom_goal_type as usize * AtomStatusType::COUNT + self.atom_status_type as usize
     }
 }
 
@@ -316,10 +349,8 @@ mod tests {
             assert!(compiler
                 .object_index_to_node_index
                 .contains_key(&object.index));
-            assert_eq!(
-                graph[compiler.object_index_to_node_index[&object.index]],
-                RslgCompiler::get_object_colour()
-            );
+            // colour zero as blocksworld has no static predicates
+            assert_eq!(graph[compiler.object_index_to_node_index[&object.index]], 0);
         }
     }
 
@@ -355,7 +386,7 @@ mod tests {
         assert_eq!(graph.node_count(), 16);
         assert_eq!(graph.edge_count(), 16);
 
-        fn count_nodes_with_colour(graph: &CGraph, colour: i32) -> usize {
+        fn count_nodes_with_colour(graph: &CGraph, colour: usize) -> usize {
             graph
                 .node_indices()
                 .filter(|node_id| graph[*node_id] == colour)
@@ -364,7 +395,8 @@ mod tests {
 
         // objects: b1 b2 b3 b4
         assert_eq!(
-            count_nodes_with_colour(&graph, RslgCompiler::get_object_colour()),
+            // objects have colour 0 as blocksworld has no static predicates
+            count_nodes_with_colour(&graph, 0),
             4
         );
 
@@ -372,10 +404,8 @@ mod tests {
         assert_eq!(
             count_nodes_with_colour(
                 &graph,
-                RslgCompiler::get_atom_colour(
-                    0,
-                    AtomType::achieved_nongoal_atom().with_optional_delete()
-                )
+                compiler
+                    .get_atom_colour(0, AtomType::achieved_nongoal_atom().with_optional_delete())
             ),
             2
         );
@@ -384,7 +414,7 @@ mod tests {
         assert_eq!(
             count_nodes_with_colour(
                 &graph,
-                RslgCompiler::get_atom_colour(0, AtomType::unachieved_goal_atom())
+                compiler.get_atom_colour(0, AtomType::unachieved_goal_atom())
             ),
             1
         );
@@ -393,7 +423,7 @@ mod tests {
         assert_eq!(
             count_nodes_with_colour(
                 &graph,
-                RslgCompiler::get_atom_colour(0, AtomType::achieved_nongoal_atom())
+                compiler.get_atom_colour(0, AtomType::achieved_nongoal_atom())
             ),
             1
         );
@@ -402,7 +432,7 @@ mod tests {
         assert_eq!(
             count_nodes_with_colour(
                 &graph,
-                RslgCompiler::get_atom_colour(1, AtomType::achieved_nongoal_atom())
+                compiler.get_atom_colour(1, AtomType::achieved_nongoal_atom())
             ),
             1
         );
@@ -411,7 +441,7 @@ mod tests {
         assert_eq!(
             count_nodes_with_colour(
                 &graph,
-                RslgCompiler::get_atom_colour(1, AtomType::achieved_nongoal_atom().with_in_goal())
+                compiler.get_atom_colour(1, AtomType::achieved_nongoal_atom().with_in_goal())
             ),
             1
         );
@@ -420,7 +450,7 @@ mod tests {
         assert_eq!(
             count_nodes_with_colour(
                 &graph,
-                RslgCompiler::get_atom_colour(2, AtomType::achieved_nongoal_atom())
+                compiler.get_atom_colour(2, AtomType::achieved_nongoal_atom())
             ),
             1
         );
@@ -429,7 +459,7 @@ mod tests {
         assert_eq!(
             count_nodes_with_colour(
                 &graph,
-                RslgCompiler::get_atom_colour(4, AtomType::achieved_nongoal_atom())
+                compiler.get_atom_colour(4, AtomType::achieved_nongoal_atom())
             ),
             1
         );
@@ -438,10 +468,8 @@ mod tests {
         assert_eq!(
             count_nodes_with_colour(
                 &graph,
-                RslgCompiler::get_atom_colour(
-                    4,
-                    AtomType::unachieved_nongoal_atom().with_optional_add()
-                )
+                compiler
+                    .get_atom_colour(4, AtomType::unachieved_nongoal_atom().with_optional_add())
             ),
             1
         );
@@ -450,10 +478,7 @@ mod tests {
         assert_eq!(
             count_nodes_with_colour(
                 &graph,
-                RslgCompiler::get_atom_colour(
-                    4,
-                    AtomType::unachieved_goal_atom().with_optional_add()
-                )
+                compiler.get_atom_colour(4, AtomType::unachieved_goal_atom().with_optional_add())
             ),
             1
         );
@@ -462,7 +487,7 @@ mod tests {
         assert_eq!(
             count_nodes_with_colour(
                 &graph,
-                RslgCompiler::get_atom_colour(4, AtomType::unachieved_goal_atom())
+                compiler.get_atom_colour(4, AtomType::unachieved_goal_atom())
             ),
             2
         );

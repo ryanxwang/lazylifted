@@ -84,7 +84,7 @@ impl SclgCompiler {
                     ));
                     for (arg_index, object_index) in atom.arguments().iter().enumerate() {
                         let object_node_id = self.object_index_to_node_index[object_index];
-                        graph.add_edge(node_id, object_node_id, arg_index as i32);
+                        graph.add_edge(node_id, object_node_id, arg_index);
                     }
                     node_id
                 }
@@ -159,7 +159,7 @@ impl SclgCompiler {
             ));
             for (arg_index, object_index) in atom.arguments().iter().enumerate() {
                 let object_node_id = self.object_index_to_node_index[object_index];
-                graph.add_edge(node_id, object_node_id, arg_index as i32);
+                graph.add_edge(node_id, object_node_id, arg_index);
             }
             self.goal_atom_to_node_index.insert(atom.clone(), node_id);
         }
@@ -168,21 +168,21 @@ impl SclgCompiler {
     }
 
     #[inline(always)]
-    fn get_object_colour(_object: &Object) -> i32 {
-        const START: i32 = 0;
+    fn get_object_colour(_object: &Object) -> usize {
+        const START: usize = 0;
         START
     }
 
     #[inline(always)]
-    fn get_atom_colour(predicate_index: usize, atom_type: AtomType) -> i32 {
-        const START: i32 = 1;
-        START + predicate_index as i32 * AtomType::count() as i32 + atom_type.into_repr()
+    fn get_atom_colour(predicate_index: usize, atom_type: AtomType) -> usize {
+        const START: usize = 1;
+        START + predicate_index * AtomType::count() + atom_type.into_repr()
     }
 
     #[inline(always)]
-    fn get_atom_type(colour: i32) -> AtomType {
-        const START: i32 = 1;
-        AtomType::from_repr((colour - START) % AtomType::count() as i32).unwrap()
+    fn get_atom_type(colour: usize) -> AtomType {
+        const START: usize = 1;
+        AtomType::from_repr((colour - START) % AtomType::count()).unwrap()
     }
 }
 
@@ -243,22 +243,22 @@ impl AtomType {
         AtomNodeType::COUNT * AtomChangeType::COUNT
     }
 
-    pub fn from_repr(repr: i32) -> Option<Self> {
-        let atom_node_type = AtomNodeType::from_repr(repr / AtomChangeType::COUNT as i32)?;
-        let atom_change_type = AtomChangeType::from_repr(repr % AtomChangeType::COUNT as i32)?;
+    pub fn from_repr(repr: usize) -> Option<Self> {
+        let atom_node_type = AtomNodeType::from_repr(repr / AtomChangeType::COUNT)?;
+        let atom_change_type = AtomChangeType::from_repr(repr % AtomChangeType::COUNT)?;
         Some(Self {
             atom_node_type,
             atom_change_type,
         })
     }
 
-    pub fn into_repr(self) -> i32 {
-        self.atom_node_type as i32 * AtomChangeType::COUNT as i32 + self.atom_change_type as i32
+    pub fn into_repr(self) -> usize {
+        self.atom_node_type as usize * AtomChangeType::COUNT + self.atom_change_type as usize
     }
 }
 
 #[derive(EnumCountMacro, Debug, Clone, Copy, FromRepr)]
-#[repr(i32)]
+#[repr(usize)]
 enum AtomChangeType {
     Unchanged,
     Added,
@@ -290,7 +290,7 @@ impl AtomChangeType {
 
 #[allow(clippy::enum_variant_names)]
 #[derive(EnumCountMacro, Debug, Clone, Copy, FromRepr)]
-#[repr(i32)]
+#[repr(usize)]
 enum AtomNodeType {
     /// The node is a goal node but not in the current state and is not being
     /// added.
