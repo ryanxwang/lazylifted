@@ -5,7 +5,8 @@ validate = false
 ranker-name = "ranksvm"
 
 [wl-model.wl]
-iters = 5
+iters = 2
+set-or-multiset = "set"
 
 [wl-model.data-generator.state-space-ilg-ranking]
 successor-generator = "full-reducer"
