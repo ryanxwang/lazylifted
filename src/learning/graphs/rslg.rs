@@ -204,10 +204,6 @@ impl RslgCompiler {
 
     #[inline(always)]
     fn get_object_colour(&self, object_index: usize) -> usize {
-        // TODO-soon different objects can have different initial colours based
-        // on constants associated with them, such as if a child requires gluten
-        // free or not in childsnack. This information is currently not included
-        // as we don't include statics
         self.object_colours[object_index]
     }
 
