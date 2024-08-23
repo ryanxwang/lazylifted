@@ -86,6 +86,11 @@ impl Preprocessor {
                                     // unseen feature
                                     (feature, count as f64)
                                 } else {
+                                    // TODO-someday: investigate how the or case
+                                    // can even happen on rovers. We provide the
+                                    // default for now as preprocessing doesn't
+                                    // end up being useful, and I don't have the
+                                    // time to investigate
                                     let mean = mean.get(&feature).unwrap_or(&0.0);
                                     let std = std.get(&feature).unwrap_or(&1.0);
                                     (feature, ((count as f64 - mean) / std))

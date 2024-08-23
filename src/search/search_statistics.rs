@@ -63,27 +63,22 @@ impl SearchStatistics {
 
     pub fn increment_evaluated_nodes(&mut self) {
         self.evaluated_nodes += 1;
-        self.log_if_needed();
     }
 
     pub fn increment_generated_nodes(&mut self, num_nodes: usize) {
         self.generated_nodes += num_nodes as i64;
-        self.log_if_needed();
     }
 
     pub fn increment_reopened_nodes(&mut self) {
         self.reopened_nodes += 1;
-        self.log_if_needed();
     }
 
     pub fn increment_generated_actions(&mut self, num_actions: usize) {
         self.generated_actions += num_actions as i64;
-        self.log_if_needed();
     }
 
     pub fn increment_skipped_evaluations(&mut self) {
         self.skipped_evaluations += 1;
-        self.log_if_needed();
     }
 
     fn log_if_needed(&mut self) {
