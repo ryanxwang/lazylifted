@@ -104,24 +104,22 @@ impl SparseStatePacker {
                 }
                 packed_relation.push(hash);
             }
+            // sorting ensures that the hash is unique for each state
             packed_relation.sort_unstable();
             packed_relations.push(packed_relation);
             predicate_symbols.push(relation.predicate_symbol);
         }
 
-        let packed = SparsePackedState {
+        // rywang: I've thought about adding to the unpacking cache here as
+        // well. That turns out to significantly increase the time spent
+        // packing, mainly due to having to clone, and doesn't help much - the
+        // situation could change though.
+
+        SparsePackedState {
             packed_relations,
             predicate_symbols,
             nullary_atoms: state.nullary_atoms.clone(),
-        };
-
-        // TODO-soon This takes up a decent bit of time, actually verify it is
-        // beneficial
-        self.unpacked_states_cache
-            .borrow_mut()
-            .put(packed.clone(), state.clone());
-
-        packed
+        }
     }
 
     pub fn unpack(&self, packed_state: &SparsePackedState) -> DBState {
