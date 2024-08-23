@@ -1,12 +1,21 @@
 use crate::search::{
     successor_generators::{FullReducer, JoinSuccessorGenerator, NaiveJoinAlgorithm},
-    Action, ActionSchema, DBState, Task,
+    Action, ActionSchema, DBState, PartialAction, Task,
 };
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
 pub trait SuccessorGenerator: Debug {
     fn get_applicable_actions(&self, state: &DBState, action_schema: &ActionSchema) -> Vec<Action>;
+
+    // Get applicable actions that satisfy the fixed parameters from the partial
+    // action
+    fn get_applicable_actions_from_partial(
+        &self,
+        state: &DBState,
+        action_schema: &ActionSchema,
+        partial_action: &PartialAction,
+    ) -> Vec<Action>;
 
     fn generate_successor(
         &self,

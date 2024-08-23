@@ -1,7 +1,7 @@
 use crate::search::database::{hash_join, Table};
 use crate::search::states::GroundAtom;
 use crate::search::{object_tuple, AtomSchema, DBState, Negatable, ObjectTuple, SchemaArgument};
-use std::collections::{HashSet, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 
 #[derive(Debug)]
 pub struct PrecompiledActionData {
@@ -16,15 +16,22 @@ pub struct PrecompiledActionData {
 }
 
 pub trait JoinAlgorithm {
-    fn instantiate(&self, state: &DBState, data: &PrecompiledActionData) -> Table {
+    fn instantiate(
+        &self,
+        state: &DBState,
+        data: &PrecompiledActionData,
+        // map from param index to object index
+        fixed_schema_params: &HashMap<usize, usize>,
+    ) -> Table {
         if data.is_ground {
             panic!("Ground action schemas should not be instantiated")
         }
 
-        let mut tables: VecDeque<Table> = match self.parse_precond_into_join_program(data, state) {
-            Some(tables) => VecDeque::from(tables),
-            None => return Table::EMPTY,
-        };
+        let mut tables: VecDeque<Table> =
+            match self.parse_precond_into_join_program(data, state, fixed_schema_params) {
+                Some(tables) => VecDeque::from(tables),
+                None => return Table::EMPTY,
+            };
         assert_eq!(tables.len(), data.relevant_precondition_atoms.len());
 
         let mut working_table = tables.pop_front().unwrap();
@@ -40,11 +47,14 @@ pub trait JoinAlgorithm {
     }
 
     /// Create the set of tables corresponding to the precondition of the given
-    /// action.
+    /// action. For performance, we don't validate that the fixed_schema_params
+    /// are actually valid (particularly the correct type for the parameter), so
+    /// if not expect undefined behaviour.
     fn parse_precond_into_join_program(
         &self,
         data: &PrecompiledActionData,
         state: &DBState,
+        fixed_schema_params: &HashMap<usize, usize>,
     ) -> Option<Vec<Table>> {
         let mut tables = Vec::new();
         for schema_atom in &data.relevant_precondition_atoms {
@@ -63,6 +73,7 @@ pub trait JoinAlgorithm {
                 &constants,
                 &free_and_param_index,
                 &data.objects_per_param,
+                fixed_schema_params,
             );
             if tuples.is_empty() {
                 return None;
@@ -106,6 +117,7 @@ fn select_tuples(
     constants: &[usize],
     free_and_param_index: &[(usize, usize)],
     objects_per_param: &[HashSet<usize>],
+    fixed_schema_params: &HashMap<usize, usize>,
 ) -> Vec<GroundAtom> {
     let tuple_matches = |tuple: &ObjectTuple| -> bool {
         // the tuple matches the atom if
@@ -130,6 +142,13 @@ fn select_tuples(
                 matches = false;
                 break;
             }
+            if fixed_schema_params
+                .get(&param_index)
+                .is_some_and(|&expected_object_index| object_index != expected_object_index)
+            {
+                matches = false;
+                break;
+            }
         }
         matches
     };
@@ -148,7 +167,6 @@ fn select_tuples(
         // variables. We then remove those tuples that are present in the
         // state.
 
-        // TODO-soon plenty of low-hanging optimisation fruits here
         fn product(l: &HashSet<ObjectTuple>, r: HashSet<usize>) -> HashSet<ObjectTuple> {
             l.iter()
                 .flat_map(|x| {
@@ -160,19 +178,24 @@ fn select_tuples(
                 })
                 .collect()
         }
-        let get_relevant_objects = |index: usize| -> HashSet<usize> {
-            if constants.contains(&index) {
-                HashSet::from([atom.argument(index).get_index()])
+        let get_relevant_objects = |atom_index: usize| -> HashSet<usize> {
+            if constants.contains(&atom_index) {
+                HashSet::from([atom.argument(atom_index).get_index()])
             } else {
-                objects_per_param[index].clone()
+                let param_index = atom.argument(atom_index).get_index();
+                if let Some(&object_index) = fixed_schema_params.get(&param_index) {
+                    HashSet::from([object_index])
+                } else {
+                    objects_per_param[param_index].clone()
+                }
             }
         };
         let mut all_tuples = get_relevant_objects(0)
             .iter()
             .map(|&x| object_tuple![x])
             .collect::<HashSet<ObjectTuple>>();
-        for param_index in 1..atom.arguments().len() {
-            all_tuples = product(&all_tuples, get_relevant_objects(param_index));
+        for atom_index in 1..atom.arguments().len() {
+            all_tuples = product(&all_tuples, get_relevant_objects(atom_index));
         }
 
         for tuple in all_tuples {
@@ -208,6 +231,11 @@ mod tests {
     #[test]
     fn applicable_actions_in_blocksworld_init() {
         test_applicable_actions_in_blocksworld_init(SuccessorGeneratorName::Naive);
+    }
+
+    #[test]
+    fn applicable_actions_from_partial_in_blocksworld() {
+        test_applicable_actions_from_partial_in_blocksworld(SuccessorGeneratorName::Naive);
     }
 
     #[test]

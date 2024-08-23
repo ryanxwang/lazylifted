@@ -59,10 +59,10 @@ impl IlgCompiler {
 
     #[inline(always)]
     fn get_object_colour(_object: &Object) -> usize {
-        // TODO-soon different objects can have different initial colours based
-        // on constants associated with them, such as if a child requires gluten
-        // free or not in childsnack. This information is currently not included
-        // as we don't include statics
+        // TODO-someday different objects can have different initial colours
+        // based on constants associated with them, such as if a child requires
+        // gluten free or not in childsnack. This information is currently not
+        // included as we don't include statics
         const START: usize = 0;
         START
     }

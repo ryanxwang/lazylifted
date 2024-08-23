@@ -1,3 +1,4 @@
+use crate::search::PartialAction;
 use crate::search::{successor_generators::SuccessorGeneratorName, Action, Task};
 use crate::test_utils::*;
 
@@ -24,6 +25,60 @@ pub fn test_applicable_actions_in_blocksworld_init(name: SuccessorGeneratorName)
     assert_eq!(actions.len(), 1);
     assert_eq!(actions[0].index, 3);
     assert_eq!(actions[0].instantiation, vec![0, 1]);
+}
+
+pub fn test_applicable_actions_from_partial_in_blocksworld(name: SuccessorGeneratorName) {
+    let task = Task::from_text(BLOCKSWORLD_DOMAIN_TEXT, BLOCKSWORLD_PROBLEM13_TEXT);
+    let generator = name.create(&task);
+
+    let mut state = task.initial_state.clone();
+
+    // (unstack b1 b2)
+    let actions = generator.get_applicable_actions(&state, &task.action_schemas()[3]);
+    state = generator.generate_successor(&state, &task.action_schemas()[3], &actions[0]);
+
+    // (putdown b1)
+    let actions = generator.get_applicable_actions(&state, &task.action_schemas()[1]);
+    state = generator.generate_successor(&state, &task.action_schemas()[1], &actions[0]);
+
+    // (unstack b2 b3)
+    let actions = generator.get_applicable_actions(&state, &task.action_schemas()[3]);
+    state = generator.generate_successor(&state, &task.action_schemas()[3], &actions[0]);
+
+    // we can now either stack b2 on b1 or b3
+
+    // fixing none of the parameters should yield both
+    let actions = generator.get_applicable_actions_from_partial(
+        &state,
+        &task.action_schemas()[2],
+        &PartialAction::new(2, vec![]),
+    );
+    assert_eq!(actions.len(), 2);
+    assert_eq!(
+        actions,
+        vec![Action::new(2, vec![1, 0]), Action::new(2, vec![1, 2])]
+    );
+
+    // further restricting the first argumenting shouldn't change anything
+    let actions = generator.get_applicable_actions_from_partial(
+        &state,
+        &task.action_schemas()[2],
+        &PartialAction::new(2, vec![1]),
+    );
+    assert_eq!(actions.len(), 2);
+    assert_eq!(
+        actions,
+        vec![Action::new(2, vec![1, 0]), Action::new(2, vec![1, 2])]
+    );
+
+    // fixing the last one should
+    let actions = generator.get_applicable_actions_from_partial(
+        &state,
+        &task.action_schemas()[2],
+        &PartialAction::new(2, vec![1, 0]),
+    );
+    assert_eq!(actions.len(), 1);
+    assert_eq!(actions, vec![Action::new(2, vec![1, 0])]);
 }
 
 pub fn test_successor_generation_in_blocksworld(name: SuccessorGeneratorName) {

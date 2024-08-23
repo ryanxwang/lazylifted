@@ -2,7 +2,11 @@ use crate::search::states::GroundAtom;
 use crate::search::successor_generators::{
     JoinAlgorithm, PrecompiledActionData, SuccessorGenerator,
 };
-use crate::search::{Action, ActionSchema, AtomSchema, DBState, Negatable, ObjectTuple, Task};
+use crate::search::{
+    Action, ActionSchema, AtomSchema, DBState, Negatable, ObjectTuple, PartialAction, Task,
+    NO_PARTIAL,
+};
+use std::collections::HashMap;
 use std::fmt::Debug;
 
 #[derive(Debug)]
@@ -36,14 +40,23 @@ impl<T> SuccessorGenerator for JoinSuccessorGenerator<T>
 where
     T: JoinAlgorithm + Debug,
 {
-    fn get_applicable_actions(&self, state: &DBState, action: &ActionSchema) -> Vec<Action> {
-        if is_trivially_inapplicable(action, state) {
+    fn get_applicable_actions(&self, state: &DBState, action_schema: &ActionSchema) -> Vec<Action> {
+        self.get_applicable_actions_from_partial(state, action_schema, &NO_PARTIAL)
+    }
+
+    fn get_applicable_actions_from_partial(
+        &self,
+        state: &DBState,
+        action_schema: &ActionSchema,
+        partial_action: &PartialAction,
+    ) -> Vec<Action> {
+        if is_trivially_inapplicable(action_schema, state) {
             return vec![];
         }
-        if action.is_ground() {
-            if is_ground_action_applicable(action, state) {
+        if action_schema.is_ground() {
+            if is_ground_action_applicable(action_schema, state) {
                 return vec![Action {
-                    index: action.index(),
+                    index: action_schema.index(),
                     instantiation: vec![],
                 }];
             } else {
@@ -51,9 +64,23 @@ where
             }
         }
 
-        let instantiations = self
-            .join_algorithm
-            .instantiate(state, &self.action_data[action.index()]);
+        let fixed_schema_params = if *partial_action == NO_PARTIAL {
+            HashMap::new()
+        } else {
+            assert_eq!(partial_action.schema_index(), action_schema.index());
+            partial_action
+                .partial_instantiation()
+                .iter()
+                .enumerate()
+                .map(|(param_index, &object_index)| (param_index, object_index))
+                .collect()
+        };
+
+        let instantiations = self.join_algorithm.instantiate(
+            state,
+            &self.action_data[action_schema.index()],
+            &fixed_schema_params,
+        );
 
         if instantiations.tuples.is_empty() {
             return vec![];
@@ -69,7 +96,6 @@ where
             }
         }
 
-        // applicable actions, ignoring negative preconditions
         let actions = instantiations
             .tuples
             .iter()
@@ -79,7 +105,7 @@ where
                     ordered_tuple[free_var_indices[i]] = tuple[map_indices_to_position[i]];
                 }
                 Action {
-                    index: action.index(),
+                    index: action_schema.index(),
                     instantiation: ordered_tuple,
                 }
             })

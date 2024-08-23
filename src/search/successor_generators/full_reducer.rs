@@ -1,7 +1,10 @@
 //! This module contains a
 //! [`crate::search::successor_generators::JoinAlgorithm`] implementation that
 //! uses the full reducer algorithm. See the Ullman book for more information.
-use std::{cmp::Ordering, collections::HashSet};
+use std::{
+    cmp::Ordering,
+    collections::{HashMap, HashSet},
+};
 
 use priority_queue::PriorityQueue;
 
@@ -131,15 +134,21 @@ impl FullReducer {
 }
 
 impl JoinAlgorithm for FullReducer {
-    fn instantiate(&self, state: &DBState, data: &PrecompiledActionData) -> Table {
+    fn instantiate(
+        &self,
+        state: &DBState,
+        data: &PrecompiledActionData,
+        fixed_schema_params: &HashMap<usize, usize>,
+    ) -> Table {
         if data.is_ground {
             panic!("Ground action schemas should not be instantiated")
         }
 
-        let mut tables: Vec<Table> = match self.parse_precond_into_join_program(data, state) {
-            Some(tables) => tables,
-            None => return Table::EMPTY,
-        };
+        let mut tables: Vec<Table> =
+            match self.parse_precond_into_join_program(data, state, fixed_schema_params) {
+                Some(tables) => tables,
+                None => return Table::EMPTY,
+            };
 
         let order = &self.full_join_order[data.action_index];
         assert!(tables.len() == order.len());
@@ -187,6 +196,11 @@ mod tests {
     #[test]
     fn successor_generation_in_blocksworld() {
         test_successor_generation_in_blocksworld(SuccessorGeneratorName::FullReducer);
+    }
+
+    #[test]
+    fn applicable_actions_from_partial_in_blocksworld() {
+        test_applicable_actions_from_partial_in_blocksworld(SuccessorGeneratorName::FullReducer);
     }
 
     #[test]
