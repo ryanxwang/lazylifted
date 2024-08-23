@@ -14,6 +14,7 @@ use strum_macros::{EnumCount as EnumCountMacro, FromRepr};
 use super::PartialActionCompiler;
 
 const NO_STATIC_PREDICATES: bool = true;
+const OBJECTS_COLOURED_BY_STATIC_PREDICATES: bool = true;
 
 #[derive(Debug)]
 pub struct AoagCompiler {
@@ -29,10 +30,38 @@ pub struct AoagCompiler {
     action_schemas: Vec<ActionSchema>,
     /// The static predicates of the task
     static_predicates: HashSet<usize>,
+    /// Object colours, which may depend on how static predicates apply to them,
+    /// indexed by object index
+    object_colours: Vec<usize>,
+    /// The maximum number of possible object colours - this is domain dependent
+    /// (so not a const unfortunately) but not instance dependent, so that
+    /// colours mean the same thing across instances
+    max_object_colours: usize,
 }
 
 impl AoagCompiler {
     pub fn new(task: &Task, successor_generator_name: SuccessorGeneratorName) -> Self {
+        // Fix here
+        let object_colours = task
+            .object_static_information()
+            .iter()
+            .map(|static_predicates| {
+                if OBJECTS_COLOURED_BY_STATIC_PREDICATES {
+                    let mut colour: usize = 0;
+                    for predicate_index in static_predicates {
+                        // negative so that colours don't overlap
+                        colour += 1 << predicate_index;
+                    }
+                    colour
+                } else {
+                    0
+                }
+            })
+            .collect();
+        // can't just use the maximum seen colour, as this needs to be instance
+        // agnostic
+        let max_object_colours = (2 << task.max_static_information_count()) - 1;
+
         let mut compiler = Self {
             successor_generator: successor_generator_name.create(task),
             base_graph: None,
@@ -40,6 +69,8 @@ impl AoagCompiler {
             goal_atom_to_node_index: HashMap::new(),
             action_schemas: task.action_schemas().to_owned(),
             static_predicates: task.static_predicates(),
+            object_colours,
+            max_object_colours,
         };
 
         compiler.precompile(task);
@@ -67,7 +98,7 @@ impl AoagCompiler {
                 .generate_successor(state, action_schema, &actions[0])
         } else {
             for action in actions {
-                let node_id = graph.add_node(Self::get_action_colour(action.index));
+                let node_id = graph.add_node(self.get_action_colour(action.index));
                 for (arg_index, object_index) in action.instantiation.iter().enumerate() {
                     let object_node_id = self.object_index_to_node_index[object_index];
                     graph.add_edge(node_id, object_node_id, arg_index);
@@ -105,8 +136,10 @@ impl AoagCompiler {
 
         // Object nodes
         for object in &task.objects {
-            self.object_index_to_node_index
-                .insert(object.index, graph.add_node(Self::get_object_colour()));
+            self.object_index_to_node_index.insert(
+                object.index,
+                graph.add_node(self.get_object_colour(object.index)),
+            );
         }
 
         for atom in task.goal.atoms() {
@@ -134,24 +167,19 @@ impl AoagCompiler {
     }
 
     #[inline(always)]
-    fn get_object_colour() -> usize {
-        // TODO-soon different objects can have different initial colours based
-        // on constants associated with them, such as if a child requires gluten
-        // free or not in childsnack. This information is currently not included
-        // as we don't include statics
-        const START: usize = 0;
-        START
+    fn get_object_colour(&self, object_index: usize) -> usize {
+        self.object_colours[object_index]
     }
 
     #[inline(always)]
-    fn get_action_colour(schema_index: usize) -> usize {
-        const START: usize = 1;
-        START + schema_index
+    fn get_action_colour(&self, schema_index: usize) -> usize {
+        let start = self.max_object_colours + 1;
+        start + schema_index
     }
 
     #[inline(always)]
     fn get_atom_colour(&self, predicate_index: usize, atom_type: AtomType) -> usize {
-        let start = 1 + self.action_schemas.len();
+        let start = self.max_object_colours + 1 + self.action_schemas.len();
         start + predicate_index * AtomType::COUNT + atom_type as usize
     }
 }
@@ -190,7 +218,7 @@ mod tests {
                 .contains_key(&object.index));
             assert_eq!(
                 graph[compiler.object_index_to_node_index[&object.index]],
-                AoagCompiler::get_object_colour()
+                compiler.get_object_colour(object.index)
             );
         }
         for atom in task.goal.atoms() {
@@ -248,7 +276,8 @@ mod tests {
 
         // objects: b1 b2 b3 b4
         assert_eq!(
-            count_nodes_with_colour(&graph, AoagCompiler::get_object_colour()),
+            // objects have colour 0 as blocksworld has no static predicates
+            count_nodes_with_colour(&graph, 0),
             4
         );
 
@@ -302,7 +331,7 @@ mod tests {
 
         // stack actions: (stack b2 b1), (stack b2 b3)
         assert_eq!(
-            count_nodes_with_colour(&graph, AoagCompiler::get_action_colour(2)),
+            count_nodes_with_colour(&graph, compiler.get_action_colour(2)),
             2
         );
     }
