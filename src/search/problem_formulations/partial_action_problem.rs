@@ -46,7 +46,7 @@ impl PartialActionProblem {
         }
     }
 
-    fn get_transitions(&mut self, node_id: NodeId) -> HashSet<PartialActionDiff> {
+    fn get_transitions(&self, node_id: NodeId) -> HashSet<PartialActionDiff> {
         let (state, partial) = self.search_space.get_state(node_id);
         if *partial == NO_PARTIAL || partial.is_complete(&self.task) {
             let state = if *partial == NO_PARTIAL {
@@ -279,7 +279,7 @@ mod tests {
 
     #[test]
     fn test_get_transitions() {
-        let mut problem = create_problem();
+        let problem = create_problem();
         let root_node = problem.initial_state();
 
         let transitions = problem.get_transitions(root_node.get_node_id());

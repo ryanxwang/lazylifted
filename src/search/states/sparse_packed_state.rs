@@ -3,7 +3,12 @@ use crate::search::{
     states::{DBState, GroundAtom, Relation},
     Task,
 };
-use std::collections::{BTreeSet, HashMap};
+use lru::LruCache;
+use std::{
+    cell::RefCell,
+    collections::{BTreeSet, HashMap},
+    num::NonZeroUsize,
+};
 
 /// The [`SparsePackedState`] struct is used to store a state in a more compact
 /// representation. This is based on the powerlifted implementation, which is
@@ -40,6 +45,9 @@ pub struct SparseStatePacker {
     hash_multipliers: Vec<Vec<u64>>,
     obj_to_hash_index: Vec<Vec<HashMap<usize, usize>>>,
     hash_index_to_obj: Vec<Vec<HashMap<usize, usize>>>,
+    // We cache only for fast unpacking but not for packing, as we never pack
+    // the same state twice.
+    unpacked_states_cache: RefCell<LruCache<SparsePackedState, DBState>>,
 }
 
 impl SparseStatePacker {
@@ -77,6 +85,7 @@ impl SparseStatePacker {
             hash_multipliers,
             obj_to_hash_index,
             hash_index_to_obj,
+            unpacked_states_cache: RefCell::new(LruCache::new(NonZeroUsize::new(1000).unwrap())),
         }
     }
 
@@ -100,14 +109,26 @@ impl SparseStatePacker {
             predicate_symbols.push(relation.predicate_symbol);
         }
 
-        SparsePackedState {
+        let packed = SparsePackedState {
             packed_relations,
             predicate_symbols,
             nullary_atoms: state.nullary_atoms.clone(),
-        }
+        };
+
+        // TODO-soon This takes up a decent bit of time, actually verify it is
+        // beneficial
+        self.unpacked_states_cache
+            .borrow_mut()
+            .put(packed.clone(), state.clone());
+
+        packed
     }
 
     pub fn unpack(&self, packed_state: &SparsePackedState) -> DBState {
+        if let Some(state) = self.unpacked_states_cache.borrow_mut().get(packed_state) {
+            return state.clone();
+        }
+
         let mut relations = Vec::with_capacity(packed_state.packed_relations.len());
 
         for (i, packed_relation) in packed_state.packed_relations.iter().enumerate() {
@@ -134,10 +155,16 @@ impl SparseStatePacker {
             })
         }
 
-        DBState {
+        let dbstate = DBState {
             relations,
             nullary_atoms: packed_state.nullary_atoms.clone(),
-        }
+        };
+
+        self.unpacked_states_cache
+            .borrow_mut()
+            .put(packed_state.clone(), dbstate.clone());
+
+        dbstate
     }
 }
 
