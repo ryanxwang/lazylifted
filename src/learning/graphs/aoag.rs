@@ -84,10 +84,7 @@ impl AoagCompiler {
 
         let actions: Vec<Action> = self
             .successor_generator
-            .get_applicable_actions(state, action_schema)
-            .into_iter()
-            .filter(|action| partial_action.is_superset_of_action(action))
-            .collect();
+            .get_applicable_actions_from_partial(state, action_schema, partial_action);
 
         // in the special case that there is only one applicable action, we make
         // reasoning more direct by directly applying the action, otherwise, we

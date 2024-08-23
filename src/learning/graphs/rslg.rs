@@ -92,16 +92,9 @@ impl RslgCompiler {
         let mut graph = self.base_graph.clone().unwrap();
         let action_schema = &self.action_schemas[partial_action.schema_index()];
 
-        // TODO-soon instead of doing this filtering, we can just make the successor
-        // generator generate only for the partial action. This could be
-        // decently meaning on domains where we spend a lot of time generating
-        // successors, such as miconic
         let applicable_actions: Vec<Action> = self
             .successor_generator
-            .get_applicable_actions(state, action_schema)
-            .into_iter()
-            .filter(|action| partial_action.is_superset_of_action(action))
-            .collect();
+            .get_applicable_actions_from_partial(state, action_schema, partial_action);
 
         let PartialEffects {
             unavoidable_effects,

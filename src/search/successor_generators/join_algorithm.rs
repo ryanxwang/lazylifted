@@ -119,6 +119,9 @@ fn select_tuples(
     objects_per_param: &[HashSet<usize>],
     fixed_schema_params: &HashMap<usize, usize>,
 ) -> Vec<GroundAtom> {
+    // TODO-soon: we spend a decent bit of time inside this closure (in fact,
+    // that most of our time in the finding the applicable actions), can it be
+    // faster?
     let tuple_matches = |tuple: &ObjectTuple| -> bool {
         // the tuple matches the atom if
         // 1. when the atom is a constant, the tuple has the same value
