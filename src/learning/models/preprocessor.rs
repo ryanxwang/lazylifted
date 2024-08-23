@@ -62,7 +62,7 @@ impl Preprocessor {
                                     // unseen feature
                                     (feature, count as f64)
                                 } else {
-                                    let std = std.get(&feature).unwrap();
+                                    let std = std.get(&feature).unwrap_or(&1.0);
                                     (feature, (count as f64 / std))
                                 }
                             })
@@ -86,8 +86,8 @@ impl Preprocessor {
                                     // unseen feature
                                     (feature, count as f64)
                                 } else {
-                                    let mean = mean.get(&feature).unwrap();
-                                    let std = std.get(&feature).unwrap();
+                                    let mean = mean.get(&feature).unwrap_or(&0.0);
+                                    let std = std.get(&feature).unwrap_or(&1.0);
                                     (feature, ((count as f64 - mean) / std))
                                 }
                             })
