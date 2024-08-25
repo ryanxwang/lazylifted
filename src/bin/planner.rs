@@ -2,12 +2,12 @@ use clap::{Parser, Subcommand};
 use lazylifted::search::{
     heuristics::{PartialActionHeuristicNames, StateHeuristicNames},
     problem_formulations::{PartialActionProblem, StateSpaceProblem},
-    search_engines::{SearchEngineName, SearchResult},
+    search_engines::{SearchEngineName, SearchResult, TerminationCondition},
     successor_generators::SuccessorGeneratorName,
     validate, Task, Verbosity,
 };
 use pyo3::Python;
-use std::{path::PathBuf, rc::Rc};
+use std::{path::PathBuf, rc::Rc, time::Duration};
 use tracing::info;
 
 #[derive(Parser)]
@@ -65,6 +65,22 @@ struct Cli {
     verbosity: Verbosity,
     #[arg(help = "Whether to use coloured output", short = 'c', long = "colour")]
     colour: bool,
+    // These limits are useful, because even though the user can just enforce
+    // these limits with utilities like `ulimit`, we get to provide better
+    // messages when the limits are exceeded if we are the ones enforcing them.
+    #[arg(
+        help = "The time limit for the search, supports syntax like 30min",
+        long = "time-limit",
+        id = "TIME_LIMIT",
+        value_parser = humantime::parse_duration,
+    )]
+    time_limit: Option<Duration>,
+    #[arg(
+        help = "The memory limit for the search, in megabytes",
+        long = "memory-limit",
+        id = "MEMORY_LIMIT"
+    )]
+    memory_limit_mb: Option<usize>,
 }
 
 #[derive(Subcommand)]
@@ -117,6 +133,7 @@ fn main() {
 fn plan(cli: Cli, task: Task) {
     let task = Rc::new(task);
     let successor_generator = cli.successor_generator_name.create(&task);
+    let termination_condition = TerminationCondition::new(cli.time_limit, cli.memory_limit_mb);
 
     let result = match cli.command {
         Commands::StateSpaceSearch { heuristic_name } => {
@@ -126,7 +143,8 @@ fn plan(cli: Cli, task: Task) {
                 cli.saved_model.as_deref(),
             );
             let problem = StateSpaceProblem::new(task.clone(), successor_generator, heuristic);
-            cli.search_engine_name.search(Box::new(problem))
+            cli.search_engine_name
+                .search(Box::new(problem), termination_condition)
         }
         Commands::PartialActionSearch { heuristic_name } => {
             let heuristic = heuristic_name.create(
@@ -135,7 +153,8 @@ fn plan(cli: Cli, task: Task) {
                 cli.saved_model.as_deref(),
             );
             let problem = PartialActionProblem::new(task.clone(), successor_generator, heuristic);
-            cli.search_engine_name.search(Box::new(problem))
+            cli.search_engine_name
+                .search(Box::new(problem), termination_condition)
         }
     };
 

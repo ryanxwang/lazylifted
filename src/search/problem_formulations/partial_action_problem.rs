@@ -1,7 +1,7 @@
 use crate::search::{
     states::{SparsePackedState, SparseStatePacker},
     Action, DBState, Heuristic, HeuristicValue, NodeId, PartialAction, PartialActionDiff, Plan,
-    SearchNode, SearchNodeStatus, SearchProblem, SearchSpace, SearchStatistics, SuccessorGenerator,
+    SearchContext, SearchNode, SearchNodeStatus, SearchProblem, SearchSpace, SuccessorGenerator,
     Task, NO_PARTIAL,
 };
 use ordered_float::Float;
@@ -12,7 +12,7 @@ const REOPEN: bool = false;
 #[derive(Debug)]
 pub struct PartialActionProblem {
     task: Rc<Task>,
-    statistics: SearchStatistics,
+    context: SearchContext,
     packer: SparseStatePacker,
     generator: Box<dyn SuccessorGenerator>,
     search_space: SearchSpace<(SparsePackedState, PartialAction), PartialActionDiff>,
@@ -25,7 +25,7 @@ impl PartialActionProblem {
         generator: Box<dyn SuccessorGenerator>,
         heuristic: Box<dyn Heuristic<(DBState, PartialAction)>>,
     ) -> Self {
-        let mut statistics = SearchStatistics::new();
+        let mut context = SearchContext::new();
         let packer = SparseStatePacker::new(&task);
         let mut search_space = SearchSpace::new((packer.pack(&task.initial_state), NO_PARTIAL));
 
@@ -33,12 +33,12 @@ impl PartialActionProblem {
         // it doesn't make sense to evaluate the initial state, so we just give
         // it a heuristic value of infinity
         let initial_heuristic = HeuristicValue::infinity();
-        statistics.register_heuristic_value(initial_heuristic);
+        context.register_heuristic_value(initial_heuristic);
         root_node.open((0.).into(), initial_heuristic);
 
         Self {
             task,
-            statistics,
+            context,
             generator,
             packer,
             search_space,
@@ -154,17 +154,16 @@ impl SearchProblem<(SparsePackedState, PartialAction), PartialActionDiff> for Pa
             node.close();
             node
         };
-        self.statistics.increment_expanded_nodes();
+        self.context.increment_expanded_nodes();
         let g_value = node.get_g();
         let h_value = node.get_h();
-        self.statistics.register_heuristic_value(h_value);
+        self.context.register_heuristic_value(h_value);
 
         let transitions = self.get_transitions(node_id);
-        self.statistics
-            .increment_generated_actions(transitions.len());
+        self.context.increment_generated_actions(transitions.len());
 
         if transitions.len() == 1 {
-            self.statistics.increment_skipped_evaluations();
+            self.context.increment_skipped_evaluations();
             let transition = transitions.iter().next().unwrap();
             let (new_state, new_partial) = self.apply_transition(node_id, transition);
             let child_node = self.search_space.insert_or_get_node(
@@ -178,7 +177,7 @@ impl SearchProblem<(SparsePackedState, PartialAction), PartialActionDiff> for Pa
                 // children a heuristic value. But since we want to skip
                 // evaluations, we just use the same value as its parent, i.e.
                 // the current node.
-                self.statistics.increment_generated_nodes(1);
+                self.context.increment_generated_nodes(1);
                 child_node.open(g_value + 1., h_value);
                 Some(child_node.get_node_id())
             } else if REOPEN && g_value + 1. < child_node.get_g() {
@@ -227,18 +226,18 @@ impl SearchProblem<(SparsePackedState, PartialAction), PartialActionDiff> for Pa
 
             (new_states, new_ids, ids_to_reopen)
         };
-        self.statistics.increment_generated_nodes(new_states.len());
+        self.context.increment_generated_nodes(new_states.len());
 
         let h_values = self.heuristic.evaluate_batch(&new_states, &self.task);
 
         for (child_node_id, child_h_value) in new_ids.iter().zip(h_values) {
-            self.statistics.increment_evaluated_nodes();
+            self.context.increment_evaluated_nodes();
             let child_node = self.search_space.get_node_mut(*child_node_id);
             child_node.open(g_value + 1., child_h_value);
         }
         for child_node_id in ids_to_reopen.iter() {
             let child_node = self.search_space.get_node_mut(*child_node_id);
-            self.statistics.increment_reopened_nodes();
+            self.context.increment_reopened_nodes();
             child_node.open(g_value + 1., child_node.get_h());
         }
 
@@ -250,8 +249,8 @@ impl SearchProblem<(SparsePackedState, PartialAction), PartialActionDiff> for Pa
         child_nodes
     }
 
-    fn extract_plan(&self, goal_id: NodeId) -> Plan {
-        self.statistics.finalise_search();
+    fn extract_plan(&mut self, goal_id: NodeId) -> Plan {
+        self.context.finalise();
         self.search_space
             .extract_plan(self.search_space.get_node(goal_id))
     }

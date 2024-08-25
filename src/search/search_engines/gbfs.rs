@@ -4,7 +4,7 @@ use ordered_float::OrderedFloat;
 use priority_queue::PriorityQueue;
 
 use crate::search::{
-    search_engines::{SearchEngine, SearchResult},
+    search_engines::{SearchEngine, SearchResult, TerminationCondition},
     HeuristicValue, NodeId, SearchProblem, Transition,
 };
 use std::cmp::Reverse;
@@ -22,7 +22,11 @@ impl<S, T> SearchEngine<S, T> for Gbfs
 where
     T: Transition,
 {
-    fn search(&self, mut problem: Box<dyn SearchProblem<S, T>>) -> SearchResult {
+    fn search(
+        &self,
+        mut problem: Box<dyn SearchProblem<S, T>>,
+        mut termination_condition: TerminationCondition,
+    ) -> SearchResult {
         let mut priority_queue = PriorityQueue::new();
         priority_queue.push(
             problem.initial_state().get_node_id(),
@@ -30,6 +34,10 @@ where
         );
 
         while !priority_queue.is_empty() {
+            termination_condition.log_if_needed();
+            if let Some(result) = termination_condition.should_terminate() {
+                return result;
+            }
             let sid = priority_queue.pop().unwrap().0;
 
             if problem.is_goal(sid) {

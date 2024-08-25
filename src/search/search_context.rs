@@ -1,11 +1,10 @@
 use crate::search::HeuristicValue;
-use memory_stats::memory_stats;
 use ordered_float::Float;
 use std::time::Instant;
 use tracing::info;
 
 #[derive(Debug)]
-pub struct SearchStatistics {
+pub struct SearchContext {
     /// Number of nodes expanded
     expanded_nodes: i64,
     /// Number of nodes evaluated
@@ -20,21 +19,12 @@ pub struct SearchStatistics {
     skipped_evaluations: i64,
     /// Best heuristic value found so far
     best_heuristic_value: HeuristicValue,
-    /// Time when the search started
-    search_start_time: Instant,
     /// Time when the last log was printed, used for periodic logging
     last_log_time: Instant,
 }
 
-impl Default for SearchStatistics {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl SearchStatistics {
+impl SearchContext {
     pub fn new() -> Self {
-        info!("starting search");
         Self {
             expanded_nodes: 0,
             evaluated_nodes: 0,
@@ -43,7 +33,6 @@ impl SearchStatistics {
             generated_actions: 0,
             skipped_evaluations: 0,
             best_heuristic_value: HeuristicValue::infinity(),
-            search_start_time: Instant::now(),
             last_log_time: Instant::now(),
         }
     }
@@ -91,7 +80,6 @@ impl SearchStatistics {
 
     fn log(&self) {
         info!(
-            memory_usage_mb = memory_stats().map(|usage| usage.physical_mem / 1024 / 1024),
             expanded_nodes = self.expanded_nodes,
             evaluated_nodes = self.evaluated_nodes,
             generated_nodes = self.generated_nodes,
@@ -102,9 +90,7 @@ impl SearchStatistics {
         );
     }
 
-    pub fn finalise_search(&self) {
-        info!("finalising search");
+    pub fn finalise(&self) {
         self.log();
-        info!(search_duration = self.search_start_time.elapsed().as_secs_f64());
     }
 }

@@ -1,7 +1,7 @@
 //! Breadth first search
 
 use crate::search::{
-    search_engines::{SearchEngine, SearchResult},
+    search_engines::{SearchEngine, SearchResult, TerminationCondition},
     NodeId, Plan, SearchProblem, Transition,
 };
 use std::collections::VecDeque;
@@ -18,7 +18,11 @@ impl<S, T> SearchEngine<S, T> for Bfs
 where
     T: Transition,
 {
-    fn search(&self, mut problem: Box<dyn SearchProblem<S, T>>) -> SearchResult {
+    fn search(
+        &self,
+        mut problem: Box<dyn SearchProblem<S, T>>,
+        mut termination_condition: TerminationCondition,
+    ) -> SearchResult {
         if problem.is_goal(problem.initial_state().get_node_id()) {
             return SearchResult::Success(Plan::empty());
         }
@@ -27,6 +31,10 @@ where
         queue.push_back(problem.initial_state().get_node_id());
 
         while !queue.is_empty() {
+            termination_condition.log_if_needed();
+            if let Some(result) = termination_condition.should_terminate() {
+                return result;
+            }
             let node_id = queue.pop_front().unwrap();
 
             let successors_ids: Vec<NodeId> = problem

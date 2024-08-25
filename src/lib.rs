@@ -12,6 +12,7 @@
 use assert_approx_eq as _;
 use console as _;
 use dialoguer as _;
+use humantime as _;
 use tracing_subscriber as _;
 
 pub mod learning;

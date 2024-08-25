@@ -23,5 +23,5 @@ pub trait SearchProblem<S, T: Transition> {
     /// the search. This should be called only once. When this is called, final
     /// statistics logs are emitted. No further calls to
     /// [`SearchProblem::expand`] should be made.
-    fn extract_plan(&self, goal_id: NodeId) -> Plan;
+    fn extract_plan(&mut self, goal_id: NodeId) -> Plan;
 }
