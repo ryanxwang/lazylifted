@@ -24,6 +24,7 @@ where
         mut termination_condition: TerminationCondition,
     ) -> SearchResult {
         if problem.is_goal(problem.initial_state().get_node_id()) {
+            termination_condition.finalise();
             return SearchResult::Success(Plan::empty());
         }
 
@@ -33,6 +34,7 @@ where
         while !queue.is_empty() {
             termination_condition.log_if_needed();
             if let Some(result) = termination_condition.should_terminate() {
+                termination_condition.finalise();
                 return result;
             }
             let node_id = queue.pop_front().unwrap();
@@ -44,12 +46,14 @@ where
                 .collect();
             for id in successors_ids {
                 if problem.is_goal(id) {
+                    termination_condition.finalise();
                     return SearchResult::Success(problem.extract_plan(id));
                 }
                 queue.push_back(id);
             }
         }
 
+        termination_condition.finalise();
         SearchResult::ProvablyUnsolvable
     }
 }

@@ -209,6 +209,12 @@ impl SearchProblem<(SparsePackedState, PartialAction), PartialActionDiff> for Pa
 
             for transition in transitions {
                 let (new_state, new_partial) = self.apply_transition(node_id, &transition);
+                // TODO-soon: it turns out we frequently run out of memory. My
+                // suspicion is that we access nodes that have already been
+                // visited before too many times and we keep swapping their
+                // pages back into memory (that's a whole 4k of memory!), and
+                // then not use it at all since we don't reopen. Let's try
+                // insert only and don't get the node,
                 let child_node = self.search_space.insert_or_get_node(
                     (self.packer.pack(&new_state), new_partial.clone()),
                     transition,

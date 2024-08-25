@@ -7,7 +7,7 @@ from typing import Optional, List
 from processed_log import process_log
 
 
-SEARCH_TIME_LIMIT = 1800 # 30 minutes
+SEARCH_TIME_LIMIT = 1800  # 30 minutes
 
 
 @dataclass
@@ -18,6 +18,7 @@ class PlanningResult:
     model: str
     found_plan: bool
     search_duration: float
+    peak_memory: Optional[float]
     expanded_nodes: int
     evaluated_nodes: int
     generated_nodes: int
@@ -54,7 +55,7 @@ def main():
         log_path = os.path.join(args.log_dir, log_file)
 
         print(f"Processing found log file {log_file}")
-        
+
         try:
             processed_log = process_log(log_path)
         except Exception as e:
@@ -64,6 +65,7 @@ def main():
         found_plan = False
         plan_length = None
         search_duration = None
+        peak_memory = None
         expanded_nodes = None
         evaluated_nodes = None
         generated_nodes = None
@@ -75,8 +77,10 @@ def main():
             if key == "plan_length" and value_entries:
                 found_plan = True
                 plan_length = value_entries[-1].value
-            if key == "search_duration" and value_entries:
+            if key in ["total_time_used", "search_duration"] and value_entries:
                 search_duration = value_entries[-1].value
+            if key == "peak_recorded_memory_usage_mb" and value_entries:
+                peak_memory = value_entries[-1].value
             if key == "expanded_nodes" and value_entries:
                 expanded_nodes = value_entries[-1].value
             if key == "evaluated_nodes" and value_entries:
@@ -91,11 +95,11 @@ def main():
                 improving_expansions = value_entries[-1].value
             if key == "skipped_evaluations" and value_entries:
                 skipped_evaluations = value_entries[-1].value
-        
+
         if search_duration is None:
             search_duration = SEARCH_TIME_LIMIT
-        assert(search_duration <= SEARCH_TIME_LIMIT)
-        
+        assert search_duration <= SEARCH_TIME_LIMIT
+
         results.append(
             PlanningResult(
                 domain=processed_log.domain,
@@ -104,6 +108,7 @@ def main():
                 model=processed_log.model,
                 found_plan=found_plan,
                 search_duration=search_duration,
+                peak_memory=peak_memory,
                 expanded_nodes=expanded_nodes,
                 evaluated_nodes=evaluated_nodes,
                 generated_nodes=generated_nodes,
@@ -116,15 +121,17 @@ def main():
         )
 
     def instance_value(instance):
-        difficulty = instance.split('_')[1]
-        instance_value = int(instance.split('_')[2].strip('p'))
+        difficulty = instance.split("_")[-2]
+        instance_value = int(instance.split("_")[-1].strip("p"))
         if difficulty == "easy":
             return instance_value
         elif difficulty == "medium":
             return instance_value + 30
         elif difficulty == "hard":
             return instance_value + 60
-            
+        elif difficulty == "training":
+            return instance_value - 100
+
     results.sort(key=lambda x: instance_value(x.instance))
 
     save_results(results, args.output_file)

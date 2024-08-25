@@ -47,7 +47,7 @@ impl TerminationCondition {
     pub fn finalise(&mut self) {
         let time_elapsed = self.start_time.elapsed();
         info!(
-            peak_memory_usage_mb = self.peak_memory_usage_mb,
+            peak_recorded_memory_usage_mb = self.peak_memory_usage_mb,
             total_time_used = time_elapsed.as_secs_f64(),
         );
     }

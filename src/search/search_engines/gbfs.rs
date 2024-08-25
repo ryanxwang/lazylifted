@@ -36,11 +36,13 @@ where
         while !priority_queue.is_empty() {
             termination_condition.log_if_needed();
             if let Some(result) = termination_condition.should_terminate() {
+                termination_condition.finalise();
                 return result;
             }
             let sid = priority_queue.pop().unwrap().0;
 
             if problem.is_goal(sid) {
+                termination_condition.finalise();
                 return SearchResult::Success(problem.extract_plan(sid));
             }
 
@@ -55,6 +57,7 @@ where
             }
         }
 
+        termination_condition.finalise();
         SearchResult::ProvablyUnsolvable
     }
 }
