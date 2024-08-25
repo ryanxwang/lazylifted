@@ -1,4 +1,5 @@
 use crate::search::HeuristicValue;
+use memory_stats::memory_stats;
 use ordered_float::Float;
 use std::time::Instant;
 use tracing::info;
@@ -89,10 +90,8 @@ impl SearchStatistics {
     }
 
     fn log(&self) {
-        // TODO-soon would be nice to log memory usage, like FD does.
-        // https://crates.io/crates/memory-stats seems like a decent tool for
-        // this.
         info!(
+            memory_usage_mb = memory_stats().map(|usage| usage.physical_mem / 1024 / 1024),
             expanded_nodes = self.expanded_nodes,
             evaluated_nodes = self.evaluated_nodes,
             generated_nodes = self.generated_nodes,
