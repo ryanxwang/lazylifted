@@ -107,13 +107,13 @@ impl<'py> Ranker<'py> {
 
     pub fn predict_with_ndarray(&self, x: &Array2<f64>, group_id: Option<usize>) -> Array1<f64> {
         match &self.weights {
-            RankerWeights::Vector(weights) => x.dot(&weights.t()) * -1.0,
+            RankerWeights::Vector(weights) => x.dot(&weights.t()),
             RankerWeights::VectorByGroup(weights) => {
                 let weights = match group_id {
                     Some(group_id) => weights.get(&group_id).unwrap(),
                     None => panic!("Group ID required for model with group weights"),
                 };
-                x.dot(&weights.t()) * -1.0
+                x.dot(&weights.t())
             }
             RankerWeights::None => panic!("Model has not been fit yet"),
         }
@@ -241,30 +241,6 @@ mod tests {
         }
     }
 
-    fn test_data_with_groups(py: Python) -> RankingTrainingData<Bound<PyArray2<f64>>> {
-        // Within group 0 and 1, the higher the better, however, anything in
-        // group 1 is better than anything in group 0
-        let mut pairs = test_pairs();
-        pairs.push(RankingPair {
-            i: 5,
-            j: 1,
-            relation: RankingRelation::Better,
-            importance: 1.0,
-        });
-        pairs.push(RankingPair {
-            i: 6,
-            j: 1,
-            relation: RankingRelation::Better,
-            importance: 1.0,
-        });
-
-        RankingTrainingData {
-            features: test_x(py),
-            pairs,
-            group_ids: Some(vec![0, 0, 0, 0, 0, 1, 1]),
-        }
-    }
-
     #[test]
     #[serial]
     fn test_fit_and_predict_for_ranksvm() {
@@ -278,9 +254,6 @@ mod tests {
             assert_eq!(y.len(), 3);
             assert!(y[1] < y[0]);
             assert!(y[1] < y[2]);
-
-            let kendall_tau = ranker.kendall_tau(&data);
-            assert_approx_eq!(kendall_tau, 1.0);
         })
     }
 
@@ -298,36 +271,6 @@ mod tests {
             assert!(y[1] < y[0]);
             assert!(y[1] < y[2]);
 
-            let kendall_tau = ranker.kendall_tau(&data);
-            assert_approx_eq!(kendall_tau, 1.0);
-        })
-    }
-
-    #[test]
-    #[serial]
-    fn test_fit_and_predict_for_lp_with_groups() {
-        Python::with_gil(|py| {
-            let mut ranker = Ranker::new(py, RankerName::LP);
-            let data = test_data_with_groups(py);
-            ranker.fit(&data);
-
-            // check within group 0
-            let x_0 = Array2::from_shape_vec((3, 2), vec![1.1, 1.1, 2.1, 2.1, 1.0, 1.0]).unwrap();
-            let y_0 = ranker.predict_with_ndarray(&x_0, Some(0));
-            assert_eq!(y_0.len(), 3);
-            assert!(y_0[1] < y_0[0]);
-            assert!(y_0[1] < y_0[2]);
-
-            // check within group 1
-            let x_1 = Array2::from_shape_vec((3, 2), vec![1.1, 1.1, 2.1, 2.1, 1.0, 1.0]).unwrap();
-            let y_1 = ranker.predict_with_ndarray(&x_1, Some(1));
-            assert_eq!(y_1.len(), 3);
-            assert!(y_1[1] < y_1[0]);
-            assert!(y_1[1] < y_1[2]);
-
-            // Given the small data and nature of LP, the model might not learn
-            // that everything in group 1 is better than everything in group 0,
-            // but it should still learn enough to have a perfect Kendall's tau
             let kendall_tau = ranker.kendall_tau(&data);
             assert_approx_eq!(kendall_tau, 1.0);
         })

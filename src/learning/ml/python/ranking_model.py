@@ -1,7 +1,8 @@
 import numpy as np
 from sklearn.svm import LinearSVC
-from collections import defaultdict
-from uuid import uuid4
+from rank2plan import LpModel, Pair
+from rank2plan.metrics import kendall_tau as r2p_kendall_tau
+from pulp import PULP_CBC_CMD
 
 
 class RankingModel:
@@ -12,10 +13,17 @@ class RankingModel:
             # we create the model later
             pass
         elif model_str == "lp":
-            # we create the model later
-            pass
-        elif model_str == "lambdamart":
-            raise ValueError("LambdaMART is no longer supported")
+            SECS_PER_MINUTE = 60
+            SECS_PER_HOUR = 3600
+            solver = PULP_CBC_CMD(
+                msg=verbose,
+                options=[f"RandomS 2024"],
+                timeLimit=10 * SECS_PER_MINUTE,
+                mip=False,
+            )
+            self.model = LpModel(
+                solver, C=10.0, use_constraint_generation=True, verbose=verbose
+            )
         else:
             raise ValueError("Unknown regressor model: " + model_str)
 
@@ -28,11 +36,11 @@ class RankingModel:
                 continue
 
             # go both ways to make sure the data is balanced
-            X_new.append(X[i] - X[j])
+            X_new.append(X[j] - X[i])
             y_new.append(1)
             sample_weight.append(importance)
 
-            X_new.append(X[j] - X[i])
+            X_new.append(X[i] - X[j])
             y_new.append(-1)
             sample_weight.append(importance)
 
@@ -75,11 +83,9 @@ class RankingModel:
             data = self._to_classification(X, pairs)
             self._train_ranksvm(*data)
         elif self.model_str == "lp":
-            lp = LP()
-            lp.fit(X, pairs, group_ids, verbose=self.verbose)
-            self.weights = lp.weights
-        elif self.model_str == "lambdamart":
-            raise ValueError("LambdaMART is no longer supported")
+            pairs = self._to_rank2plan_pairs(pairs)
+            self.model.fit(X, pairs)
+            self.weights = self.model.weights()
         else:
             raise ValueError("Unknown ranking model: " + self.model_str)
 
@@ -88,16 +94,7 @@ class RankingModel:
         # practice, this is okay because as of 2024/07/09, we call predict
         # with a single feature at a time.
         if self.model_str == "ranksvm" or self.model_str == "lp":
-            if type(self.weights) == dict:
-                # this means we never saw this group during training, we can
-                # only assume it's the worst
-                if group_id not in self.weights:
-                    return np.array([1000000.0])
-
-                # Can only predict for a single group on batch
-                return -np.dot(X, self.weights[group_id].T).astype(np.float64)
-            else:
-                return -np.dot(X, self.weights.T).astype(np.float64)
+            return np.dot(X, self.weights.T).astype(np.float64)
         elif self.model_str == "lambdamart":
             raise ValueError("LambdaMART is no longer supported")
         else:
@@ -106,106 +103,13 @@ class RankingModel:
     def get_weights(self):
         return self.weights
 
+    def _to_rank2plan_pairs(self, pairs):
+        return [
+            Pair(i, j, gap=relation, sample_weight=importance)
+            for i, j, relation, importance in pairs
+        ]
+
     def kendall_tau(self, X, pairs, group_ids):
-        concordant_pairs = 0
-        discordant_pairs = 0
-        total_pairs = 0
-
-        for i, j, relation, importance in pairs:
-            if np.array_equal(X[i], X[j]):
-                continue
-
-            total_pairs += importance
-
-            i_heuristic = self.predict(
-                X[i], group_ids[i] if group_ids is not None else None
-            )
-            j_heuristic = self.predict(
-                X[j], group_ids[j] if group_ids is not None else None
-            )
-            diff = i_heuristic - j_heuristic
-            assert relation >= 0
-            if (relation > 0 and diff < 0) or (relation == 0 and diff <= 0):
-                concordant_pairs += importance
-            else:
-                discordant_pairs += importance
-
-        return (concordant_pairs - discordant_pairs) / total_pairs
-
-
-from pulp import *
-
-
-class LP:
-    def __init__(self):
-        pass
-
-    def fit(self, X, pairs, group_ids, C=10, verbose=False):
-        prob = LpProblem("Ranking", LpMinimize)
-
-        weights = defaultdict(list)
-        abs_weights = defaultdict(list)
-
-        is_using_groups = group_ids is not None
-        if group_ids is None:
-            MOCK_GROUP_ID = 0
-            group_ids = [MOCK_GROUP_ID] * X.shape[0]
-
-        for group_id in set(group_ids):
-            for i in range(X.shape[1]):
-                # Dillon constrains the weights to be in {-1, 0, 1}, but it seems
-                # for us that takes too long to solve, so we make this an LP
-                weights[group_id].append(
-                    LpVariable(f"w({group_id})({i})", cat=LpContinuous)
-                )
-
-            abs_weights[group_id] = [
-                LpVariable(f"abs_w({group_id})({i})", lowBound=0)
-                for i in range(X.shape[1])
-            ]
-            for i in range(X.shape[1]):
-                prob += abs_weights[group_id][i] >= weights[group_id][i]
-                prob += abs_weights[group_id][i] >= -weights[group_id][i]
-
-        h_values = [lpDot(weights[group_ids[i]], X[i]) for i in range(X.shape[0])]
-
-        slacks = []
-        seen_pairs = set()
-        for i, j, relation, importance in pairs:
-            if np.array_equal(X[i], X[j]):
-                continue
-
-            # generally, we try and make variable names concise and meaningful,
-            # but in the rare case of duplicate relation between variables, we
-            # just add a UUID to the end
-            if (i, j) in seen_pairs:
-                slack = LpVariable(f"z{i}_{j}_{uuid4()}", lowBound=0)
-            else:
-                slack = LpVariable(f"z{i}_{j}", lowBound=0)
-            slacks.append((slack, importance))
-
-            prob += h_values[i] - h_values[j] >= relation - slack
-            seen_pairs.add((i, j))
-
-        prob += C * lpSum(importance * slack for (slack, importance) in slacks) + lpSum(
-            abs_weights[group_id][i]
-            for i in range(X.shape[1])
-            for group_id in set(group_ids)
-        )
-
-        # solver_list = listSolvers(onlyAvailable=True) if "CPLEX_PY" not in
-
-        # fix seed for deterministic results, note that 0 results in using time
-        # of day
-        solver = PULP_CBC_CMD(msg=verbose, options=[f"RandomS 2024"])
-        # else:
-        # solver = CPLEX_PY(msg=verbose)
-        prob.solve(solver)
-
-        if is_using_groups:
-            self.weights = {
-                group_id: np.array([w.varValue for w in weights[group_id]])
-                for group_id in set(group_ids)
-            }
-        else:
-            self.weights = np.array([w.varValue for w in weights[MOCK_GROUP_ID]])
+        scores = self.predict(X, group_ids)
+        pairs = self._to_rank2plan_pairs(pairs)
+        return r2p_kendall_tau(pairs, scores)

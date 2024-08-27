@@ -224,7 +224,8 @@ mod tests {
         // depth 0
         let partial_action = PartialAction::from_action(&action, 0);
         assert_eq!(partial_action.schema_index(), 0);
-        assert_eq!(*partial_action.partial_instantiation(), vec![]);
+        // need to specify the type of the empty vector to avoid conflict with serde_json
+        assert_eq!(*partial_action.partial_instantiation(), Vec::<usize>::new());
 
         // depth 1
         let partial_action = PartialAction::from_action(&action, 1);

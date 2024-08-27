@@ -1,9 +1,13 @@
 use crate::learning::graphs::CGraph;
-use numpy::{PyArray1, PyArray2, PyUntypedArrayMethods};
+use numpy::{PyArray1, PyArray2, PyArrayMethods, PyUntypedArrayMethods};
 use pyo3::{
     types::{PyAnyMethods, PyList, PyNone, PyTuple},
     Bound, PyAny, Python,
 };
+use serde::{Deserialize, Serialize};
+use serde_json;
+use serde_json::json;
+use std::{fs::File, io::Write, path::Path};
 use tracing::info;
 
 #[derive(Debug)]
@@ -36,13 +40,13 @@ impl<F> RegressionTrainingData<F> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum RankingRelation {
     Better,
     BetterOrEqual,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct RankingPair {
     pub i: usize,
     pub j: usize,
@@ -82,6 +86,27 @@ impl<'a> RankingTrainingData<Bound<'a, PyArray2<f64>>> {
                 info!(unique_groups_count = "None");
             }
         }
+    }
+
+    // save the dataset to a file in json format
+    pub fn save(&self, path: &Path) {
+        let cols = self.features.shape()[1];
+        let features_vec: Vec<serde_json::Value> = self
+            .features
+            .to_vec()
+            .unwrap()
+            .chunks(cols)
+            .map(|chunk| serde_json::to_value(chunk.to_vec()).unwrap())
+            .collect();
+
+        let data = json!({
+            "features": features_vec,
+            "pairs": self.pairs,
+        });
+        let data = serde_json::to_string_pretty(&data).unwrap();
+
+        let mut file = File::create(path).unwrap();
+        file.write_all(data.as_bytes()).unwrap();
     }
 }
 
@@ -139,6 +164,17 @@ impl<'a> TrainingData<Bound<'a, PyArray2<f64>>> {
         match self {
             TrainingData::Regression(data) => data.log(),
             TrainingData::Ranking(data) => data.log(),
+        }
+    }
+
+    pub fn save(&self, path: &Path) {
+        match self {
+            TrainingData::Ranking(data) => {
+                data.save(path);
+            }
+            _ => {
+                todo!("save regression data")
+            }
         }
     }
 }
