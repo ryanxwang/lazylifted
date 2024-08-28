@@ -3,10 +3,20 @@ from sklearn.svm import LinearSVC
 from rank2plan import LpModel, Pair
 from rank2plan.metrics import kendall_tau as r2p_kendall_tau
 from pulp import PULP_CBC_CMD
+import logging
+import random
+import sys
 
 
 class RankingModel:
     def __init__(self, model_str, verbose):
+        if verbose:
+            logging.basicConfig(
+                level=logging.INFO,
+                format="%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)",
+                stream=sys.stdout,
+            )
+
         self.model_str = model_str
         self.verbose = verbose
         if model_str == "ranksvm":
@@ -14,15 +24,18 @@ class RankingModel:
             pass
         elif model_str == "lp":
             SECS_PER_MINUTE = 60
-            SECS_PER_HOUR = 3600
             solver = PULP_CBC_CMD(
-                msg=verbose,
+                msg=False,  # already logging, so no need to print solver messages
                 options=[f"RandomS 2024"],
                 timeLimit=10 * SECS_PER_MINUTE,
                 mip=False,
             )
+            random.seed(2024)
             self.model = LpModel(
-                solver, C=10.0, use_constraint_generation=True, verbose=verbose
+                solver,
+                C=10.0,
+                use_constraint_generation=True,
+                use_column_generation=True,
             )
         else:
             raise ValueError("Unknown regressor model: " + model_str)
