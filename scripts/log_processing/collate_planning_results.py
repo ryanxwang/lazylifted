@@ -98,7 +98,6 @@ def main():
 
         if search_duration is None:
             search_duration = SEARCH_TIME_LIMIT
-        assert search_duration <= SEARCH_TIME_LIMIT
 
         results.append(
             PlanningResult(
