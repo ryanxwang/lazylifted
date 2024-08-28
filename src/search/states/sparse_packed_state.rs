@@ -3,6 +3,7 @@ use crate::search::{
     states::{DBState, GroundAtom, Relation},
     Task,
 };
+use internment::Intern;
 use lru::LruCache;
 use std::{
     cell::RefCell,
@@ -10,9 +11,9 @@ use std::{
     num::NonZeroUsize,
 };
 
-/// The [`SparsePackedState`] struct is used to store a state in a more compact
-/// representation. This is based on the powerlifted implementation, which is
-/// then based on the fast downward implementation.
+/// The [`InternalSparsePackedState`] struct is used to store a state in a more
+/// compact representation. This is based on the powerlifted implementation,
+/// which is then based on the fast downward implementation.
 ///
 /// We represent a state as a vector of relations and a vector of nullary atoms.
 /// Each relation is a set of tuples, which can be interpreted as a 'table'. In
@@ -22,14 +23,22 @@ use std::{
 /// corresponding relation). Last, we combine all these hash values together and
 /// also combine with a hash over the predicate symbols and the truth value of
 /// the nullary relations (i.e., predicates) of the state.
+///
+/// This type is only made "pub" to satisfy the compiler. It should not be used
+/// outside of this module. Use its interned version, [`SparsePackedState`],
+/// instead.
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
-pub struct SparsePackedState {
+pub struct InternalSparsePackedState {
     packed_relations: Vec<Vec<u64>>,
     predicate_symbols: Vec<usize>,
     nullary_atoms: Vec<bool>,
 }
 
-impl SparsePackedState {}
+/// The [`SparsePackedState`] type is an interned version of the internal
+/// representation of a state. This is useful for avoiding having many copies of
+/// the same state in memory, which can happen to a scary degree for partial
+/// space search.
+pub type SparsePackedState = Intern<InternalSparsePackedState>;
 
 /// The [`SparseStatePacker`] struct is used to pack and unpack states into a
 /// more compact representation. This is useful for storing states in a hash
@@ -115,11 +124,11 @@ impl SparseStatePacker {
         // packing, mainly due to having to clone, and doesn't help much - the
         // situation could change though.
 
-        SparsePackedState {
+        Intern::new(InternalSparsePackedState {
             packed_relations,
             predicate_symbols,
             nullary_atoms: state.nullary_atoms.clone(),
-        }
+        })
     }
 
     pub fn unpack(&self, packed_state: &SparsePackedState) -> DBState {
@@ -160,7 +169,7 @@ impl SparseStatePacker {
 
         self.unpacked_states_cache
             .borrow_mut()
-            .put(packed_state.clone(), dbstate.clone());
+            .put(packed_state.to_owned(), dbstate.clone());
 
         dbstate
     }

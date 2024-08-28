@@ -591,6 +591,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "internment"
+version = "0.8.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "78d408a22389be01e56d8083e6a53bfd6226e392d2bd9661196a426be36e165e"
+dependencies = [
+ "hashbrown",
+]
+
+[[package]]
 name = "is_terminal_polyfill"
 version = "1.70.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -635,6 +644,7 @@ dependencies = [
  "console",
  "dialoguer",
  "humantime",
+ "internment",
  "itertools",
  "lazy_static",
  "lru",

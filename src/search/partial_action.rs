@@ -8,6 +8,7 @@ use crate::search::{Action, ActionSchema, Atom, Negatable, Task, Transition};
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PartialAction {
     schema_index: usize,
+    // TODO-soon: this probably could be a smallvec
     partial_instantiation: Vec<usize>,
 }
 
