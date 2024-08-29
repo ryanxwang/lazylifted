@@ -1,7 +1,7 @@
 [wl-model]
 validate = false
 
-[wl-model.model.regressor-name.gpr]
+[wl-model.model.regressor.gpr]
 alpha = 1e-7
 
 [wl-model.wl]

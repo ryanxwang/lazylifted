@@ -51,23 +51,11 @@ impl ModelConfig {
         config
     }
 
-    pub fn trainer_from_config(self, iters: Option<usize>, alpha: Option<f64>) -> Box<dyn Train> {
+    pub fn trainer_from_config(self) -> Box<dyn Train> {
         let py = unsafe { Python::assume_gil_acquired() };
 
         match self {
-            ModelConfig::WlModel(config) => {
-                let config = if let Some(iters) = iters {
-                    config.with_iters(iters)
-                } else {
-                    config
-                };
-                let config = if let Some(alpha) = alpha {
-                    config.with_alpha(alpha)
-                } else {
-                    config
-                };
-                Box::new(WlModel::new(py, config))
-            }
+            ModelConfig::WlModel(config) => Box::new(WlModel::new(py, config)),
         }
     }
 }
@@ -78,7 +66,7 @@ mod tests {
     use crate::{
         learning::{
             data_generators::DataGeneratorConfig,
-            ml::MlModelName,
+            ml::MlModelConfig,
             wl::{SetOrMultiset, WlConfig},
         },
         search::successor_generators::SuccessorGeneratorName,
@@ -89,7 +77,7 @@ mod tests {
     #[test]
     fn serialise_sample_model_config() {
         let config = ModelConfig::WlModel(WlModelConfig {
-            model: MlModelName::RankerName(crate::learning::ml::RankerName::LP),
+            model: MlModelConfig::Ranker(crate::learning::ml::RankerConfig::LP { c_value: 0.1 }),
             wl: WlConfig {
                 iters: 2,
                 set_or_multiset: SetOrMultiset::Set,

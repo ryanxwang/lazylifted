@@ -11,18 +11,18 @@ use std::time;
 use tracing::info;
 
 #[derive(Debug, Clone, Copy, PartialEq, Deserialize, Serialize)]
-pub enum RegressorName {
+pub enum RegressorConfig {
     #[serde(rename = "lr")]
     LinearRegressor,
     #[serde(rename = "gpr")]
     GaussianProcessRegressor { alpha: f64 },
 }
 
-impl RegressorName {
+impl RegressorConfig {
     pub fn get_model_str(&self) -> &'static str {
         match self {
-            RegressorName::LinearRegressor => "lr",
-            RegressorName::GaussianProcessRegressor { alpha: _ } => "gpr",
+            RegressorConfig::LinearRegressor => "lr",
+            RegressorConfig::GaussianProcessRegressor { alpha: _ } => "gpr",
         }
     }
 
@@ -30,8 +30,8 @@ impl RegressorName {
         let py = unsafe { Python::assume_gil_acquired() };
         let kwargs = PyDict::new_bound(py);
         match self {
-            RegressorName::LinearRegressor => kwargs,
-            RegressorName::GaussianProcessRegressor { alpha } => {
+            RegressorConfig::LinearRegressor => kwargs,
+            RegressorConfig::GaussianProcessRegressor { alpha } => {
                 kwargs.set_item("alpha", alpha).unwrap();
                 kwargs
             }
@@ -49,11 +49,11 @@ pub struct Regressor<'py> {
 }
 
 impl<'py> Regressor<'py> {
-    pub fn new(py: Python<'py>, name: RegressorName) -> Self {
+    pub fn new(py: Python<'py>, config: RegressorConfig) -> Self {
         let py_model = py_utils::get_regression_model(py);
         Self {
             model: py_model
-                .call((name.get_model_str(),), Some(&name.get_kwargs()))
+                .call((config.get_model_str(),), Some(&config.get_kwargs()))
                 .unwrap(),
             weights: None,
         }
@@ -139,8 +139,11 @@ mod tests {
     #[serial]
     fn test_imports() {
         Python::with_gil(|py| {
-            let _ = Regressor::new(py, RegressorName::GaussianProcessRegressor { alpha: 1e-7 });
-            let _ = Regressor::new(py, RegressorName::LinearRegressor);
+            let _ = Regressor::new(
+                py,
+                RegressorConfig::GaussianProcessRegressor { alpha: 1e-7 },
+            );
+            let _ = Regressor::new(py, RegressorConfig::LinearRegressor);
         });
     }
 
@@ -148,8 +151,10 @@ mod tests {
     #[serial]
     fn test_fit_predict_score_for_gpr() {
         Python::with_gil(|py| {
-            let mut regressor =
-                Regressor::new(py, RegressorName::GaussianProcessRegressor { alpha: 1e-7 });
+            let mut regressor = Regressor::new(
+                py,
+                RegressorConfig::GaussianProcessRegressor { alpha: 1e-7 },
+            );
             let x = PyArray2::from_vec2_bound(py, &[vec![1.0, 2.0], vec![3.0, 4.0]]).unwrap();
             let y = vec![1.0, 2.0];
             let data = RegressionTrainingData {
@@ -174,7 +179,7 @@ mod tests {
     #[serial]
     fn test_fit_and_predict_for_lr() {
         Python::with_gil(|py| {
-            let mut regressor = Regressor::new(py, RegressorName::LinearRegressor);
+            let mut regressor = Regressor::new(py, RegressorConfig::LinearRegressor);
             let x = PyArray2::from_vec2_bound(py, &[vec![1.0, 2.0], vec![3.0, 4.0]]).unwrap();
             let y = vec![1.0, 2.0];
             let data = RegressionTrainingData {

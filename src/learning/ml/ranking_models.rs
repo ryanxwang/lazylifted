@@ -8,22 +8,26 @@ use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::Path};
 use tracing::info;
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Deserialize, Serialize)]
-pub enum RankerName {
+#[derive(Debug, Clone, Copy, PartialEq, Deserialize, Serialize)]
+pub enum RankerConfig {
     #[serde(rename = "ranksvm")]
-    RankSVM,
-    #[serde(rename = "lambdamart")]
-    LambdaMart,
+    RankSVM { c_value: f64 },
     #[serde(rename = "lp")]
-    LP,
+    LP { c_value: f64 },
 }
 
-impl RankerName {
+impl RankerConfig {
     pub fn to_model_str(self) -> &'static str {
         match self {
-            RankerName::RankSVM => "ranksvm",
-            RankerName::LambdaMart => "lambdamart",
-            RankerName::LP => "lp",
+            RankerConfig::RankSVM { c_value: _ } => "ranksvm",
+            RankerConfig::LP { c_value: _ } => "lp",
+        }
+    }
+
+    pub fn get_c_value(&self) -> f64 {
+        match self {
+            RankerConfig::RankSVM { c_value } => *c_value,
+            RankerConfig::LP { c_value } => *c_value,
         }
     }
 }
@@ -63,11 +67,15 @@ pub struct Ranker<'py> {
 }
 
 impl<'py> Ranker<'py> {
-    pub fn new(py: Python<'py>, name: RankerName) -> Self {
+    pub fn new(py: Python<'py>, config: RankerConfig) -> Self {
         let py_model = py_utils::get_ranking_model(py);
         Self {
             model: py_model
-                .call1((name.to_model_str(), *VERBOSE.get().unwrap_or(&false)))
+                .call1((
+                    config.to_model_str(),
+                    config.get_c_value(),
+                    *VERBOSE.get().unwrap_or(&false),
+                ))
                 .unwrap(),
             weights: RankerWeights::None,
         }
@@ -178,7 +186,7 @@ mod tests {
     #[serial]
     fn test_imports() {
         Python::with_gil(|py: Python<'_>| {
-            let _ = Ranker::new(py, RankerName::RankSVM);
+            let _ = Ranker::new(py, RankerConfig::RankSVM { c_value: 1.0 });
         })
     }
 
@@ -245,7 +253,7 @@ mod tests {
     #[serial]
     fn test_fit_and_predict_for_ranksvm() {
         Python::with_gil(|py| {
-            let mut ranker = Ranker::new(py, RankerName::RankSVM);
+            let mut ranker = Ranker::new(py, RankerConfig::RankSVM { c_value: 1.0 });
             let data = test_data_without_groups(py);
             ranker.fit(&data);
 
@@ -261,7 +269,7 @@ mod tests {
     #[serial]
     fn test_fit_and_predict_for_lp_without_groups() {
         Python::with_gil(|py| {
-            let mut ranker = Ranker::new(py, RankerName::LP);
+            let mut ranker = Ranker::new(py, RankerConfig::LP { c_value: 1.0 });
             let data = test_data_without_groups(py);
             ranker.fit(&data);
 

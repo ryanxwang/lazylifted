@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use crate::learning::{
-    ml::{Ranker, RankerName, Regressor, RegressorName},
+    ml::{Ranker, RankerConfig, Regressor, RegressorConfig},
     models::TrainingData,
 };
 use ndarray::{Array1, Array2};
@@ -11,9 +11,9 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Deserialize, Serialize, Copy)]
 #[serde(rename_all = "kebab-case")]
-pub enum MlModelName {
-    RegressorName(RegressorName),
-    RankerName(RankerName),
+pub enum MlModelConfig {
+    Regressor(RegressorConfig),
+    Ranker(RankerConfig),
 }
 
 #[derive(Debug)]
@@ -23,10 +23,10 @@ pub enum MlModel<'py> {
 }
 
 impl<'py> MlModel<'py> {
-    pub fn new(py: Python<'py>, name: MlModelName) -> Self {
-        match name {
-            MlModelName::RegressorName(name) => MlModel::Regressor(Regressor::new(py, name)),
-            MlModelName::RankerName(name) => MlModel::Ranker(Ranker::new(py, name)),
+    pub fn new(py: Python<'py>, config: MlModelConfig) -> Self {
+        match config {
+            MlModelConfig::Regressor(config) => MlModel::Regressor(Regressor::new(py, config)),
+            MlModelConfig::Ranker(config) => MlModel::Ranker(Ranker::new(py, config)),
         }
     }
 
@@ -70,10 +70,10 @@ impl<'py> MlModel<'py> {
         }
     }
 
-    pub fn unpickle(model_name: MlModelName, py: Python<'py>, path: &Path) -> Self {
+    pub fn unpickle(model_name: MlModelConfig, py: Python<'py>, path: &Path) -> Self {
         match model_name {
-            MlModelName::RegressorName(_name) => MlModel::Regressor(Regressor::unpickle(py, path)),
-            MlModelName::RankerName(_name) => MlModel::Ranker(Ranker::unpickle(py, path)),
+            MlModelConfig::Regressor(_config) => MlModel::Regressor(Regressor::unpickle(py, path)),
+            MlModelConfig::Ranker(_config) => MlModel::Ranker(Ranker::unpickle(py, path)),
         }
     }
 

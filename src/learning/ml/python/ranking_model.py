@@ -9,7 +9,7 @@ import sys
 
 
 class RankingModel:
-    def __init__(self, model_str, verbose):
+    def __init__(self, model_str, C, verbose):
         if verbose:
             logging.basicConfig(
                 level=logging.INFO,
@@ -19,6 +19,7 @@ class RankingModel:
 
         self.model_str = model_str
         self.verbose = verbose
+        self.C = C
         if model_str == "ranksvm":
             # we create the model later
             pass
@@ -33,7 +34,7 @@ class RankingModel:
             random.seed(2024)
             self.model = LpModel(
                 solver,
-                C=10.0,
+                C=C,
                 use_constraint_generation=True,
                 use_column_generation=True,
             )
@@ -66,7 +67,7 @@ class RankingModel:
             max_iter=30000,
             dual=False,
             fit_intercept=False,
-            C=1,
+            C=self.C,
             tol=1e-3,
         )
         model.fit(X, y, sample_weight=sample_weight)
