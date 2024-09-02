@@ -83,6 +83,7 @@ mod tests {
                 set_or_multiset: SetOrMultiset::Set,
             },
             validate: true,
+            tune: true,
             data_generator: DataGeneratorConfig::StateSpaceIlgRanking(
                 crate::learning::data_generators::StateSpaceIlgRankingConfig {
                     successor_generator: SuccessorGeneratorName::FullReducer,

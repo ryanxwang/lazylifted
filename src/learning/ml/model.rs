@@ -43,6 +43,29 @@ impl<'py> MlModel<'py> {
         }
     }
 
+    pub fn tune(
+        &mut self,
+        training_data: &TrainingData<Bound<'py, PyArray2<f64>>>,
+        validation_data: &TrainingData<Bound<'py, PyArray2<f64>>>,
+    ) {
+        match self {
+            MlModel::Regressor(_) => {
+                panic!("Tuning is not supported for regressor model")
+            }
+            MlModel::Ranker(ranker) => {
+                let training_data = match training_data {
+                    TrainingData::Ranking(data) => data,
+                    _ => panic!("Wrong data type for ranker model"),
+                };
+                let validation_data = match validation_data {
+                    TrainingData::Ranking(data) => data,
+                    _ => panic!("Wrong data type for ranker model"),
+                };
+                ranker.tune(training_data, validation_data)
+            }
+        }
+    }
+
     pub fn predict_with_ndarray(&self, x: &Array2<f64>, group_id: Option<usize>) -> Array1<f64> {
         match self {
             MlModel::Regressor(regressor) => regressor.predict(x),

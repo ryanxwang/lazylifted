@@ -103,6 +103,14 @@ class RankingModel:
         else:
             raise ValueError("Unknown ranking model: " + self.model_str)
 
+    def tune(self, X_train, pairs_train, X_val, pairs_val):
+        if self.model_str == "lp":
+            pairs_train = self._to_rank2plan_pairs(pairs_train)
+            pairs_val = self._to_rank2plan_pairs(pairs_val)
+            _best_C = self.model.tune(X_train, pairs_train, X_val, pairs_val)
+        else:
+            raise ValueError("Tuning is not supported for model: " + self.model_str)
+
     def predict(self, X, group_id):
         # We require that all the features come from the same group. In
         # practice, this is okay because as of 2024/07/09, we call predict

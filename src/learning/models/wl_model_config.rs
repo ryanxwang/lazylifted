@@ -13,4 +13,8 @@ pub struct WlModelConfig {
     pub validate: bool,
     #[serde(default)]
     pub preprocessing_option: PreprocessingOption,
+    /// Whether to tune the model, as of 2024/09/02, this is only supported for
+    /// the LP ranker. If this is set to true, validate must also be set to
+    /// true.
+    pub tune: bool,
 }

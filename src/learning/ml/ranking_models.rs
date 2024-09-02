@@ -113,6 +113,25 @@ impl<'py> Ranker<'py> {
         }
     }
 
+    pub fn tune(
+        &mut self,
+        training_data: &RankingTrainingData<Bound<'py, PyArray2<f64>>>,
+        validation_data: &RankingTrainingData<Bound<'py, PyArray2<f64>>>,
+    ) {
+        let start_time = std::time::Instant::now();
+        self.model
+            .getattr("tune")
+            .unwrap()
+            .call1((
+                &training_data.features,
+                &training_data.pairs_for_python(),
+                &validation_data.features,
+                &validation_data.pairs_for_python(),
+            ))
+            .unwrap();
+        info!(tuning_time = start_time.elapsed().as_secs_f64());
+    }
+
     pub fn predict_with_ndarray(&self, x: &Array2<f64>, group_id: Option<usize>) -> Array1<f64> {
         match &self.weights {
             RankerWeights::Vector(weights) => x.dot(&weights.t()),

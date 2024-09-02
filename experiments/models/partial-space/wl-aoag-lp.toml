@@ -1,5 +1,6 @@
 [wl-model]
-validate = false
+validate = true
+tune = true
 
 [wl-model.model.ranker.lp]
 c_value = 1.0

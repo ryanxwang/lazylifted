@@ -90,16 +90,20 @@ impl WlModel {
 }
 
 impl Train for WlModel {
-    fn train(&mut self, train_instances: &[TrainingInstance]) {
+    fn train(&mut self, all_instances: &[TrainingInstance]) {
         assert_eq!(self.state, WlModelState::New);
-        let (train_instances, val_instances) = if self.config.validate {
+        if self.config.tune && !self.config.validate {
+            panic!("Tuning is only supported when validate is set to true");
+        }
+
+        let (train_instances, val_instances) = if self.config.validate || self.config.tune {
             const TRAIN_RATIO: f64 = 0.8;
             info!("splitting train data into train and val sets with train ratio {TRAIN_RATIO:.2}",);
-            train_instances.split_at((train_instances.len() as f64 * TRAIN_RATIO) as usize)
+            all_instances.split_at((all_instances.len() as f64 * TRAIN_RATIO) as usize)
         } else {
             info!("training without validation");
             #[allow(trivial_casts)]
-            (train_instances, &[] as &[TrainingInstance])
+            (all_instances, &[] as &[TrainingInstance])
         };
 
         let data_generator = <dyn DataGenerator>::new(&self.config.data_generator);
@@ -133,8 +137,27 @@ impl Train for WlModel {
         info!("logging val data");
         val_data.log();
 
-        info!("fitting model");
-        self.model.fit(&train_data);
+        if self.config.tune {
+            info!("tuning model");
+            self.model.tune(&train_data, &val_data);
+
+            // for simplicity we just regenerate all data and retrain the model
+            let all_data = data_generator.generate(all_instances);
+            let all_histograms = self
+                .preprocessor
+                .preprocess(self.wl.compute_histograms(all_data.features()), false);
+            let all_x = self.wl.convert_to_pyarray(self.py(), &all_histograms);
+            let all_data = all_data.with_features(all_x);
+
+            info!("logging all data");
+            all_data.log();
+
+            info!("fitting model");
+            self.model.fit(&all_data);
+        } else {
+            info!("fitting model");
+            self.model.fit(&train_data);
+        }
 
         let train_score_start = time::Instant::now();
         let train_score = self.model.score(&train_data);
