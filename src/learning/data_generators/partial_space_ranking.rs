@@ -1,7 +1,7 @@
 use crate::{
     learning::{
         data_generators::DataGenerator,
-        graphs::{CGraph, PartialActionCompilerName},
+        graphs::{CGraph, ColourDictionary, PartialActionCompilerName},
         models::{
             RankingPair, RankingRelation, RankingTrainingData, TrainingData, TrainingInstance,
         },
@@ -33,7 +33,11 @@ impl PartialSpaceRanking {
 }
 
 impl DataGenerator for PartialSpaceRanking {
-    fn generate(&self, training_instances: &[TrainingInstance]) -> TrainingData<Vec<CGraph>> {
+    fn generate(
+        &self,
+        training_instances: &[TrainingInstance],
+        colour_dictionary: &mut ColourDictionary,
+    ) -> TrainingData<Vec<CGraph>> {
         let mut graphs = Vec::new();
         let mut pairs = Vec::new();
         let mut group_ids = Vec::new();
@@ -71,7 +75,8 @@ impl DataGenerator for PartialSpaceRanking {
                 for partial_depth in 0..=(chosen_action.instantiation.len()) {
                     let chosen_partial = PartialAction::from_action(chosen_action, partial_depth);
 
-                    let graph = compiler.compile(&cur_state, &chosen_partial);
+                    let graph =
+                        compiler.compile(&cur_state, &chosen_partial, Some(colour_dictionary));
                     let cur_index = graphs.len();
                     graphs.push(graph.clone());
                     group_ids.push(chosen_partial.group_id());
@@ -104,7 +109,11 @@ impl DataGenerator for PartialSpaceRanking {
                                 relation: RankingRelation::BetterOrEqual,
                                 importance: 1.,
                             });
-                            graphs.push(compiler.compile(&cur_state, partial));
+                            graphs.push(compiler.compile(
+                                &cur_state,
+                                partial,
+                                Some(colour_dictionary),
+                            ));
                             group_ids.push(partial.group_id());
                         }
                     }

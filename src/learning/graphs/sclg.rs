@@ -1,6 +1,6 @@
 //! The State Change Learning Graph
 use crate::{
-    learning::graphs::{CGraph, NodeID, PartialActionCompiler},
+    learning::graphs::{CGraph, ColourDictionary, NodeID, PartialActionCompiler},
     search::{
         successor_generators::SuccessorGeneratorName, ActionSchema, Atom, DBState, Negatable,
         Object, PartialAction, SuccessorGenerator, Task,
@@ -44,7 +44,12 @@ impl SclgCompiler {
         compiler
     }
 
-    pub fn compile(&self, state: &DBState, partial_action: &PartialAction) -> CGraph {
+    pub fn compile(
+        &self,
+        state: &DBState,
+        partial_action: &PartialAction,
+        _colour_dictionary: Option<&mut ColourDictionary>,
+    ) -> CGraph {
         let mut graph = self.base_graph.clone().unwrap();
         let action_schema = &self.action_schemas[partial_action.schema_index()];
 
@@ -187,8 +192,13 @@ impl SclgCompiler {
 }
 
 impl PartialActionCompiler for SclgCompiler {
-    fn compile(&self, state: &DBState, partial_action: &PartialAction) -> CGraph {
-        self.compile(state, partial_action)
+    fn compile(
+        &self,
+        state: &DBState,
+        partial_action: &PartialAction,
+        colour_dictionary: Option<&mut ColourDictionary>,
+    ) -> CGraph {
+        self.compile(state, partial_action, colour_dictionary)
     }
 }
 
@@ -360,6 +370,7 @@ mod tests {
         let graph = compiler.compile(
             &task.initial_state,
             &PartialAction::from(task.action_schemas()[3].clone()),
+            None,
         );
 
         assert_eq!(graph.node_count(), 14);

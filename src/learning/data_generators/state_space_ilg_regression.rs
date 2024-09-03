@@ -1,7 +1,7 @@
 use crate::{
     learning::{
         data_generators::DataGenerator,
-        graphs::{CGraph, IlgCompiler},
+        graphs::{CGraph, ColourDictionary, IlgCompiler},
         models::{RegressionTrainingData, TrainingData, TrainingInstance},
     },
     search::successor_generators::SuccessorGeneratorName,
@@ -28,7 +28,11 @@ impl StateSpaceIlgRegression {
 }
 
 impl DataGenerator for StateSpaceIlgRegression {
-    fn generate(&self, training_instances: &[TrainingInstance]) -> TrainingData<Vec<CGraph>> {
+    fn generate(
+        &self,
+        training_instances: &[TrainingInstance],
+        colour_dictionary: &mut ColourDictionary,
+    ) -> TrainingData<Vec<CGraph>> {
         let mut graphs = Vec::new();
         let mut dist_to_goal = Vec::new();
         for instance in training_instances {
@@ -42,11 +46,11 @@ impl DataGenerator for StateSpaceIlgRegression {
                 let action_schema = &task.action_schemas()[action.index];
                 let next_state =
                     successor_generator.generate_successor(&cur_state, action_schema, action);
-                graphs.push(compiler.compile(&cur_state));
+                graphs.push(compiler.compile(&cur_state, Some(colour_dictionary)));
                 dist_to_goal.push(plan.len() as f64 - i as f64);
                 cur_state = next_state;
             }
-            graphs.push(compiler.compile(&cur_state));
+            graphs.push(compiler.compile(&cur_state, Some(colour_dictionary)));
             dist_to_goal.push(0.0);
         }
 

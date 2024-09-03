@@ -11,7 +11,7 @@
 
 use crate::search::{Negatable, Object, PartialAction, Task};
 use crate::{
-    learning::graphs::{CGraph, Compiler, NodeID, PartialActionCompiler},
+    learning::graphs::{CGraph, ColourDictionary, Compiler, NodeID, PartialActionCompiler},
     search::{Atom, DBState},
 };
 use serde::{Deserialize, Serialize};
@@ -73,7 +73,11 @@ impl IlgCompiler {
         START + predicate_index * AtomNodeType::COUNT + atom_type as usize
     }
 
-    pub fn compile(&self, state: &DBState) -> CGraph {
+    pub fn compile(
+        &self,
+        state: &DBState,
+        _colour_dictionary: Option<&mut ColourDictionary>,
+    ) -> CGraph {
         let mut graph = self
             .base_graph
             .as_ref()
@@ -142,8 +146,8 @@ impl IlgCompiler {
 }
 
 impl Compiler<DBState> for IlgCompiler {
-    fn compile(&self, state: &DBState) -> CGraph {
-        self.compile(state)
+    fn compile(&self, state: &DBState, colour_dictionary: Option<&mut ColourDictionary>) -> CGraph {
+        self.compile(state, colour_dictionary)
     }
 }
 
@@ -151,13 +155,19 @@ impl Compiler<DBState> for IlgCompiler {
 /// used in also for [`crate::learning::models::PartialActionModel`], this
 /// implementation ignores the partial action completely.
 impl PartialActionCompiler for IlgCompiler {
-    fn compile(&self, state: &DBState, _: &PartialAction) -> CGraph {
-        self.compile(state)
+    fn compile(
+        &self,
+        state: &DBState,
+        _: &PartialAction,
+        colour_dictionary: Option<&mut ColourDictionary>,
+    ) -> CGraph {
+        self.compile(state, colour_dictionary)
     }
 }
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
     use crate::test_utils::*;
 
@@ -229,7 +239,7 @@ mod tests {
         let task = Task::from_text(BLOCKSWORLD_DOMAIN_TEXT, BLOCKSWORLD_PROBLEM13_TEXT);
         let compiler = IlgCompiler::new(&task);
 
-        let graph = compiler.compile(&task.initial_state);
+        let graph = compiler.compile(&task.initial_state, None);
 
         assert_eq!(graph.node_count(), 14);
         assert_eq!(graph.edge_count(), 14);

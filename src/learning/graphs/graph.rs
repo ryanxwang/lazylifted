@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 
 use crate::learning::graphs::{
-    AoagCompiler, IlgCompiler, PalgCompiler, RslgCompiler, SclgCompiler,
+    AoagCompiler, ColourDictionary, IlgCompiler, PalgCompiler, RslgCompiler, SclgCompiler,
 };
 use crate::search::successor_generators::SuccessorGeneratorName;
 use crate::search::{DBState, PartialAction, Task};
@@ -13,12 +13,17 @@ pub type NodeID = petgraph::graph::NodeIndex<u32>;
 
 pub trait Compiler<T>: Debug {
     #[allow(dead_code)]
-    fn compile(&self, arg: &T) -> CGraph;
+    fn compile(&self, arg: &T, colour_dictionary: Option<&mut ColourDictionary>) -> CGraph;
 }
 
 pub trait PartialActionCompiler: Debug {
     /// Compile the (state, partial) pair into a graph.
-    fn compile(&self, state: &DBState, partial: &PartialAction) -> CGraph;
+    fn compile(
+        &self,
+        state: &DBState,
+        partial: &PartialAction,
+        colour_dictionary: Option<&mut ColourDictionary>,
+    ) -> CGraph;
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Copy)]

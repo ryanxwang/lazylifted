@@ -28,7 +28,7 @@ impl Heuristic<DBState> for WlStateHeuristic {
         if self.compiler.is_none() {
             self.compiler = Some(IlgCompiler::new(task));
         }
-        let graph = self.compiler.as_ref().unwrap().compile(state);
+        let graph = self.compiler.as_ref().unwrap().compile(state, None);
         self.model.evaluate(graph, None).into()
     }
 }

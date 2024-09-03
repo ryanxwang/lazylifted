@@ -1,6 +1,8 @@
 //! The Partial Action Learning Graph
 use crate::{
-    learning::graphs::{utils::SchemaPred, CGraph, NodeID, PartialActionCompiler},
+    learning::graphs::{
+        utils::SchemaPred, CGraph, ColourDictionary, NodeID, PartialActionCompiler,
+    },
     search::{
         ActionSchema, Atom, DBState, Negatable, Object, PartialAction, Predicate, SchemaArgument,
         SchemaParameter, Task,
@@ -43,7 +45,12 @@ impl PalgCompiler {
         compiler
     }
 
-    pub fn compile(&self, state: &DBState, partial_action: &PartialAction) -> CGraph {
+    pub fn compile(
+        &self,
+        state: &DBState,
+        partial_action: &PartialAction,
+        _colour_dictionary: Option<&mut ColourDictionary>,
+    ) -> CGraph {
         let action_schema = &self.action_schemas[partial_action.schema_index()];
         let mut graph = self
             .base_graph
@@ -226,8 +233,13 @@ impl PalgCompiler {
 // Instead of placing the implementation in the trait, we just wrap the trait
 // around them so that they are accessible even without the trait in scope.
 impl PartialActionCompiler for PalgCompiler {
-    fn compile(&self, state: &DBState, partial_action: &PartialAction) -> CGraph {
-        self.compile(state, partial_action)
+    fn compile(
+        &self,
+        state: &DBState,
+        partial_action: &PartialAction,
+        colour_dictionary: Option<&mut ColourDictionary>,
+    ) -> CGraph {
+        self.compile(state, partial_action, colour_dictionary)
     }
 }
 
@@ -317,7 +329,7 @@ mod tests {
 
         let state = task.initial_state.clone();
         let action_schema = task.action_schemas()[0].clone();
-        let graph = compiler.compile(&state, &action_schema.clone().into());
+        let graph = compiler.compile(&state, &action_schema.clone().into(), None);
 
         assert_eq!(graph.node_count(), 24);
         assert_eq!(graph.edge_count(), 31);

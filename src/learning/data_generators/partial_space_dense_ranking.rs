@@ -1,7 +1,7 @@
 use crate::{
     learning::{
         data_generators::DataGenerator,
-        graphs::{CGraph, PartialActionCompilerName},
+        graphs::{CGraph, ColourDictionary, PartialActionCompilerName},
         models::{
             RankingPair, RankingRelation, RankingTrainingData, TrainingData, TrainingInstance,
         },
@@ -38,7 +38,11 @@ impl PartialSpaceDenseRanking {
 }
 
 impl DataGenerator for PartialSpaceDenseRanking {
-    fn generate(&self, training_instances: &[TrainingInstance]) -> TrainingData<Vec<CGraph>> {
+    fn generate(
+        &self,
+        training_instances: &[TrainingInstance],
+        colour_dictionary: &mut ColourDictionary,
+    ) -> TrainingData<Vec<CGraph>> {
         let mut graphs = Vec::new();
         let mut pairs = Vec::new();
         let mut group_ids = Vec::new();
@@ -83,7 +87,8 @@ impl DataGenerator for PartialSpaceDenseRanking {
                 for partial_depth in 0..=(chosen_action.instantiation.len()) {
                     let chosen_partial = PartialAction::from_action(chosen_action, partial_depth);
 
-                    let graph = compiler.compile(&cur_state, &chosen_partial);
+                    let graph =
+                        compiler.compile(&cur_state, &chosen_partial, Some(colour_dictionary));
                     let cur_index = graphs.len();
                     graphs.push(graph.clone());
                     group_ids.push(chosen_partial.group_id());
@@ -131,7 +136,11 @@ impl DataGenerator for PartialSpaceDenseRanking {
                                 relation: RankingRelation::BetterOrEqual,
                                 importance: self.config.layer_sibling_weight,
                             });
-                            graphs.push(compiler.compile(&cur_state, partial));
+                            graphs.push(compiler.compile(
+                                &cur_state,
+                                partial,
+                                Some(colour_dictionary),
+                            ));
                             group_ids.push(partial.group_id());
                             layer_sibling_pairs_count += 1;
                         }
@@ -157,7 +166,11 @@ impl DataGenerator for PartialSpaceDenseRanking {
                                 relation: RankingRelation::BetterOrEqual,
                                 importance: self.config.state_sibling_weight,
                             });
-                            graphs.push(compiler.compile(&cur_state, partial));
+                            graphs.push(compiler.compile(
+                                &cur_state,
+                                partial,
+                                Some(colour_dictionary),
+                            ));
                             group_ids.push(partial.group_id());
                             state_sibling_pairs_count += 1;
                         }

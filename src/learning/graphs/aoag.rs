@@ -1,7 +1,7 @@
 //! The Action-Object-Atom Graph
 
 use crate::{
-    learning::graphs::{CGraph, NodeID},
+    learning::graphs::{CGraph, ColourDictionary, NodeID, PartialActionCompiler},
     search::{
         successor_generators::SuccessorGeneratorName, Action, ActionSchema, Atom, DBState,
         Negatable, PartialAction, SuccessorGenerator, Task,
@@ -10,8 +10,6 @@ use crate::{
 use std::collections::{HashMap, HashSet};
 use strum::EnumCount;
 use strum_macros::{EnumCount as EnumCountMacro, FromRepr};
-
-use super::PartialActionCompiler;
 
 const NO_STATIC_PREDICATES: bool = true;
 const OBJECTS_COLOURED_BY_STATIC_PREDICATES: bool = true;
@@ -78,7 +76,12 @@ impl AoagCompiler {
         compiler
     }
 
-    pub fn compile(&self, state: &DBState, partial_action: &PartialAction) -> CGraph {
+    pub fn compile(
+        &self,
+        state: &DBState,
+        partial_action: &PartialAction,
+        _colour_dictionary: Option<&mut ColourDictionary>,
+    ) -> CGraph {
         let mut graph = self.base_graph.clone().unwrap();
         let action_schema = &self.action_schemas[partial_action.schema_index()];
 
@@ -182,8 +185,13 @@ impl AoagCompiler {
 }
 
 impl PartialActionCompiler for AoagCompiler {
-    fn compile(&self, state: &DBState, partial_action: &PartialAction) -> CGraph {
-        self.compile(state, partial_action)
+    fn compile(
+        &self,
+        state: &DBState,
+        partial_action: &PartialAction,
+        colour_dictionary: Option<&mut ColourDictionary>,
+    ) -> CGraph {
+        self.compile(state, partial_action, colour_dictionary)
     }
 }
 
@@ -259,7 +267,7 @@ mod tests {
 
         // partial: (stack ?ob ?underob), so that we can stack on top of either
         // b1 or b3
-        let graph = compiler.compile(&state, &PartialAction::new(2, vec![]));
+        let graph = compiler.compile(&state, &PartialAction::new(2, vec![]), None);
 
         assert_eq!(graph.node_count(), 16);
         assert_eq!(graph.edge_count(), 18);

@@ -1,7 +1,7 @@
 use crate::{
     learning::{
         data_generators::DataGenerator,
-        graphs::{CGraph, PartialActionCompilerName},
+        graphs::{CGraph, ColourDictionary, PartialActionCompilerName},
         models::{RegressionTrainingData, TrainingData, TrainingInstance},
     },
     search::{successor_generators::SuccessorGeneratorName, PartialAction},
@@ -29,7 +29,11 @@ impl PartialSpaceRegression {
 }
 
 impl DataGenerator for PartialSpaceRegression {
-    fn generate(&self, training_instances: &[TrainingInstance]) -> TrainingData<Vec<CGraph>> {
+    fn generate(
+        &self,
+        training_instances: &[TrainingInstance],
+        colour_dictionary: &mut ColourDictionary,
+    ) -> TrainingData<Vec<CGraph>> {
         let mut graphs = Vec::new();
         let mut labels = Vec::new();
         let mut noise = Vec::new();
@@ -50,7 +54,7 @@ impl DataGenerator for PartialSpaceRegression {
                 for partial_depth in 0..=(chosen_action.instantiation.len()) {
                     cur_partial_step += 1. / (chosen_action.instantiation.len() + 1) as f64;
                     let partial = PartialAction::from_action(chosen_action, partial_depth);
-                    graphs.push(compiler.compile(&cur_state, &partial));
+                    graphs.push(compiler.compile(&cur_state, &partial, Some(colour_dictionary)));
                     labels.push(total_steps - cur_partial_step);
 
                     if partial_depth == chosen_action.instantiation.len() {

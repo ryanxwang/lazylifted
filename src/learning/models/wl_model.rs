@@ -1,7 +1,7 @@
 use crate::{
     learning::{
         data_generators::{DataGenerator, DataGeneratorConfig},
-        graphs::{CGraph, PartialActionCompilerName},
+        graphs::{CGraph, ColourDictionary, PartialActionCompilerName},
         ml::MlModel,
         models::{
             model_utils::{extract_from_zip, zip_files, PICKLE_FILE_NAME, RON_FILE_NAME},
@@ -106,10 +106,12 @@ impl Train for WlModel {
             (all_instances, &[] as &[TrainingInstance])
         };
 
+        let mut colour_dictionary = ColourDictionary::new();
+
         let data_generator = <dyn DataGenerator>::new(&self.config.data_generator);
 
-        let train_data = data_generator.generate(train_instances);
-        let val_data = data_generator.generate(val_instances);
+        let train_data = data_generator.generate(train_instances, &mut colour_dictionary);
+        let val_data = data_generator.generate(val_instances, &mut colour_dictionary);
         info!("generated graphs");
         info!(
             train_graph = train_data.features().len(),
@@ -142,7 +144,8 @@ impl Train for WlModel {
             self.model.tune(&train_data, &val_data);
 
             // for simplicity we just regenerate all data and retrain the model
-            let all_data = data_generator.generate(all_instances);
+            // TODO-soon: this needs to happen in train mode of the wl kernal
+            let all_data = data_generator.generate(all_instances, &mut colour_dictionary);
             let all_histograms = self
                 .preprocessor
                 .preprocess(self.wl.compute_histograms(all_data.features()), false);

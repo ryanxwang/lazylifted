@@ -7,12 +7,16 @@ use crate::learning::{
         state_space_ilg_ranking::StateSpaceIlgRanking,
         state_space_ilg_regression::StateSpaceIlgRegression, DataGeneratorConfig,
     },
-    graphs::CGraph,
+    graphs::{CGraph, ColourDictionary},
     models::{TrainingData, TrainingInstance},
 };
 
 pub trait DataGenerator {
-    fn generate(&self, training_instances: &[TrainingInstance]) -> TrainingData<Vec<CGraph>>;
+    fn generate(
+        &self,
+        training_instances: &[TrainingInstance],
+        colour_dictionary: &mut ColourDictionary,
+    ) -> TrainingData<Vec<CGraph>>;
 }
 
 impl dyn DataGenerator {

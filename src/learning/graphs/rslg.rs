@@ -1,6 +1,6 @@
 //! The Resulting State Learning Graph
 use crate::{
-    learning::graphs::{CGraph, NodeID, PartialActionCompiler},
+    learning::graphs::{CGraph, ColourDictionary, NodeID, PartialActionCompiler},
     search::{
         successor_generators::SuccessorGeneratorName, Action, ActionSchema, Atom, DBState,
         Negatable, PartialAction, PartialEffects, SuccessorGenerator, Task,
@@ -88,7 +88,12 @@ impl RslgCompiler {
         compiler
     }
 
-    pub fn compile(&self, state: &DBState, partial_action: &PartialAction) -> CGraph {
+    pub fn compile(
+        &self,
+        state: &DBState,
+        partial_action: &PartialAction,
+        _colour_dictionary: Option<&mut ColourDictionary>,
+    ) -> CGraph {
         let mut graph = self.base_graph.clone().unwrap();
         let action_schema = &self.action_schemas[partial_action.schema_index()];
 
@@ -212,8 +217,13 @@ impl RslgCompiler {
 }
 
 impl PartialActionCompiler for RslgCompiler {
-    fn compile(&self, state: &DBState, partial_action: &PartialAction) -> CGraph {
-        self.compile(state, partial_action)
+    fn compile(
+        &self,
+        state: &DBState,
+        partial_action: &PartialAction,
+        colour_dictionary: Option<&mut ColourDictionary>,
+    ) -> CGraph {
+        self.compile(state, partial_action, colour_dictionary)
     }
 }
 
@@ -374,7 +384,7 @@ mod tests {
 
         // partial: (stack ?ob ?underob), so that we can stack on top of either
         // b1 or b3
-        let graph = compiler.compile(&state, &PartialAction::new(2, vec![]));
+        let graph = compiler.compile(&state, &PartialAction::new(2, vec![]), None);
 
         assert_eq!(graph.node_count(), 16);
         assert_eq!(graph.edge_count(), 16);

@@ -1,7 +1,7 @@
 use crate::{
     learning::{
         data_generators::DataGenerator,
-        graphs::{CGraph, IlgCompiler},
+        graphs::{CGraph, ColourDictionary, IlgCompiler},
         models::{
             RankingPair, RankingRelation, RankingTrainingData, TrainingData, TrainingInstance,
         },
@@ -30,7 +30,11 @@ impl StateSpaceIlgRanking {
 }
 
 impl DataGenerator for StateSpaceIlgRanking {
-    fn generate(&self, training_instances: &[TrainingInstance]) -> TrainingData<Vec<CGraph>> {
+    fn generate(
+        &self,
+        training_instances: &[TrainingInstance],
+        colour_dictionary: &mut ColourDictionary,
+    ) -> TrainingData<Vec<CGraph>> {
         let mut graphs = Vec::new();
         let mut pairs = Vec::new();
 
@@ -44,7 +48,7 @@ impl DataGenerator for StateSpaceIlgRanking {
             let mut predecessor_graph: Option<CGraph> = None;
             let mut sibling_graphs: Option<Vec<CGraph>> = None;
             for chosen_action in plan.steps() {
-                let cur_graph = compiler.compile(&cur_state);
+                let cur_graph = compiler.compile(&cur_state, Some(colour_dictionary));
                 let cur_index = graphs.len();
                 graphs.push(cur_graph.clone());
 
@@ -89,7 +93,7 @@ impl DataGenerator for StateSpaceIlgRanking {
                     let action_schema = &task.action_schemas()[action.index];
                     let next_state =
                         successor_generator.generate_successor(&cur_state, action_schema, &action);
-                    let next_graph = compiler.compile(&next_state);
+                    let next_graph = compiler.compile(&next_state, Some(colour_dictionary));
                     sibling_graphs.as_mut().unwrap().push(next_graph);
                 }
 

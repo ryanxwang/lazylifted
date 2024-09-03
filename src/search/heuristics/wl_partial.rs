@@ -43,7 +43,11 @@ impl Heuristic<(DBState, PartialAction)> for WlPartialHeuristic {
                     .create(task, self.successor_generator_name),
             );
         }
-        let graph = self.compiler.as_ref().unwrap().compile(state, partial);
+        let graph = self
+            .compiler
+            .as_ref()
+            .unwrap()
+            .compile(state, partial, None);
         self.model.evaluate(graph, Some(partial.group_id())).into()
     }
 }
