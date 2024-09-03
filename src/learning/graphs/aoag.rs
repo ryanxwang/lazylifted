@@ -34,38 +34,54 @@ pub struct AoagCompiler {
     /// Object colours, which may depend on how static predicates apply to them,
     /// indexed by object index
     object_colours: Vec<usize>,
-    object_colour_names: Vec<String>,
     /// The maximum number of possible object colours - this is domain dependent
     /// (so not a const unfortunately) but not instance dependent, so that
     /// colours mean the same thing across instances
     max_object_colours: usize,
+    /// Names of predicates, for colour descriptions
     predicate_names: Vec<String>,
+    /// Names of action schemas, for colour descriptions
     schema_names: Vec<String>,
+    /// Names of object colours, for colour descriptions
+    object_colour_names: HashMap<usize, String>,
 }
 
 impl AoagCompiler {
     pub fn new(task: &Task, successor_generator_name: SuccessorGeneratorName) -> Self {
-        // Fix here
-        let object_colours = task
-            .object_static_information()
+        // map from predicate index to exponent
+        let static_predicate_map: HashMap<usize, usize> = task
+            .static_information_predicates()
             .iter()
-            .map(|static_predicates| {
-                if OBJECTS_COLOURED_BY_STATIC_PREDICATES {
-                    let mut colour: usize = 0;
-                    for predicate_index in static_predicates {
-                        // negative so that colours don't overlap
-                        colour += 1 << predicate_index;
-                    }
-                    colour
-                } else {
-                    0
-                }
-            })
+            .enumerate()
+            .map(|(i, &p)| (p, i))
             .collect();
-        let object_colour_names = task
-            .object_static_information()
-            .iter()
-            .map(|static_predicates| {
+
+        let max_object_colours = if OBJECTS_COLOURED_BY_STATIC_PREDICATES {
+            // can't just use the maximum seen colour, as this needs to be
+            // instance agnostic, so we ask the task for the maximum number of
+            // static predicates that could appear in any instance
+            (2 << task.static_information_predicates().len()) - 1
+        } else {
+            0
+        };
+
+        let mut object_colours = vec![];
+        let mut object_colour_names = HashMap::new();
+
+        for static_predicates in task.object_static_information() {
+            let colour = if OBJECTS_COLOURED_BY_STATIC_PREDICATES {
+                let mut colour: usize = 0;
+                for predicate_index in static_predicates {
+                    colour += 1 << static_predicate_map[predicate_index];
+                }
+                colour
+            } else {
+                0
+            };
+            assert!(colour <= max_object_colours);
+
+            object_colours.push(colour);
+            object_colour_names.insert(colour, {
                 if OBJECTS_COLOURED_BY_STATIC_PREDICATES {
                     let mut pred_names = vec![];
                     for predicate_index in static_predicates {
@@ -75,12 +91,8 @@ impl AoagCompiler {
                 } else {
                     "()".to_string()
                 }
-            })
-            .collect();
-
-        // can't just use the maximum seen colour, as this needs to be instance
-        // agnostic
-        let max_object_colours = (2 << task.max_static_information_count()) - 1;
+            });
+        }
 
         let predicate_names = task
             .predicates
@@ -229,7 +241,7 @@ impl AoagCompiler {
     #[inline(always)]
     fn colour_description(&self, colour: usize) -> String {
         if colour <= self.max_object_colours {
-            format!("object {}", self.object_colour_names[colour])
+            format!("object {}", self.object_colour_names[&colour])
         } else if colour <= self.max_object_colours + self.action_schemas.len() {
             format!(
                 "action {}",

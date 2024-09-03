@@ -204,12 +204,13 @@ impl Task {
     }
 
     /// The maximum number of object static information for any object in the
-    /// domain
-    pub fn max_static_information_count(&self) -> usize {
+    /// domain.
+    pub fn static_information_predicates(&self) -> HashSet<usize> {
         self.predicates
             .iter()
             .filter(|p| p.is_static && p.arity == 1)
-            .count()
+            .map(|p| p.index)
+            .collect()
     }
 
     fn mark_static_predicates(
@@ -318,7 +319,7 @@ mod tests {
 
         // Even though there are static predicates, this only counts the number
         // with arity 1
-        assert_eq!(task.max_static_information_count(), 0);
+        assert_eq!(task.static_information_predicates().len(), 0);
     }
 
     #[test]
@@ -333,7 +334,7 @@ mod tests {
         assert_eq!(static_predicates, HashSet::from([3, 4, 7, 8, 10]));
 
         // waiting doesn't have arity 1, so it doesn't count
-        assert_eq!(task.max_static_information_count(), 4);
+        assert_eq!(task.static_information_predicates().len(), 4);
     }
 
     #[test]

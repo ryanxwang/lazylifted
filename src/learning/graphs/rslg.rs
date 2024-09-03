@@ -62,7 +62,7 @@ impl RslgCompiler {
             .collect();
         // can't just use the maximum seen colour, as this needs to be instance
         // agnostic
-        let max_object_colours = (2 << task.max_static_information_count()) - 1;
+        let max_object_colours = (2 << task.static_information_predicates().len()) - 1;
 
         let mut compiler = Self {
             successor_generator: successor_generator_name.create(task),
