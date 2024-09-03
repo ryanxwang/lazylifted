@@ -3,7 +3,6 @@ mod data_generator_config;
 mod partial_space_dense_ranking;
 mod partial_space_ranking;
 mod partial_space_regression;
-mod partial_space_weighted_ranking;
 mod state_space_ilg_ranking;
 mod state_space_ilg_regression;
 

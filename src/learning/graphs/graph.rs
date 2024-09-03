@@ -1,8 +1,6 @@
 use std::fmt::Debug;
 
-use crate::learning::graphs::{
-    AoagCompiler, ColourDictionary, IlgCompiler, PalgCompiler, RslgCompiler, SclgCompiler,
-};
+use crate::learning::graphs::{AoagCompiler, ColourDictionary, IlgCompiler, RslgCompiler};
 use crate::search::successor_generators::SuccessorGeneratorName;
 use crate::search::{DBState, PartialAction, Task};
 use petgraph::{graph::Graph, Undirected};
@@ -29,8 +27,6 @@ pub trait PartialActionCompiler: Debug {
 #[derive(Debug, Clone, Serialize, Deserialize, Copy)]
 #[serde(rename_all = "kebab-case")]
 pub enum PartialActionCompilerName {
-    Sclg,
-    Palg,
     Ilg,
     Rslg,
     Aoag,
@@ -43,10 +39,6 @@ impl PartialActionCompilerName {
         successor_generator_name: SuccessorGeneratorName,
     ) -> Box<dyn PartialActionCompiler> {
         match self {
-            PartialActionCompilerName::Sclg => {
-                Box::new(SclgCompiler::new(task, successor_generator_name))
-            }
-            PartialActionCompilerName::Palg => Box::new(PalgCompiler::new(task)),
             PartialActionCompilerName::Ilg => Box::new(IlgCompiler::new(task)),
             PartialActionCompilerName::Rslg => {
                 Box::new(RslgCompiler::new(task, successor_generator_name))

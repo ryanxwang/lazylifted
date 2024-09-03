@@ -67,7 +67,6 @@ impl WlModel {
         match &self.config.data_generator {
             DataGeneratorConfig::PartialSpaceRanking(config) => Some(config.graph_compiler),
             DataGeneratorConfig::PartialSpaceRegression(config) => Some(config.graph_compiler),
-            DataGeneratorConfig::PartialSpaceWeightedRanking(config) => Some(config.graph_compiler),
             DataGeneratorConfig::PartialSpaceDenseRanking(config) => Some(config.graph_compiler),
             DataGeneratorConfig::StateSpaceIlgRanking(_)
             | DataGeneratorConfig::StateSpaceIlgRegression(_) => None,
@@ -83,7 +82,6 @@ impl WlModel {
             DataGeneratorConfig::PartialSpaceRegression(config) => config.successor_generator,
             DataGeneratorConfig::StateSpaceIlgRanking(config) => config.successor_generator,
             DataGeneratorConfig::StateSpaceIlgRegression(config) => config.successor_generator,
-            DataGeneratorConfig::PartialSpaceWeightedRanking(config) => config.successor_generator,
             DataGeneratorConfig::PartialSpaceDenseRanking(config) => config.successor_generator,
         }
     }
