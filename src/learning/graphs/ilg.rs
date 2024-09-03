@@ -16,14 +16,15 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
+use std::fmt::Display;
 use strum::EnumCount;
-use strum_macros::EnumCount as EnumCountMacro;
+use strum_macros::{EnumCount as EnumCountMacro, FromRepr};
 
 const NO_STATIC_PREDICATES: bool = true;
 
 /// Colours of atom nodes in the ILG.
 #[allow(clippy::enum_variant_names)]
-#[derive(Debug, Clone, PartialEq, Eq, EnumCountMacro)]
+#[derive(Debug, Clone, PartialEq, Eq, EnumCountMacro, Copy, FromRepr)]
 #[repr(i32)]
 enum AtomNodeType {
     /// The node is a goal node but not in the current state.
@@ -34,6 +35,16 @@ enum AtomNodeType {
     NonGoal,
 }
 
+impl Display for AtomNodeType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            AtomNodeType::UnachievedGoal => write!(f, "unachieved-goal"),
+            AtomNodeType::AchievedGoal => write!(f, "achieved-goal"),
+            AtomNodeType::NonGoal => write!(f, "non-goal"),
+        }
+    }
+}
+
 /// A compiler to convert states to ILGs.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IlgCompiler {
@@ -41,6 +52,7 @@ pub struct IlgCompiler {
     object_index_to_node_index: HashMap<usize, NodeID>,
     goal_atom_to_node_index: HashMap<Atom, NodeID>,
     static_predicates: HashSet<usize>,
+    predicate_names: Vec<String>,
 }
 
 impl IlgCompiler {
@@ -50,6 +62,11 @@ impl IlgCompiler {
             object_index_to_node_index: HashMap::new(),
             goal_atom_to_node_index: HashMap::new(),
             static_predicates: task.static_predicates(),
+            predicate_names: task
+                .predicates
+                .iter()
+                .map(|p| p.name.clone().to_string())
+                .collect(),
         };
 
         compiler.precompile(task);
@@ -73,10 +90,21 @@ impl IlgCompiler {
         START + predicate_index * AtomNodeType::COUNT + atom_type as usize
     }
 
+    #[inline(always)]
+    fn colour_description(&self, colour: usize) -> String {
+        if colour == 0 {
+            return "object".to_string();
+        }
+        let predicate_index = (colour - 1) / AtomNodeType::COUNT;
+        let atom_type = AtomNodeType::from_repr((colour - 1) as i32 % AtomNodeType::COUNT as i32)
+            .expect("Invalid colour");
+        format!("{} {}", self.predicate_names[predicate_index], atom_type)
+    }
+
     pub fn compile(
         &self,
         state: &DBState,
-        _colour_dictionary: Option<&mut ColourDictionary>,
+        colour_dictionary: Option<&mut ColourDictionary>,
     ) -> CGraph {
         let mut graph = self
             .base_graph
@@ -103,6 +131,12 @@ impl IlgCompiler {
                         graph.add_edge(node_id, object_node_id, arg_index);
                     }
                 }
+            }
+        }
+
+        if let Some(colour_dictionary) = colour_dictionary {
+            for node in graph.node_indices() {
+                colour_dictionary.insert(graph[node] as i32, self.colour_description(graph[node]));
             }
         }
 

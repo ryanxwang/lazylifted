@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Display};
 
 #[derive(Debug, Clone)]
 pub struct ColourDictionary {
@@ -24,5 +24,19 @@ impl ColourDictionary {
 
     pub fn get(&self, colour: i32) -> Option<&String> {
         self.descriptor.get(&colour)
+    }
+}
+
+impl Display for ColourDictionary {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut sorted_entries: Vec<_> = self.descriptor.iter().collect();
+        sorted_entries.sort_by_key(|(k, _)| *k);
+
+        writeln!(f, "[Colour] Description")?;
+        for (colour, descriptor) in sorted_entries {
+            writeln!(f, "[{:6}] {}", colour, descriptor)?;
+        }
+
+        Ok(())
     }
 }

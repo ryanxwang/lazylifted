@@ -94,6 +94,7 @@ impl RslgCompiler {
         partial_action: &PartialAction,
         _colour_dictionary: Option<&mut ColourDictionary>,
     ) -> CGraph {
+        // TODO-soon: fill up the colour dictionary
         let mut graph = self.base_graph.clone().unwrap();
         let action_schema = &self.action_schemas[partial_action.schema_index()];
 

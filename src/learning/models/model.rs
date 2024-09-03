@@ -84,6 +84,7 @@ mod tests {
             },
             validate: true,
             tune: true,
+            explain_colours: true,
             data_generator: DataGeneratorConfig::StateSpaceIlgRanking(
                 crate::learning::data_generators::StateSpaceIlgRankingConfig {
                     successor_generator: SuccessorGeneratorName::FullReducer,

@@ -137,6 +137,10 @@ impl Train for WlModel {
         info!("logging val data");
         val_data.log();
 
+        if self.config.explain_colours {
+            print!("{}", colour_dictionary);
+        }
+
         if self.config.tune {
             info!("tuning model");
             self.model.tune(&train_data, &val_data);
