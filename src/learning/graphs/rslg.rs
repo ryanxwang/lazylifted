@@ -6,7 +6,10 @@ use crate::{
         Negatable, PartialAction, PartialEffects, SuccessorGenerator, Task,
     },
 };
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt::Display,
+};
 use strum::EnumCount;
 use strum_macros::{EnumCount as EnumCountMacro, FromRepr};
 
@@ -35,6 +38,10 @@ pub struct RslgCompiler {
     /// (so not a const unfortunately) but not instance dependent, so that
     /// colours mean the same thing across instances
     max_object_colours: usize,
+    /// The names of the predicates, for colour descriptions
+    predicate_names: Vec<String>,
+    /// The names of the object colours, for colour descriptions
+    object_colour_names: HashMap<usize, String>,
 }
 
 impl RslgCompiler {
@@ -44,25 +51,57 @@ impl RslgCompiler {
         // initialise some edges in the graph with colours representing static
         // predicate information. This would nicely allow modelling any domain
         // with an underlying graph. What about arity > 2? Projection?
-        let object_colours = task
-            .object_static_information()
+        // map from predicate index to exponent
+        let static_predicate_map: HashMap<usize, usize> = task
+            .static_information_predicates()
             .iter()
-            .map(|static_predicates| {
-                if OBJECTS_COLOURED_BY_STATIC_PREDICATES {
-                    let mut colour: usize = 0;
-                    for predicate_index in static_predicates {
-                        // negative so that colours don't overlap
-                        colour += 1 << predicate_index;
-                    }
-                    colour
-                } else {
-                    0
-                }
-            })
+            .enumerate()
+            .map(|(i, &p)| (p, i))
             .collect();
-        // can't just use the maximum seen colour, as this needs to be instance
-        // agnostic
-        let max_object_colours = (2 << task.static_information_predicates().len()) - 1;
+
+        let max_object_colours = if OBJECTS_COLOURED_BY_STATIC_PREDICATES {
+            // can't just use the maximum seen colour, as this needs to be
+            // instance agnostic, so we ask the task for the maximum number of
+            // static predicates that could appear in any instance
+            (2 << task.static_information_predicates().len()) - 1
+        } else {
+            0
+        };
+
+        let mut object_colours = vec![];
+        let mut object_colour_names = HashMap::new();
+
+        for static_predicates in task.object_static_information() {
+            let colour = if OBJECTS_COLOURED_BY_STATIC_PREDICATES {
+                let mut colour: usize = 0;
+                for predicate_index in static_predicates {
+                    colour += 1 << static_predicate_map[predicate_index];
+                }
+                colour
+            } else {
+                0
+            };
+            assert!(colour <= max_object_colours);
+
+            object_colours.push(colour);
+            object_colour_names.insert(colour, {
+                if OBJECTS_COLOURED_BY_STATIC_PREDICATES {
+                    let mut pred_names = vec![];
+                    for predicate_index in static_predicates {
+                        pred_names.push(task.predicates[*predicate_index].name.clone().to_string());
+                    }
+                    format!("({})", pred_names.join(" "))
+                } else {
+                    "()".to_string()
+                }
+            });
+        }
+
+        let predicate_names = task
+            .predicates
+            .iter()
+            .map(|p| p.name.clone().to_string())
+            .collect();
 
         let mut compiler = Self {
             successor_generator: successor_generator_name.create(task),
@@ -81,6 +120,8 @@ impl RslgCompiler {
             static_predicates: task.static_predicates(),
             object_colours,
             max_object_colours,
+            predicate_names,
+            object_colour_names,
         };
 
         compiler.precompile(task);
@@ -92,7 +133,7 @@ impl RslgCompiler {
         &self,
         state: &DBState,
         partial_action: &PartialAction,
-        _colour_dictionary: Option<&mut ColourDictionary>,
+        colour_dictionary: Option<&mut ColourDictionary>,
     ) -> CGraph {
         // TODO-soon: fill up the colour dictionary
         let mut graph = self.base_graph.clone().unwrap();
@@ -183,6 +224,12 @@ impl RslgCompiler {
             }
         }
 
+        if let Some(colour_dictionary) = colour_dictionary {
+            for node in graph.node_indices() {
+                colour_dictionary.insert(graph[node] as i32, self.colour_description(graph[node]));
+            }
+        }
+
         // TODO-soon: for hard-to-ground problems, we probably only need to care
         // about the connected component of the graph that includes goal atoms.
         // This could significantly reduce the size of the graphs without losing
@@ -215,6 +262,22 @@ impl RslgCompiler {
         let start = self.max_object_colours + 1;
         start + predicate_index * AtomType::COUNT + atom_type.into_repr()
     }
+
+    #[inline(always)]
+    fn colour_description(&self, colour: usize) -> String {
+        if colour <= self.max_object_colours {
+            format!("object {}", self.object_colour_names[&colour])
+        } else {
+            let start = self.max_object_colours + 1;
+            let predicate_index = (colour - start) / AtomType::COUNT;
+            let atom_type =
+                AtomType::from_repr((colour - start) as i32 % AtomType::COUNT as i32).unwrap();
+            format!(
+                "atom {} {}",
+                self.predicate_names[predicate_index], atom_type,
+            )
+        }
+    }
 }
 
 impl PartialActionCompiler for RslgCompiler {
@@ -233,6 +296,12 @@ impl PartialActionCompiler for RslgCompiler {
 struct AtomType {
     atom_goal_type: AtomGoalType,
     atom_status_type: AtomStatusType,
+}
+
+impl Display for AtomType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}-{}", self.atom_goal_type, self.atom_status_type)
+    }
 }
 
 impl AtomType {
@@ -289,6 +358,15 @@ impl AtomType {
     pub fn into_repr(self) -> usize {
         self.atom_goal_type as usize * AtomStatusType::COUNT + self.atom_status_type as usize
     }
+
+    pub fn from_repr(repr: i32) -> Option<Self> {
+        let atom_goal_type = AtomGoalType::from_repr(repr / AtomStatusType::COUNT as i32)?;
+        let atom_status_type = AtomStatusType::from_repr(repr % AtomStatusType::COUNT as i32)?;
+        Some(Self {
+            atom_goal_type,
+            atom_status_type,
+        })
+    }
 }
 
 #[derive(EnumCountMacro, Debug, Clone, Copy, FromRepr)]
@@ -298,6 +376,17 @@ enum AtomStatusType {
     Unachieved,
     OptionalAdd,
     OptionalDelete,
+}
+
+impl Display for AtomStatusType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            AtomStatusType::Achieved => write!(f, "achieved"),
+            AtomStatusType::Unachieved => write!(f, "unachieved"),
+            AtomStatusType::OptionalAdd => write!(f, "optional-add"),
+            AtomStatusType::OptionalDelete => write!(f, "optional-delete"),
+        }
+    }
 }
 
 impl AtomStatusType {
@@ -334,6 +423,15 @@ enum AtomGoalType {
     Goal,
     /// The node is not a goal node.
     NonGoal,
+}
+
+impl Display for AtomGoalType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            AtomGoalType::Goal => write!(f, "goal"),
+            AtomGoalType::NonGoal => write!(f, "non-goal"),
+        }
+    }
 }
 
 #[cfg(test)]
