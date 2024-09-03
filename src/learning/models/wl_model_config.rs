@@ -16,5 +16,10 @@ pub struct WlModelConfig {
     /// Whether to tune the model, as of 2024/09/02, this is only supported for
     /// the LP ranker. If this is set to true, validate must also be set to
     /// true.
+    #[serde(default = "default_tune")]
     pub tune: bool,
+}
+
+fn default_tune() -> bool {
+    false
 }
