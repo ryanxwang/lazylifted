@@ -118,12 +118,16 @@ impl Train for WlModel {
             mean_val_graph_size = val_data.mean_graph_size(),
         );
 
-        let train_histograms = self
-            .preprocessor
-            .preprocess(self.wl.compute_histograms(train_data.features()), true);
-        let val_histograms = self
-            .preprocessor
-            .preprocess(self.wl.compute_histograms(val_data.features()), false);
+        let train_histograms = self.preprocessor.preprocess(
+            self.wl
+                .compute_histograms(train_data.features(), Some(&mut colour_dictionary)),
+            true,
+        );
+        let val_histograms = self.preprocessor.preprocess(
+            self.wl
+                .compute_histograms(val_data.features(), Some(&mut colour_dictionary)),
+            false,
+        );
         info!("computed histograms");
 
         let train_x = self.wl.convert_to_pyarray(self.py(), &train_histograms);
@@ -148,9 +152,11 @@ impl Train for WlModel {
             // for simplicity we just regenerate all data and retrain the model
             // TODO-soon: this needs to happen in train mode of the wl kernal
             let all_data = data_generator.generate(all_instances, &mut colour_dictionary);
-            let all_histograms = self
-                .preprocessor
-                .preprocess(self.wl.compute_histograms(all_data.features()), false);
+            let all_histograms = self.preprocessor.preprocess(
+                self.wl
+                    .compute_histograms(all_data.features(), Some(&mut colour_dictionary)),
+                false,
+            );
             let all_x = self.wl.convert_to_pyarray(self.py(), &all_histograms);
             let all_data = all_data.with_features(all_x);
 
@@ -221,7 +227,7 @@ impl Evaluate for WlModel {
     fn evaluate(&mut self, graph: CGraph, group_id: Option<usize>) -> f64 {
         let histograms = self
             .preprocessor
-            .preprocess(self.wl.compute_histograms(&[graph.clone()]), false);
+            .preprocess(self.wl.compute_histograms(&[graph.clone()], None), false);
         let x = self.wl.convert_to_ndarray(&histograms);
         self.model.predict_with_ndarray(&x, group_id)[0]
     }

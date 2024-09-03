@@ -1,12 +1,12 @@
 use crate::learning::{
-    graphs::CGraph,
+    graphs::{CGraph, ColourDictionary},
     wl::{Neighbourhood, NeighbourhoodFactory, WlConfig, WlStatistics},
 };
 use ndarray::Array2;
 use numpy::{PyArray2, PyArrayMethods};
 use pyo3::{Bound, Python};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 enum Mode {
@@ -51,71 +51,120 @@ impl WlKernel {
     /// called, the kernel will be in training mode and will create new hashes
     /// for unseen subgraphs. Subsequent calls will be in evaluation mode and
     /// will record statistics about the kernel.
-    pub fn compute_histograms(&mut self, graphs: &[CGraph]) -> Vec<HashMap<i32, usize>> {
+    pub fn compute_histograms(
+        &mut self,
+        graphs: &[CGraph],
+        mut colour_dictionary: Option<&mut ColourDictionary>,
+    ) -> Vec<HashMap<i32, usize>> {
         assert_eq!(self.k, 1, "k-WL not implemented yet for k > 1.");
-        let mut histograms = vec![];
 
         if self.mode == Mode::Train {
             self.hashes.clear();
+
+            let mut old_dictionary = None;
+            if let Some(colour_dictionary) = colour_dictionary.as_mut() {
+                old_dictionary = Some(colour_dictionary.clone());
+                colour_dictionary.clear();
+            }
+
+            let all_graph_colours = graphs
+                .iter()
+                .flat_map(|graph| graph.node_indices().map(|node| graph[node]))
+                .collect::<HashSet<_>>();
+
+            if all_graph_colours.is_empty() {
+                self.mode = Mode::Evaluate;
+                return vec![HashMap::new(); graphs.len()];
+            }
+
             let max_graph_colour = graphs
                 .iter()
                 .map(|graph| graph.node_indices().map(|node| graph[node]).max().unwrap())
                 .max();
 
             // Add the colours of the nodes to the hash map.
-            if let Some(max_graph_colour) = max_graph_colour {
-                for colour in 0..=max_graph_colour {
-                    self.hashes.insert(
-                        self.neighbourhood_factory
-                            .create_neighbourhood(colour as i32, vec![]),
-                        colour as i32,
+            let mut new_colour = 0;
+            for graph_colour in 0..=max_graph_colour.unwrap() {
+                if !all_graph_colours.contains(&graph_colour) {
+                    continue;
+                }
+                self.hashes.insert(
+                    self.neighbourhood_factory.create_neighbourhood(
+                        graph_colour as i32,
+                        vec![],
+                        true,
+                    ),
+                    new_colour,
+                );
+
+                if let Some(colour_dictionary) = colour_dictionary.as_mut() {
+                    colour_dictionary.insert(
+                        new_colour,
+                        old_dictionary
+                            .as_ref()
+                            .unwrap()
+                            .get(graph_colour as i32)
+                            .unwrap()
+                            .clone(),
                     );
                 }
+
+                new_colour += 1;
             }
         }
 
+        let mut histograms = vec![];
+        let mut cur_colours = vec![];
         for graph in graphs {
             self.statistics.register_graph(graph.node_count() as i64);
 
             let mut histogram = HashMap::new();
-            let mut cur_colours = HashMap::new();
+            let mut cur_colour = HashMap::new();
             for node in graph.node_indices() {
                 let colour_hash = self.get_hash_value(
-                    self.neighbourhood_factory
-                        .create_neighbourhood(graph[node] as i32, vec![]),
+                    self.neighbourhood_factory.create_neighbourhood(
+                        graph[node] as i32,
+                        vec![],
+                        true,
+                    ),
+                    &mut colour_dictionary,
                 );
-                cur_colours.insert(node, colour_hash);
+                cur_colour.insert(node, colour_hash);
                 histogram
                     .entry(colour_hash)
                     .and_modify(|e| *e += 1)
                     .or_insert(1);
             }
+            histograms.push(histogram);
+            cur_colours.push(cur_colour);
+        }
 
-            for _ in 0..self.iters {
+        for _ in 0..self.iters {
+            for (graph_id, graph) in graphs.iter().enumerate() {
                 let mut new_colours = HashMap::new();
                 for node in graph.node_indices() {
                     let mut neighbour_colours = vec![];
                     for neighbour in graph.neighbors(node) {
                         let edge = graph.find_edge(node, neighbour).unwrap();
                         neighbour_colours.push((
-                            cur_colours[&neighbour],
+                            cur_colours[graph_id][&neighbour],
                             *graph.edge_weight(edge).unwrap() as i32,
                         ));
                     }
-                    let neighbourhood = self
-                        .neighbourhood_factory
-                        .create_neighbourhood(cur_colours[&node], neighbour_colours);
-                    let colour_hash = self.get_hash_value(neighbourhood);
+                    let neighbourhood = self.neighbourhood_factory.create_neighbourhood(
+                        cur_colours[graph_id][&node],
+                        neighbour_colours,
+                        false,
+                    );
+                    let colour_hash = self.get_hash_value(neighbourhood, &mut colour_dictionary);
                     new_colours.insert(node, colour_hash);
-                    histogram
+                    histograms[graph_id]
                         .entry(colour_hash)
                         .and_modify(|e| *e += 1)
                         .or_insert(1);
                 }
-                cur_colours = new_colours;
+                cur_colours[graph_id] = new_colours;
             }
-
-            histograms.push(histogram);
         }
 
         if self.mode == Mode::Train {
@@ -165,13 +214,38 @@ impl WlKernel {
         features
     }
 
-    fn get_hash_value(&mut self, neighbourhood: Neighbourhood) -> i32 {
+    fn get_hash_value(
+        &mut self,
+        neighbourhood: Neighbourhood,
+        colour_dictionary: &mut Option<&mut ColourDictionary>,
+    ) -> i32 {
         match self.mode {
             Mode::Train => match self.hashes.get(&neighbourhood) {
                 Some(hash) => *hash,
                 None => {
                     let new_hash = self.hashes.len() as i32;
+                    if let Some(colour_dictionary) = colour_dictionary.as_mut() {
+                        if !neighbourhood.from_base_graph {
+                            let description = format!(
+                                "{} with neighbours [{}]",
+                                colour_dictionary.get(neighbourhood.node_colour).unwrap(),
+                                neighbourhood
+                                    .neighbour_colours
+                                    .iter()
+                                    .map(|(neighbour_colour, edge_colour)| format!(
+                                        "({}, {})",
+                                        colour_dictionary.get(*neighbour_colour).unwrap(),
+                                        edge_colour
+                                    ))
+                                    .collect::<Vec<_>>()
+                                    .join(", ")
+                            );
+                            colour_dictionary.insert(new_hash, description);
+                        }
+                    }
+
                     self.hashes.insert(neighbourhood, new_hash);
+
                     new_hash
                 }
             },
@@ -218,11 +292,11 @@ mod tests {
     fn computing_histograms_changes_mode() {
         let mut kernel = WlKernel::new(&MULTISET_CONFIG);
         let graphs = vec![];
-        kernel.compute_histograms(&graphs);
+        kernel.compute_histograms(&graphs, None);
         assert_eq!(kernel.mode, Mode::Evaluate);
 
         // Second time should not change the mode.
-        kernel.compute_histograms(&graphs);
+        kernel.compute_histograms(&graphs, None);
         assert_eq!(kernel.mode, Mode::Evaluate);
     }
 
@@ -236,12 +310,12 @@ mod tests {
         graph.add_edge(node_0, node_1, 0);
         graph.add_edge(node_1, node_2, 0);
 
-        let histograms = kernel.compute_histograms(&[graph.clone()]);
+        let histograms = kernel.compute_histograms(&[graph.clone()], None);
         assert_eq!(histograms.len(), 1);
         assert_eq!(histograms[0].len(), 4);
 
         // Check that the histograms are the same when repeated.
-        let repeated_histograms = kernel.compute_histograms(&[graph.clone()]);
+        let repeated_histograms = kernel.compute_histograms(&[graph.clone()], None);
         assert_eq!(histograms, repeated_histograms);
     }
 
@@ -258,7 +332,7 @@ mod tests {
         graph.add_edge(node_0, node_1, 0);
         graph.add_edge(node_1, node_2, 0);
 
-        let histograms = kernel.compute_histograms(&[graph.clone()]);
+        let histograms = kernel.compute_histograms(&[graph.clone()], None);
         Python::with_gil(|py| {
             let x = kernel.convert_to_pyarray(py, &preprocessor.preprocess(histograms, true));
             assert_eq!(unsafe { x.as_slice().unwrap() }, &[2.0, 1.0, 2.0, 1.0]);
@@ -273,7 +347,7 @@ mod tests {
         graph2.add_edge(node_1, node_2, 0);
         graph2.add_edge(node_1, node_3, 0);
 
-        let histograms2 = kernel.compute_histograms(&[graph2.clone()]);
+        let histograms2 = kernel.compute_histograms(&[graph2.clone()], None);
         Python::with_gil(|py| {
             let x = kernel.convert_to_pyarray(py, &preprocessor.preprocess(histograms2, true));
             assert_eq!(unsafe { x.as_slice().unwrap() }, &[3.0, 1.0, 3.0, 0.0]);
@@ -290,12 +364,12 @@ mod tests {
         graph.add_edge(node_0, node_1, 0);
         graph.add_edge(node_1, node_2, 0);
 
-        let histograms = kernel.compute_histograms(&[graph.clone()]);
+        let histograms = kernel.compute_histograms(&[graph.clone()], None);
         assert_eq!(histograms.len(), 1);
         assert_eq!(histograms[0].len(), 4);
 
         // Check that the histograms are the same when repeated.
-        let repeated_histograms = kernel.compute_histograms(&[graph.clone()]);
+        let repeated_histograms = kernel.compute_histograms(&[graph.clone()], None);
         assert_eq!(histograms, repeated_histograms);
     }
 
@@ -312,7 +386,7 @@ mod tests {
         graph.add_edge(node_0, node_1, 0);
         graph.add_edge(node_1, node_2, 0);
 
-        let histograms = kernel.compute_histograms(&[graph.clone()]);
+        let histograms = kernel.compute_histograms(&[graph.clone()], None);
         Python::with_gil(|py| {
             let x = kernel.convert_to_pyarray(py, &preprocessor.preprocess(histograms, true));
             assert_eq!(unsafe { x.as_slice().unwrap() }, &[2.0, 1.0, 2.0, 1.0]);
@@ -327,7 +401,7 @@ mod tests {
         graph2.add_edge(node_1, node_2, 0);
         graph2.add_edge(node_1, node_3, 0);
 
-        let histograms2 = kernel.compute_histograms(&[graph2.clone()]);
+        let histograms2 = kernel.compute_histograms(&[graph2.clone()], None);
         Python::with_gil(|py| {
             let x = kernel.convert_to_pyarray(py, &preprocessor.preprocess(histograms2, true));
             assert_eq!(unsafe { x.as_slice().unwrap() }, &[3.0, 1.0, 3.0, 1.0]);

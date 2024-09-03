@@ -2,7 +2,7 @@ use std::{collections::HashMap, fmt::Display};
 
 #[derive(Debug, Clone)]
 pub struct ColourDictionary {
-    descriptor: HashMap<i32, String>,
+    descriptions: HashMap<i32, String>,
 }
 
 impl Default for ColourDictionary {
@@ -14,22 +14,26 @@ impl Default for ColourDictionary {
 impl ColourDictionary {
     pub fn new() -> Self {
         Self {
-            descriptor: HashMap::new(),
+            descriptions: HashMap::new(),
         }
     }
 
     pub fn insert(&mut self, colour: i32, descriptor: String) {
-        self.descriptor.insert(colour, descriptor);
+        self.descriptions.insert(colour, descriptor);
     }
 
     pub fn get(&self, colour: i32) -> Option<&String> {
-        self.descriptor.get(&colour)
+        self.descriptions.get(&colour)
+    }
+
+    pub fn clear(&mut self) {
+        self.descriptions.clear();
     }
 }
 
 impl Display for ColourDictionary {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut sorted_entries: Vec<_> = self.descriptor.iter().collect();
+        let mut sorted_entries: Vec<_> = self.descriptions.iter().collect();
         sorted_entries.sort_by_key(|(k, _)| *k);
 
         writeln!(f, "[Colour] Description")?;

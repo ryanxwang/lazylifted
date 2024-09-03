@@ -1,8 +1,9 @@
 [wl-model]
 validate = false
+tune = false
 
-[wl-model.model]
-ranker-name = "lp"
+[wl-model.model.ranker.lp]
+c_value = 1.0
 
 [wl-model.wl]
 iters = 2

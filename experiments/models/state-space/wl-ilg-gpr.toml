@@ -6,7 +6,8 @@ explain-colours = true
 alpha = 1e-7
 
 [wl-model.wl]
-iters = 2
+iters = 4
+set-or-multiset = "multiset"
 
 [wl-model.data-generator.state-space-ilg-regression]
 successor-generator = "full-reducer"

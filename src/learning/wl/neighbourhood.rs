@@ -6,8 +6,9 @@ use serde::{Deserialize, Serialize};
 /// this does not include the edge colours to the neighbours.
 #[derive(Debug, Clone, Hash, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Neighbourhood {
-    node_colour: i32,
-    neighbour_colours: Vec<(i32, i32)>,
+    pub node_colour: i32,
+    pub neighbour_colours: Vec<(i32, i32)>,
+    pub from_base_graph: bool,
 }
 
 /// A [`Neighbourhood`] factory that can create [`Neighbourhood`]s. This is used
@@ -24,11 +25,13 @@ impl NeighbourhoodFactory {
     }
 
     /// Create a new [`Neighbourhood`] from a node colour and a list of
-    /// neighbour colours.
+    /// neighbour colours. [`from_base_graph`] is used to indicate whether the
+    /// colours are from the base graph or are WL colours.
     pub fn create_neighbourhood(
         &self,
         node_colour: i32,
         mut neighbour_colours: Vec<(i32, i32)>,
+        from_base_graph: bool,
     ) -> Neighbourhood {
         neighbour_colours.sort();
 
@@ -42,6 +45,7 @@ impl NeighbourhoodFactory {
         Neighbourhood {
             node_colour,
             neighbour_colours,
+            from_base_graph,
         }
     }
 }
