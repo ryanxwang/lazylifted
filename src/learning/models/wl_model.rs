@@ -229,7 +229,13 @@ impl Evaluate for WlModel {
             .preprocessor
             .preprocess(self.wl.compute_histograms(&[graph.clone()], None), false);
         let x = self.wl.convert_to_ndarray(&histograms);
-        self.model.predict_with_ndarray(&x, group_id)[0]
+
+        let h_value = self.model.predict_with_ndarray(&x, group_id)[0];
+        if self.config.round {
+            h_value.round()
+        } else {
+            h_value
+        }
     }
 
     fn load(py: Python<'static>, path: &Path) -> Self {

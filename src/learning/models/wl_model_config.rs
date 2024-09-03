@@ -22,6 +22,8 @@ pub struct WlModelConfig {
     // model config, but this is convenient for now
     #[serde(default = "default_explain_colours")]
     pub explain_colours: bool,
+    /// Whether to round heuristic values to the nearest integer.
+    pub round: bool,
 }
 
 fn default_tune() -> bool {

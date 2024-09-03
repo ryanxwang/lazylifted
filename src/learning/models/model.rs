@@ -72,7 +72,7 @@ mod tests {
         search::successor_generators::SuccessorGeneratorName,
     };
 
-    // This is not really a test, but more a helper piece of code to make
+    // This is not really a test, but more a helper piece of code to generate
     // serialised model configs
     #[test]
     fn serialise_sample_model_config() {
@@ -82,9 +82,6 @@ mod tests {
                 iters: 2,
                 set_or_multiset: SetOrMultiset::Set,
             },
-            validate: true,
-            tune: true,
-            explain_colours: true,
             data_generator: DataGeneratorConfig::StateSpaceIlgRanking(
                 crate::learning::data_generators::StateSpaceIlgRankingConfig {
                     successor_generator: SuccessorGeneratorName::FullReducer,
@@ -92,6 +89,10 @@ mod tests {
             ),
             preprocessing_option:
                 crate::learning::models::preprocessor::PreprocessingOption::DivByStd,
+            validate: true,
+            tune: true,
+            explain_colours: true,
+            round: true,
         });
 
         let serialised = toml::to_string(&config).unwrap();

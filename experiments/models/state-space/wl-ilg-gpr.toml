@@ -1,6 +1,7 @@
 [wl-model]
 validate = false
-explain-colours = true
+explain-colours = false
+round = true
 
 [wl-model.model.regressor.gpr]
 alpha = 1e-7
