@@ -27,10 +27,10 @@ const NO_STATIC_PREDICATES: bool = true;
 #[derive(Debug, Clone, PartialEq, Eq, EnumCountMacro, Copy, FromRepr)]
 #[repr(i32)]
 enum AtomNodeType {
-    /// The node is a goal node but not in the current state.
-    UnachievedGoal,
     /// The node is a goal node and in the current state.
     AchievedGoal,
+    /// The node is a goal node but not in the current state.
+    UnachievedGoal,
     /// The node is not a goal node, but is in the current state.
     NonGoal,
 }
@@ -38,8 +38,8 @@ enum AtomNodeType {
 impl Display for AtomNodeType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            AtomNodeType::UnachievedGoal => write!(f, "unachieved-goal"),
             AtomNodeType::AchievedGoal => write!(f, "achieved-goal"),
+            AtomNodeType::UnachievedGoal => write!(f, "unachieved-goal"),
             AtomNodeType::NonGoal => write!(f, "non-goal"),
         }
     }
@@ -207,28 +207,28 @@ mod tests {
 
     #[test]
     fn node_type_to_i32() {
-        assert_eq!(AtomNodeType::UnachievedGoal as i32, 0);
-        assert_eq!(AtomNodeType::AchievedGoal as i32, 1);
+        assert_eq!(AtomNodeType::AchievedGoal as i32, 0);
+        assert_eq!(AtomNodeType::UnachievedGoal as i32, 1);
         assert_eq!(AtomNodeType::NonGoal as i32, 2);
     }
 
     #[test]
     fn get_atom_colour() {
         assert_eq!(
-            IlgCompiler::get_atom_colour(0, AtomNodeType::UnachievedGoal),
+            IlgCompiler::get_atom_colour(0, AtomNodeType::AchievedGoal),
             1
         );
         assert_eq!(
-            IlgCompiler::get_atom_colour(0, AtomNodeType::AchievedGoal),
+            IlgCompiler::get_atom_colour(0, AtomNodeType::UnachievedGoal),
             2
         );
         assert_eq!(IlgCompiler::get_atom_colour(0, AtomNodeType::NonGoal), 3);
         assert_eq!(
-            IlgCompiler::get_atom_colour(1, AtomNodeType::UnachievedGoal),
+            IlgCompiler::get_atom_colour(1, AtomNodeType::AchievedGoal),
             4
         );
         assert_eq!(
-            IlgCompiler::get_atom_colour(1, AtomNodeType::AchievedGoal),
+            IlgCompiler::get_atom_colour(1, AtomNodeType::UnachievedGoal),
             5
         );
         assert_eq!(IlgCompiler::get_atom_colour(1, AtomNodeType::NonGoal), 6);
