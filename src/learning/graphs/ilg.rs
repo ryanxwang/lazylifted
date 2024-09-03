@@ -98,7 +98,10 @@ impl IlgCompiler {
         let predicate_index = (colour - 1) / AtomNodeType::COUNT;
         let atom_type = AtomNodeType::from_repr((colour - 1) as i32 % AtomNodeType::COUNT as i32)
             .expect("Invalid colour");
-        format!("{} {}", self.predicate_names[predicate_index], atom_type)
+        format!(
+            "atom {} {}",
+            self.predicate_names[predicate_index], atom_type
+        )
     }
 
     pub fn compile(

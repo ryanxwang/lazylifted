@@ -7,7 +7,10 @@ use crate::{
         Negatable, PartialAction, SuccessorGenerator, Task,
     },
 };
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt::Display,
+};
 use strum::EnumCount;
 use strum_macros::{EnumCount as EnumCountMacro, FromRepr};
 
@@ -31,10 +34,13 @@ pub struct AoagCompiler {
     /// Object colours, which may depend on how static predicates apply to them,
     /// indexed by object index
     object_colours: Vec<usize>,
+    object_colour_names: Vec<String>,
     /// The maximum number of possible object colours - this is domain dependent
     /// (so not a const unfortunately) but not instance dependent, so that
     /// colours mean the same thing across instances
     max_object_colours: usize,
+    predicate_names: Vec<String>,
+    schema_names: Vec<String>,
 }
 
 impl AoagCompiler {
@@ -56,9 +62,37 @@ impl AoagCompiler {
                 }
             })
             .collect();
+        let object_colour_names = task
+            .object_static_information()
+            .iter()
+            .map(|static_predicates| {
+                if OBJECTS_COLOURED_BY_STATIC_PREDICATES {
+                    let mut pred_names = vec![];
+                    for predicate_index in static_predicates {
+                        pred_names.push(task.predicates[*predicate_index].name.clone().to_string());
+                    }
+                    format!("({})", pred_names.join(" "))
+                } else {
+                    "()".to_string()
+                }
+            })
+            .collect();
+
         // can't just use the maximum seen colour, as this needs to be instance
         // agnostic
         let max_object_colours = (2 << task.max_static_information_count()) - 1;
+
+        let predicate_names = task
+            .predicates
+            .iter()
+            .map(|p| p.name.clone().to_string())
+            .collect();
+
+        let schema_names = task
+            .action_schemas()
+            .iter()
+            .map(|s| s.name().clone().to_string())
+            .collect();
 
         let mut compiler = Self {
             successor_generator: successor_generator_name.create(task),
@@ -68,7 +102,10 @@ impl AoagCompiler {
             action_schemas: task.action_schemas().to_owned(),
             static_predicates: task.static_predicates(),
             object_colours,
+            object_colour_names,
             max_object_colours,
+            predicate_names,
+            schema_names,
         };
 
         compiler.precompile(task);
@@ -80,9 +117,8 @@ impl AoagCompiler {
         &self,
         state: &DBState,
         partial_action: &PartialAction,
-        _colour_dictionary: Option<&mut ColourDictionary>,
+        colour_dictionary: Option<&mut ColourDictionary>,
     ) -> CGraph {
-        // TODO-soon: fill up the colour dictionary
         let mut graph = self.base_graph.clone().unwrap();
         let action_schema = &self.action_schemas[partial_action.schema_index()];
 
@@ -126,6 +162,12 @@ impl AoagCompiler {
                         graph.add_edge(node_id, object_node_id, arg_index);
                     }
                 }
+            }
+        }
+
+        if let Some(colour_dictionary) = colour_dictionary {
+            for node in graph.node_indices() {
+                colour_dictionary.insert(graph[node] as i32, self.colour_description(graph[node]));
             }
         }
 
@@ -183,6 +225,27 @@ impl AoagCompiler {
         let start = self.max_object_colours + 1 + self.action_schemas.len();
         start + predicate_index * AtomType::COUNT + atom_type as usize
     }
+
+    #[inline(always)]
+    fn colour_description(&self, colour: usize) -> String {
+        if colour <= self.max_object_colours {
+            format!("object {}", self.object_colour_names[colour])
+        } else if colour <= self.max_object_colours + self.action_schemas.len() {
+            format!(
+                "action {}",
+                self.schema_names[colour - self.max_object_colours - 1]
+            )
+        } else {
+            let start = self.max_object_colours + 1 + self.action_schemas.len();
+            let predicate_index = (colour - start) / AtomType::COUNT;
+            let atom_type =
+                AtomType::from_repr((colour - start) as i32 % AtomType::COUNT as i32).unwrap();
+            format!(
+                "atom {} {}",
+                self.predicate_names[predicate_index], atom_type
+            )
+        }
+    }
 }
 
 impl PartialActionCompiler for AoagCompiler {
@@ -203,6 +266,16 @@ enum AtomType {
     AchievedGoal,
     UnachievedGoal,
     NonGoal,
+}
+
+impl Display for AtomType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            AtomType::AchievedGoal => write!(f, "achieved-goal"),
+            AtomType::UnachievedGoal => write!(f, "unachieved-goal"),
+            AtomType::NonGoal => write!(f, "non-goal"),
+        }
+    }
 }
 
 #[cfg(test)]
