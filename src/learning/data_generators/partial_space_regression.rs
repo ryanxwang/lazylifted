@@ -80,7 +80,7 @@ impl DataGenerator for PartialSpaceRegression {
         TrainingData::Regression(RegressionTrainingData {
             features: graphs,
             labels,
-            noise: Some(noise),
+            noise: None,
         })
     }
 }

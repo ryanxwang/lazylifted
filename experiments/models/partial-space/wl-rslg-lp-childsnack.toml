@@ -1,11 +1,13 @@
+# On childsnack, we seem to able to do decent with validate=true and C=0.01
+
 [wl-model]
 validate = true
-tune = true
+tune = false
 round = false
 explain-colours = false
 
 [wl-model.model.ranker.lp]
-c_value = 1.0
+c_value = 0.01
 
 [wl-model.wl]
 iters = 2

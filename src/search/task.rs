@@ -1,6 +1,7 @@
 use crate::parsed_types::{Domain, Name, Problem, Types};
 use crate::parsers::Parser;
 use crate::search::{ActionSchema, DBState, Goal, Object, Predicate};
+use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::PathBuf;
@@ -203,13 +204,16 @@ impl Task {
         object_static_information
     }
 
-    /// The maximum number of object static information for any object in the
-    /// domain.
-    pub fn static_information_predicates(&self) -> HashSet<usize> {
+    /// All the predicates that are used to generate static information about
+    /// objects. These are predicates with arity 1 that are static. The returned
+    /// vector contains the sorted, deduplicated indices of these predicates.
+    pub fn static_information_predicates(&self) -> Vec<usize> {
         self.predicates
             .iter()
             .filter(|p| p.is_static && p.arity == 1)
             .map(|p| p.index)
+            .sorted()
+            .dedup()
             .collect()
     }
 

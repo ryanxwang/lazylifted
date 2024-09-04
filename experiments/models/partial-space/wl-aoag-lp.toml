@@ -1,8 +1,8 @@
 [wl-model]
 validate = true
 tune = true
-round = true
-explain-colours = true
+round = false
+explain-colours = false
 
 [wl-model.model.ranker.lp]
 c_value = 1.0
