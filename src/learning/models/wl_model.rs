@@ -133,8 +133,8 @@ impl Train for WlModel {
         let train_x = self.wl.convert_to_pyarray(self.py(), &train_histograms);
         let val_x = self.wl.convert_to_pyarray(self.py(), &val_histograms);
 
-        let train_data = train_data.with_features(train_x);
-        let val_data = val_data.with_features(val_x);
+        let mut train_data = train_data.with_features(train_x);
+        let mut val_data = val_data.with_features(val_x);
 
         info!("logging train data");
         train_data.log();
@@ -146,16 +146,17 @@ impl Train for WlModel {
         }
 
         if self.config.tune {
+            // TODO-someday this is very ugly
             info!("tuning model");
             self.model.tune(&train_data, &val_data);
 
-            // for simplicity we just regenerate all data and retrain the model
-            // TODO-soon: this needs to happen in train mode of the wl kernal
+            info!("finished tuning, resetting wl kernel and retraining model with tuned hyperparameters on all data");
+            self.wl.reset();
             let all_data = data_generator.generate(all_instances, &mut colour_dictionary);
             let all_histograms = self.preprocessor.preprocess(
                 self.wl
                     .compute_histograms(all_data.features(), Some(&mut colour_dictionary)),
-                false,
+                true,
             );
             let all_x = self.wl.convert_to_pyarray(self.py(), &all_histograms);
             let all_data = all_data.with_features(all_x);
@@ -165,6 +166,27 @@ impl Train for WlModel {
 
             info!("fitting model");
             self.model.fit(&all_data);
+
+            // regenerate train and val data since the features could have changed
+            info!("regenerating train and val data with all features");
+            let train_data_graphs =
+                data_generator.generate(train_instances, &mut colour_dictionary);
+            let val_data_graphs = data_generator.generate(val_instances, &mut colour_dictionary);
+            let train_histograms = self.preprocessor.preprocess(
+                self.wl
+                    .compute_histograms(train_data_graphs.features(), Some(&mut colour_dictionary)),
+                false,
+            );
+            let val_histograms = self.preprocessor.preprocess(
+                self.wl
+                    .compute_histograms(val_data_graphs.features(), Some(&mut colour_dictionary)),
+                false,
+            );
+            let train_x = self.wl.convert_to_pyarray(self.py(), &train_histograms);
+            let val_x = self.wl.convert_to_pyarray(self.py(), &val_histograms);
+
+            train_data = train_data_graphs.with_features(train_x);
+            val_data = val_data_graphs.with_features(val_x);
         } else {
             info!("fitting model");
             self.model.fit(&train_data);
