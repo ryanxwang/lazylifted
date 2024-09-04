@@ -53,7 +53,7 @@ impl RslgCompiler {
         // with an underlying graph. What about arity > 2? Projection?
         // map from predicate index to exponent
         let static_predicate_map: HashMap<usize, usize> = task
-            .static_information_predicates()
+            .object_static_information_predicates()
             .iter()
             .enumerate()
             .map(|(i, &p)| (p, i))
@@ -63,7 +63,7 @@ impl RslgCompiler {
             // can't just use the maximum seen colour, as this needs to be
             // instance agnostic, so we ask the task for the maximum number of
             // static predicates that could appear in any instance
-            (2 << task.static_information_predicates().len()) - 1
+            (2 << task.object_static_information_predicates().len()) - 1
         } else {
             0
         };

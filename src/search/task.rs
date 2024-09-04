@@ -26,6 +26,11 @@ pub struct Task {
     /// The indices of static predicates that apply to an object. We only
     /// consider static predicate with a single argument.
     object_static_information: Vec<HashSet<usize>>,
+    /// The indices of static predicates that apply to a pair of objects. We
+    /// only consider static predicates with two arguments. The key is a pair of
+    /// object indices (sorted) and the value is the set of predicate indices
+    /// that apply to that pair.
+    object_pair_static_information: HashMap<(usize, usize), HashSet<usize>>,
 }
 
 impl Task {
@@ -121,6 +126,9 @@ impl Task {
         let object_static_information =
             Self::compute_object_static_information(&init_state, &predicates, &objects);
 
+        let object_pair_static_information =
+            Self::compute_object_pair_static_information(&init_state, &predicates, &objects);
+
         Self {
             domain_name: domain.name().clone(),
             problem_name: problem.name().clone(),
@@ -133,6 +141,7 @@ impl Task {
             action_schemas,
             objects_per_type,
             object_static_information,
+            object_pair_static_information,
         }
     }
 
@@ -204,13 +213,51 @@ impl Task {
         object_static_information
     }
 
-    /// All the predicates that are used to generate static information about
-    /// objects. These are predicates with arity 1 that are static. The returned
-    /// vector contains the sorted, deduplicated indices of these predicates.
-    pub fn static_information_predicates(&self) -> Vec<usize> {
+    fn compute_object_pair_static_information(
+        init_state: &DBState,
+        predicates: &[Predicate],
+        object: &[Object],
+    ) -> HashMap<(usize, usize), HashSet<usize>> {
+        let mut object_pair_static_information = HashMap::new();
+
+        for predicate in predicates {
+            if predicate.arity != 2 || !predicate.is_static {
+                continue;
+            }
+
+            for tuple in &init_state.relations[predicate.index].tuples {
+                assert_eq!(tuple.len(), 2);
+                let object1 = tuple[0];
+                let object2 = tuple[1];
+                let key = (min(object1, object2), max(object1, object2));
+                object_pair_static_information
+                    .entry(key)
+                    .or_insert_with(HashSet::new)
+                    .insert(predicate.index);
+            }
+        }
+
+        object_pair_static_information
+    }
+
+    /// The indices of static predicates that apply to a single object and hence
+    /// contribute to the static information of that object.
+    pub fn object_static_information_predicates(&self) -> Vec<usize> {
         self.predicates
             .iter()
             .filter(|p| p.is_static && p.arity == 1)
+            .map(|p| p.index)
+            .sorted()
+            .dedup()
+            .collect()
+    }
+
+    /// The indices of static predicates that apply to a pair of objects and
+    /// hence contribute to the static information of that pair.
+    pub fn object_pair_static_information_predicates(&self) -> Vec<usize> {
+        self.predicates
+            .iter()
+            .filter(|p| p.is_static && p.arity == 2)
             .map(|p| p.index)
             .sorted()
             .dedup()
@@ -265,6 +312,10 @@ impl Task {
 
     pub fn object_static_information(&self) -> &[HashSet<usize>] {
         self.object_static_information.as_slice()
+    }
+
+    pub fn object_pair_static_information(&self, o1: usize, o2: usize) -> &HashSet<usize> {
+        &self.object_pair_static_information[&(min(o1, o2), max(o1, o2))]
     }
 }
 
@@ -323,7 +374,7 @@ mod tests {
 
         // Even though there are static predicates, this only counts the number
         // with arity 1
-        assert_eq!(task.static_information_predicates().len(), 0);
+        assert_eq!(task.object_static_information_predicates().len(), 0);
     }
 
     #[test]
@@ -338,7 +389,7 @@ mod tests {
         assert_eq!(static_predicates, HashSet::from([3, 4, 7, 8, 10]));
 
         // waiting doesn't have arity 1, so it doesn't count
-        assert_eq!(task.static_information_predicates().len(), 4);
+        assert_eq!(task.object_static_information_predicates().len(), 4);
     }
 
     #[test]

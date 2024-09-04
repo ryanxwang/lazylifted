@@ -50,7 +50,7 @@ impl AoagCompiler {
     pub fn new(task: &Task, successor_generator_name: SuccessorGeneratorName) -> Self {
         // map from predicate index to exponent
         let static_predicate_map: HashMap<usize, usize> = task
-            .static_information_predicates()
+            .object_static_information_predicates()
             .iter()
             .enumerate()
             .map(|(i, &p)| (p, i))
@@ -60,7 +60,7 @@ impl AoagCompiler {
             // can't just use the maximum seen colour, as this needs to be
             // instance agnostic, so we ask the task for the maximum number of
             // static predicates that could appear in any instance
-            (2 << task.static_information_predicates().len()) - 1
+            (2 << task.object_static_information_predicates().len()) - 1
         } else {
             0
         };
