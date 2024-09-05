@@ -1,7 +1,7 @@
 use crate::{
     learning::{
         data_generators::DataGenerator,
-        graphs::{CGraph, ColourDictionary, IlgCompiler},
+        graphs::{CGraph, ColourDictionary, StateCompilerName},
         models::{RegressionTrainingData, TrainingData, TrainingInstance},
     },
     search::successor_generators::SuccessorGeneratorName,
@@ -10,24 +10,25 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub struct StateSpaceIlgRegressionConfig {
+pub struct StateSpaceRegressionConfig {
     pub successor_generator: SuccessorGeneratorName,
+    pub graph_compiler: StateCompilerName,
 }
 
 #[derive(Debug)]
-pub struct StateSpaceIlgRegression {
-    config: StateSpaceIlgRegressionConfig,
+pub struct StateSpaceRegression {
+    config: StateSpaceRegressionConfig,
 }
 
-impl StateSpaceIlgRegression {
-    pub fn new(config: &StateSpaceIlgRegressionConfig) -> Self {
+impl StateSpaceRegression {
+    pub fn new(config: &StateSpaceRegressionConfig) -> Self {
         Self {
             config: config.clone(),
         }
     }
 }
 
-impl DataGenerator for StateSpaceIlgRegression {
+impl DataGenerator for StateSpaceRegression {
     fn generate(
         &self,
         training_instances: &[TrainingInstance],
@@ -39,7 +40,7 @@ impl DataGenerator for StateSpaceIlgRegression {
             let plan = &instance.plan;
             let task = &instance.task;
             let successor_generator = self.config.successor_generator.create(task);
-            let compiler = IlgCompiler::new(task);
+            let compiler = self.config.graph_compiler.create(task);
 
             let mut cur_state = task.initial_state.clone();
             for (i, action) in plan.steps().iter().enumerate() {

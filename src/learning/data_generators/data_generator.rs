@@ -2,9 +2,8 @@ use crate::learning::{
     data_generators::{
         partial_space_dense_ranking::PartialSpaceDenseRanking,
         partial_space_ranking::PartialSpaceRanking,
-        partial_space_regression::PartialSpaceRegression,
-        state_space_ilg_ranking::StateSpaceIlgRanking,
-        state_space_ilg_regression::StateSpaceIlgRegression, DataGeneratorConfig,
+        partial_space_regression::PartialSpaceRegression, state_space_ranking::StateSpaceRanking,
+        state_space_regression::StateSpaceRegression, DataGeneratorConfig,
     },
     graphs::{CGraph, ColourDictionary},
     models::{TrainingData, TrainingInstance},
@@ -21,11 +20,11 @@ pub trait DataGenerator {
 impl dyn DataGenerator {
     pub fn new(config: &DataGeneratorConfig) -> Box<dyn DataGenerator> {
         match config {
-            DataGeneratorConfig::StateSpaceIlgRanking(config) => {
-                Box::new(StateSpaceIlgRanking::new(config))
+            DataGeneratorConfig::StateSpaceRanking(config) => {
+                Box::new(StateSpaceRanking::new(config))
             }
-            DataGeneratorConfig::StateSpaceIlgRegression(config) => {
-                Box::new(StateSpaceIlgRegression::new(config))
+            DataGeneratorConfig::StateSpaceRegression(config) => {
+                Box::new(StateSpaceRegression::new(config))
             }
             DataGeneratorConfig::PartialSpaceRegression(config) => {
                 Box::new(PartialSpaceRegression::new(config))

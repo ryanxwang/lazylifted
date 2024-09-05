@@ -1,7 +1,7 @@
 use crate::{
     learning::{
         data_generators::DataGenerator,
-        graphs::{CGraph, ColourDictionary, IlgCompiler},
+        graphs::{CGraph, ColourDictionary, StateCompilerName},
         models::{
             RankingPair, RankingRelation, RankingTrainingData, TrainingData, TrainingInstance,
         },
@@ -12,24 +12,25 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub struct StateSpaceIlgRankingConfig {
+pub struct StateSpaceRankingConfig {
     pub successor_generator: SuccessorGeneratorName,
+    pub graph_compiler: StateCompilerName,
 }
 
 #[derive(Debug)]
-pub struct StateSpaceIlgRanking {
-    config: StateSpaceIlgRankingConfig,
+pub struct StateSpaceRanking {
+    config: StateSpaceRankingConfig,
 }
 
-impl StateSpaceIlgRanking {
-    pub fn new(config: &StateSpaceIlgRankingConfig) -> Self {
+impl StateSpaceRanking {
+    pub fn new(config: &StateSpaceRankingConfig) -> Self {
         Self {
             config: config.clone(),
         }
     }
 }
 
-impl DataGenerator for StateSpaceIlgRanking {
+impl DataGenerator for StateSpaceRanking {
     fn generate(
         &self,
         training_instances: &[TrainingInstance],
@@ -42,7 +43,7 @@ impl DataGenerator for StateSpaceIlgRanking {
             let plan = &instance.plan;
             let task = &instance.task;
             let successor_generator = self.config.successor_generator.create(task);
-            let compiler = IlgCompiler::new(task);
+            let compiler = self.config.graph_compiler.create(task);
 
             let mut cur_state = task.initial_state.clone();
             let mut predecessor_graph: Option<CGraph> = None;

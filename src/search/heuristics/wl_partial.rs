@@ -19,7 +19,7 @@ impl WlPartialHeuristic {
         let model = WlModel::load(py, saved_model);
         let successor_generator_name = model.successor_generator_name();
 
-        match model.compiler_name() {
+        match model.partial_action_compiler_name() {
             Some(compiler_name) => Self {
                 model,
                 compiler: None,

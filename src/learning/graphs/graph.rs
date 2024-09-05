@@ -14,6 +14,20 @@ pub trait Compiler<T>: Debug {
     fn compile(&self, arg: &T, colour_dictionary: Option<&mut ColourDictionary>) -> CGraph;
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, Copy)]
+#[serde(rename_all = "kebab-case")]
+pub enum StateCompilerName {
+    Ilg,
+}
+
+impl StateCompilerName {
+    pub fn create(&self, task: &Task) -> Box<dyn Compiler<DBState>> {
+        match self {
+            StateCompilerName::Ilg => Box::new(IlgCompiler::new(task)),
+        }
+    }
+}
+
 pub trait PartialActionCompiler: Debug {
     /// Compile the (state, partial) pair into a graph.
     fn compile(

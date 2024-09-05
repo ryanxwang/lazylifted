@@ -10,5 +10,6 @@ c_value = 1.0
 iters = 2
 set-or-multiset = "set"
 
-[wl-model.data-generator.state-space-ilg-ranking]
+[wl-model.data-generator.state-space-ranking]
 successor-generator = "full-reducer"
+graph-compiler = "ilg"

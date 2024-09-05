@@ -10,5 +10,6 @@ alpha = 1e-7
 iters = 4
 set-or-multiset = "multiset"
 
-[wl-model.data-generator.state-space-ilg-regression]
+[wl-model.data-generator.state-space-regression]
 successor-generator = "full-reducer"
+graph-compiler = "ilg"

@@ -1,7 +1,7 @@
 use crate::{
     learning::{
         data_generators::{DataGenerator, DataGeneratorConfig},
-        graphs::{CGraph, ColourDictionary, PartialActionCompilerName},
+        graphs::{CGraph, ColourDictionary, PartialActionCompilerName, StateCompilerName},
         ml::MlModel,
         models::{
             model_utils::{extract_from_zip, zip_files, PICKLE_FILE_NAME, RON_FILE_NAME},
@@ -63,13 +63,23 @@ impl WlModel {
 
     /// When evaluating, the heuristic needs to know which compiler to use to
     /// input the right graph
-    pub fn compiler_name(&self) -> Option<PartialActionCompilerName> {
+    pub fn partial_action_compiler_name(&self) -> Option<PartialActionCompilerName> {
         match &self.config.data_generator {
             DataGeneratorConfig::PartialSpaceRanking(config) => Some(config.graph_compiler),
             DataGeneratorConfig::PartialSpaceRegression(config) => Some(config.graph_compiler),
             DataGeneratorConfig::PartialSpaceDenseRanking(config) => Some(config.graph_compiler),
-            DataGeneratorConfig::StateSpaceIlgRanking(_)
-            | DataGeneratorConfig::StateSpaceIlgRegression(_) => None,
+            DataGeneratorConfig::StateSpaceRanking(_)
+            | DataGeneratorConfig::StateSpaceRegression(_) => None,
+        }
+    }
+
+    pub fn state_compiler_name(&self) -> Option<StateCompilerName> {
+        match &self.config.data_generator {
+            DataGeneratorConfig::StateSpaceRanking(config) => Some(config.graph_compiler),
+            DataGeneratorConfig::StateSpaceRegression(config) => Some(config.graph_compiler),
+            DataGeneratorConfig::PartialSpaceRanking(_)
+            | DataGeneratorConfig::PartialSpaceRegression(_)
+            | DataGeneratorConfig::PartialSpaceDenseRanking(_) => None,
         }
     }
 
@@ -80,8 +90,8 @@ impl WlModel {
             // different types
             DataGeneratorConfig::PartialSpaceRanking(config) => config.successor_generator,
             DataGeneratorConfig::PartialSpaceRegression(config) => config.successor_generator,
-            DataGeneratorConfig::StateSpaceIlgRanking(config) => config.successor_generator,
-            DataGeneratorConfig::StateSpaceIlgRegression(config) => config.successor_generator,
+            DataGeneratorConfig::StateSpaceRanking(config) => config.successor_generator,
+            DataGeneratorConfig::StateSpaceRegression(config) => config.successor_generator,
             DataGeneratorConfig::PartialSpaceDenseRanking(config) => config.successor_generator,
         }
     }

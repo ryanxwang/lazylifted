@@ -82,9 +82,10 @@ mod tests {
                 iters: 2,
                 set_or_multiset: SetOrMultiset::Set,
             },
-            data_generator: DataGeneratorConfig::StateSpaceIlgRanking(
-                crate::learning::data_generators::StateSpaceIlgRankingConfig {
+            data_generator: DataGeneratorConfig::StateSpaceRanking(
+                crate::learning::data_generators::StateSpaceRankingConfig {
                     successor_generator: SuccessorGeneratorName::FullReducer,
+                    graph_compiler: crate::learning::graphs::StateCompilerName::Ilg,
                 },
             ),
             preprocessing_option:
