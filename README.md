@@ -1,41 +1,61 @@
-# Lazylifted
+# LazyLifted
 
 ![build](https://github.com/Thyroidr/lazylifted/actions/workflows/build.yml/badge.svg)
 
-Lazylifted is a domain-independent lifted PDDL planner utilising graph representations of PDDL structures.
+LazyLifted (LL) is a domain-independent lifted PDDL planner utilising graph
+representations of PDDL structures. It performs state space search (traditional)
+and *partial space search* (new).
 
 - The parser based on [pddl-rs](https://github.com/sunsided/pddl-rs)
-- The successor generation algorithm and planner is based on [powerlifted](https://github.com/abcorrea/powerlifted)
-- The graph representations and learning component is based on [GOOSE](https://github.com/DillonZChen/goose)
+- The successor generation algorithm and planner is based on
+  [powerlifted](https://github.com/abcorrea/powerlifted)
+- The graph representations and learning component is based on
+  [GOOSE](https://github.com/DillonZChen/goose)
 
 (See [references](#references) for more detail)
 
 ## Installation
 
-Lazylifted is written in rust, and can be built with `cargo build --release`.
-The produced binaries (and any tests) will [dynamically link to a Python shared
-library](https://pyo3.rs/v0.15.0/building_and_distribution.html#dynamically-embedding-the-python-interpreter),
-and the location it looks for can be configured by adding to the environment
-variables described in the [cargo
-book](https://doc.rust-lang.org/cargo/reference/environment-variables.html#dynamic-library-paths).
-Running the following command should set this up for you on Unix systems.
-
-```bash
-source ./scripts/setup_dynamic_library.sh
-```
+1. Set up a Python virtual environment and install the dependencies listed in
+   `requirements.txt`.
+2. Run `./scripts/setup_dynamic_library.sh`. This will add the Python dynamic
+   libraries to the dynamic library path environment variable. This might not be
+   necessary if you are not using a virtual environment. See
+    [pyo3](https://pyo3.rs/v0.15.0/building_and_distribution.html#dynamically-embedding-the-python-interpreter)
+    documentation and the [cargo book](https://doc.rust-lang.org/cargo/reference/environment-variables.html#dynamic-library-paths)
+    for more details.
+3. Build with `cargo build --release`. Note that the built binary will only be
+   compatible with the Python version (e.g. 3.11) of the environment that you
+   build in.
 
 ## Usage
 
 See usage with:
 
 ```bash
-./trainer --help
+./target/release/trainer --help
 ```
 
 and
 
 ```bash
-./planner --help
+./target/release/planner --help
+```
+
+For convenience, you can also use `scripts/plan.sh` and `scripts/train.sh`.
+
+## Example
+
+To train WL-ILG-GPR, run
+
+```bash
+./scripts/train.sh state-space wl-ilg-gpr
+```
+
+Then run
+
+```bash
+./scripts/plan.sh state-space wl-ilg-gpr ferry testing/easy/p30
 ```
 
 ## Development
