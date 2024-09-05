@@ -40,7 +40,10 @@ impl DataGenerator for StateSpaceRegression {
             let plan = &instance.plan;
             let task = &instance.task;
             let successor_generator = self.config.successor_generator.create(task);
-            let compiler = self.config.graph_compiler.create(task);
+            let compiler = self
+                .config
+                .graph_compiler
+                .create(task, self.config.successor_generator);
 
             let mut cur_state = task.initial_state.clone();
             for (i, action) in plan.steps().iter().enumerate() {

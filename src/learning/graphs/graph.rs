@@ -18,12 +18,20 @@ pub trait Compiler<T>: Debug {
 #[serde(rename_all = "kebab-case")]
 pub enum StateCompilerName {
     Ilg,
+    Aoag,
+    Rslg,
 }
 
 impl StateCompilerName {
-    pub fn create(&self, task: &Task) -> Box<dyn Compiler<DBState>> {
+    pub fn create(
+        &self,
+        task: &Task,
+        successor_generator_name: SuccessorGeneratorName,
+    ) -> Box<dyn Compiler<DBState>> {
         match self {
             StateCompilerName::Ilg => Box::new(IlgCompiler::new(task)),
+            StateCompilerName::Aoag => Box::new(AoagCompiler::new(task, successor_generator_name)),
+            StateCompilerName::Rslg => Box::new(RslgCompiler::new(task, successor_generator_name)),
         }
     }
 }
@@ -60,6 +68,14 @@ impl PartialActionCompilerName {
             PartialActionCompilerName::Aoag => {
                 Box::new(AoagCompiler::new(task, successor_generator_name))
             }
+        }
+    }
+
+    pub fn to_state_space_compiler_name(&self) -> StateCompilerName {
+        match self {
+            PartialActionCompilerName::Ilg => StateCompilerName::Ilg,
+            PartialActionCompilerName::Rslg => StateCompilerName::Rslg,
+            PartialActionCompilerName::Aoag => StateCompilerName::Aoag,
         }
     }
 }

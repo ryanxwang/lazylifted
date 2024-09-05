@@ -101,6 +101,12 @@ impl PartialAction {
         action_schema: &ActionSchema,
         applicable_actions: &[Action],
     ) -> PartialEffects {
+        if *self == NO_PARTIAL {
+            return PartialEffects {
+                unavoidable_effects: HashSet::new(),
+                optional_effects: HashSet::new(),
+            };
+        }
         assert!(self.schema_index == action_schema.index());
 
         let action_effects: Vec<HashSet<Negatable<Atom>>> = applicable_actions

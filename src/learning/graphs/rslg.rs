@@ -1,9 +1,9 @@
 //! The Resulting State Learning Graph
 use crate::{
-    learning::graphs::{CGraph, ColourDictionary, NodeID, PartialActionCompiler},
+    learning::graphs::{CGraph, ColourDictionary, Compiler, NodeID, PartialActionCompiler},
     search::{
         successor_generators::SuccessorGeneratorName, Action, ActionSchema, Atom, DBState,
-        Negatable, PartialAction, PartialEffects, SuccessorGenerator, Task,
+        Negatable, PartialAction, PartialEffects, SuccessorGenerator, Task, NO_PARTIAL,
     },
 };
 use std::{
@@ -138,9 +138,12 @@ impl RslgCompiler {
         let mut graph = self.base_graph.clone().unwrap();
         let action_schema = &self.action_schemas[partial_action.schema_index()];
 
-        let applicable_actions: Vec<Action> = self
-            .successor_generator
-            .get_applicable_actions_from_partial(state, action_schema, partial_action);
+        let applicable_actions: Vec<Action> = if *partial_action == NO_PARTIAL {
+            vec![]
+        } else {
+            self.successor_generator
+                .get_applicable_actions_from_partial(state, action_schema, partial_action)
+        };
 
         let PartialEffects {
             unavoidable_effects,
@@ -287,6 +290,12 @@ impl PartialActionCompiler for RslgCompiler {
         colour_dictionary: Option<&mut ColourDictionary>,
     ) -> CGraph {
         self.compile(state, partial_action, colour_dictionary)
+    }
+}
+
+impl Compiler<DBState> for RslgCompiler {
+    fn compile(&self, state: &DBState, colour_dictionary: Option<&mut ColourDictionary>) -> CGraph {
+        self.compile(state, &NO_PARTIAL, colour_dictionary)
     }
 }
 

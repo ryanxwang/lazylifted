@@ -77,9 +77,17 @@ impl WlModel {
         match &self.config.data_generator {
             DataGeneratorConfig::StateSpaceRanking(config) => Some(config.graph_compiler),
             DataGeneratorConfig::StateSpaceRegression(config) => Some(config.graph_compiler),
-            DataGeneratorConfig::PartialSpaceRanking(_)
-            | DataGeneratorConfig::PartialSpaceRegression(_)
-            | DataGeneratorConfig::PartialSpaceDenseRanking(_) => None,
+            // these are partial space configs, but they can still be used for
+            // state space search once trained
+            DataGeneratorConfig::PartialSpaceRanking(config) => {
+                Some(config.graph_compiler.to_state_space_compiler_name())
+            }
+            DataGeneratorConfig::PartialSpaceRegression(config) => {
+                Some(config.graph_compiler.to_state_space_compiler_name())
+            }
+            DataGeneratorConfig::PartialSpaceDenseRanking(config) => {
+                Some(config.graph_compiler.to_state_space_compiler_name())
+            }
         }
     }
 

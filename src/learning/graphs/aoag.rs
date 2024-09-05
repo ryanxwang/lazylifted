@@ -1,10 +1,10 @@
 //! The Action-Object-Atom Graph
 
 use crate::{
-    learning::graphs::{CGraph, ColourDictionary, NodeID, PartialActionCompiler},
+    learning::graphs::{CGraph, ColourDictionary, Compiler, NodeID, PartialActionCompiler},
     search::{
         successor_generators::SuccessorGeneratorName, Action, ActionSchema, Atom, DBState,
-        Negatable, PartialAction, SuccessorGenerator, Task,
+        Negatable, PartialAction, SuccessorGenerator, Task, NO_PARTIAL,
     },
 };
 use std::{
@@ -132,29 +132,34 @@ impl AoagCompiler {
         colour_dictionary: Option<&mut ColourDictionary>,
     ) -> CGraph {
         let mut graph = self.base_graph.clone().unwrap();
-        let action_schema = &self.action_schemas[partial_action.schema_index()];
 
-        let actions: Vec<Action> = self
-            .successor_generator
-            .get_applicable_actions_from_partial(state, action_schema, partial_action);
-
-        // in the special case that there is only one applicable action, we make
-        // reasoning more direct by directly applying the action, otherwise, we
-        // add the actions in the graph and have them reasoned about
-        let state = if actions.len() == 1 {
-            &self
-                .successor_generator
-                .generate_successor(state, action_schema, &actions[0])
-        } else {
-            for action in actions {
-                let node_id = graph.add_node(self.get_action_colour(action.index));
-                for (arg_index, object_index) in action.instantiation.iter().enumerate() {
-                    let object_node_id = self.object_index_to_node_index[object_index];
-                    graph.add_edge(node_id, object_node_id, arg_index);
-                }
-            }
-
+        let state = if *partial_action == NO_PARTIAL {
             state
+        } else {
+            let action_schema = &self.action_schemas[partial_action.schema_index()];
+
+            let actions: Vec<Action> = self
+                .successor_generator
+                .get_applicable_actions_from_partial(state, action_schema, partial_action);
+
+            // in the special case that there is only one applicable action, we make
+            // reasoning more direct by directly applying the action, otherwise, we
+            // add the actions in the graph and have them reasoned about
+            if actions.len() == 1 {
+                &self
+                    .successor_generator
+                    .generate_successor(state, action_schema, &actions[0])
+            } else {
+                for action in actions {
+                    let node_id = graph.add_node(self.get_action_colour(action.index));
+                    for (arg_index, object_index) in action.instantiation.iter().enumerate() {
+                        let object_node_id = self.object_index_to_node_index[object_index];
+                        graph.add_edge(node_id, object_node_id, arg_index);
+                    }
+                }
+
+                state
+            }
         };
 
         for atom in state.atoms() {
@@ -268,6 +273,12 @@ impl PartialActionCompiler for AoagCompiler {
         colour_dictionary: Option<&mut ColourDictionary>,
     ) -> CGraph {
         self.compile(state, partial_action, colour_dictionary)
+    }
+}
+
+impl Compiler<DBState> for AoagCompiler {
+    fn compile(&self, state: &DBState, colour_dictionary: Option<&mut ColourDictionary>) -> CGraph {
+        self.compile(state, &NO_PARTIAL, colour_dictionary)
     }
 }
 
