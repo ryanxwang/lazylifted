@@ -16,15 +16,17 @@ and *partial space search* (new).
 
 ## Installation
 
-1. Set up a Python virtual environment and install the dependencies listed in
+1. Install Rust and Cargo according to official documentations. See `cargo.toml`
+   for the minimum supported rust version of this project.
+2. Set up a Python virtual environment and install the dependencies listed in
    `requirements.txt`.
-2. Run `./scripts/setup_dynamic_library.sh`. This will add the Python dynamic
+3. Run `./scripts/setup_dynamic_library.sh`. This will add the Python dynamic
    libraries to the dynamic library path environment variable. This might not be
    necessary if you are not using a virtual environment. See
     [pyo3](https://pyo3.rs/v0.15.0/building_and_distribution.html#dynamically-embedding-the-python-interpreter)
     documentation and the [cargo book](https://doc.rust-lang.org/cargo/reference/environment-variables.html#dynamic-library-paths)
     for more details.
-3. Build with `cargo build --release`. Note that the built binary will only be
+4. Build with `cargo build --release`. Note that the built binary will only be
    compatible with the Python version (e.g. 3.11) of the environment that you
    build in.
 
