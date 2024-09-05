@@ -51,7 +51,7 @@ For convenience, you can also use `scripts/plan.sh` and `scripts/train.sh`.
 To train WL-ILG-GPR, run
 
 ```bash
-./scripts/train.sh state-space wl-ilg-gpr
+./scripts/train.sh state-space wl-ilg-gpr ferry
 ```
 
 Then run
