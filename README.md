@@ -20,7 +20,7 @@ and *partial space search* (new).
    for the minimum supported rust version of this project.
 2. Set up a Python virtual environment and install the dependencies listed in
    `requirements.txt`.
-3. Run `./scripts/setup_dynamic_library.sh`. This will add the Python dynamic
+3. Run `source scripts/setup_dynamic_library.sh`. This will add the Python dynamic
    libraries to the dynamic library path environment variable. This might not be
    necessary if you are not using a virtual environment. See
     [pyo3](https://pyo3.rs/v0.15.0/building_and_distribution.html#dynamically-embedding-the-python-interpreter)
