@@ -2,6 +2,7 @@ use crate::parsed_types::{Domain, Name, Problem, Types};
 use crate::parsers::Parser;
 use crate::search::{ActionSchema, DBState, Goal, Object, Predicate};
 use itertools::Itertools;
+use std::cmp::{max, min};
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::PathBuf;
@@ -127,7 +128,7 @@ impl Task {
             Self::compute_object_static_information(&init_state, &predicates, &objects);
 
         let object_pair_static_information =
-            Self::compute_object_pair_static_information(&init_state, &predicates, &objects);
+            Self::compute_object_pair_static_information(&init_state, &predicates);
 
         Self {
             domain_name: domain.name().clone(),
@@ -216,7 +217,6 @@ impl Task {
     fn compute_object_pair_static_information(
         init_state: &DBState,
         predicates: &[Predicate],
-        object: &[Object],
     ) -> HashMap<(usize, usize), HashSet<usize>> {
         let mut object_pair_static_information = HashMap::new();
 
@@ -314,8 +314,8 @@ impl Task {
         self.object_static_information.as_slice()
     }
 
-    pub fn object_pair_static_information(&self, o1: usize, o2: usize) -> &HashSet<usize> {
-        &self.object_pair_static_information[&(min(o1, o2), max(o1, o2))]
+    pub fn object_pair_static_information(&self) -> &HashMap<(usize, usize), HashSet<usize>> {
+        &self.object_pair_static_information
     }
 }
 
@@ -393,7 +393,7 @@ mod tests {
     }
 
     #[test]
-    fn object_static_information() {
+    fn object_static_information_childsnack() {
         let task = Task::from_text(CHILDSNACK_DOMAIN_TEXT, CHILDSNACK_PROBLEM06_TEXT);
 
         let object_static_information = task.object_static_information();
@@ -417,5 +417,90 @@ mod tests {
                 HashSet::from([]),  // kitchen
             ]
         )
+    }
+
+    #[test]
+    fn object_pair_static_information_satellite() {
+        let task = Task::from_text(SATELLITE_DOMAIN_TEXT, SATELLITE_PROBLEM10_TEXT);
+
+        let object_pair_static_information = task.object_pair_static_information();
+
+        // (calibration_target ins1 dir1), (calibration_target ins2 dir3),
+        // (on_board ins1 sat1), (on_board ins2 sat2), (supports ins2 mod1),
+        // (supports ins1 mod1)
+        assert_eq!(
+            object_pair_static_information
+                .keys()
+                .copied()
+                .sorted()
+                .collect_vec(),
+            vec![(0, 2), (1, 3), (2, 4), (2, 5), (3, 4), (3, 7)]
+        );
+
+        // on_board ins1 sat1
+        assert_eq!(
+            object_pair_static_information
+                .get(&(0, 2))
+                .unwrap()
+                .iter()
+                .copied()
+                .collect::<Vec<usize>>(),
+            vec![0]
+        );
+
+        // on_board ins2 sat2
+        assert_eq!(
+            object_pair_static_information
+                .get(&(1, 3))
+                .unwrap()
+                .iter()
+                .copied()
+                .collect::<Vec<usize>>(),
+            vec![0]
+        );
+
+        // supports ins1 mod1
+        assert_eq!(
+            object_pair_static_information
+                .get(&(2, 4))
+                .unwrap()
+                .iter()
+                .copied()
+                .collect::<Vec<usize>>(),
+            vec![1]
+        );
+
+        // calibration_target ins1 dir1
+        assert_eq!(
+            object_pair_static_information
+                .get(&(2, 5))
+                .unwrap()
+                .iter()
+                .copied()
+                .collect::<Vec<usize>>(),
+            vec![7]
+        );
+
+        // supports ins2 mod1
+        assert_eq!(
+            object_pair_static_information
+                .get(&(3, 4))
+                .unwrap()
+                .iter()
+                .copied()
+                .collect::<Vec<usize>>(),
+            vec![1]
+        );
+
+        // calibration_target ins2 dir3
+        assert_eq!(
+            object_pair_static_information
+                .get(&(3, 7))
+                .unwrap()
+                .iter()
+                .copied()
+                .collect::<Vec<usize>>(),
+            vec![7]
+        );
     }
 }
