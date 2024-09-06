@@ -88,6 +88,7 @@ mod tests {
                     graph_compiler: crate::learning::graphs::StateCompilerConfig::Ilg(
                         crate::learning::graphs::IlgConfig {
                             ignore_static_atoms: true,
+                            use_edge_colours: true,
                         },
                     ),
                 },

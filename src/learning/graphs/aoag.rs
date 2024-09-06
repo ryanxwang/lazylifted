@@ -20,6 +20,7 @@ use strum_macros::{EnumCount as EnumCountMacro, FromRepr};
 pub struct AoagConfig {
     pub ignore_static_atoms: bool,
     pub objects_coloured_by_static_information: bool,
+    pub use_edge_colours: bool,
 }
 
 #[derive(Debug)]
@@ -166,7 +167,15 @@ impl AoagCompiler {
                     let node_id = graph.add_node(self.get_action_colour(action.index));
                     for (arg_index, object_index) in action.instantiation.iter().enumerate() {
                         let object_node_id = self.object_index_to_node_index[object_index];
-                        graph.add_edge(node_id, object_node_id, arg_index);
+                        graph.add_edge(
+                            node_id,
+                            object_node_id,
+                            if self.config.use_edge_colours {
+                                arg_index
+                            } else {
+                                0
+                            },
+                        );
                     }
                 }
 
@@ -190,7 +199,15 @@ impl AoagCompiler {
                         .add_node(self.get_atom_colour(atom.predicate_index(), AtomType::NonGoal));
                     for (arg_index, object_index) in atom.arguments().iter().enumerate() {
                         let object_node_id = self.object_index_to_node_index[object_index];
-                        graph.add_edge(node_id, object_node_id, arg_index);
+                        graph.add_edge(
+                            node_id,
+                            object_node_id,
+                            if self.config.use_edge_colours {
+                                arg_index
+                            } else {
+                                0
+                            },
+                        );
                     }
                 }
             }
@@ -234,7 +251,15 @@ impl AoagCompiler {
                 .add_node(self.get_atom_colour(atom.predicate_index(), AtomType::UnachievedGoal));
             for (arg_index, object_index) in atom.arguments().iter().enumerate() {
                 let object_node_id = self.object_index_to_node_index[object_index];
-                graph.add_edge(node_id, object_node_id, arg_index);
+                graph.add_edge(
+                    node_id,
+                    object_node_id,
+                    if self.config.use_edge_colours {
+                        arg_index
+                    } else {
+                        0
+                    },
+                );
             }
             self.goal_atom_to_node_index.insert(atom.clone(), node_id);
         }
@@ -326,6 +351,7 @@ mod tests {
         AoagConfig {
             ignore_static_atoms: true,
             objects_coloured_by_static_information: true,
+            use_edge_colours: true,
         }
     }
 

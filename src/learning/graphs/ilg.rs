@@ -47,6 +47,7 @@ impl Display for AtomNodeType {
 #[serde(rename_all = "kebab-case")]
 pub struct IlgConfig {
     pub ignore_static_atoms: bool,
+    pub use_edge_colours: bool,
 }
 
 /// A compiler to convert states to ILGs.
@@ -139,7 +140,15 @@ impl IlgCompiler {
                     ));
                     for (arg_index, object_index) in atom.arguments().iter().enumerate() {
                         let object_node_id = self.object_index_to_node_index[object_index];
-                        graph.add_edge(node_id, object_node_id, arg_index);
+                        graph.add_edge(
+                            node_id,
+                            object_node_id,
+                            if self.config.use_edge_colours {
+                                arg_index
+                            } else {
+                                0
+                            },
+                        );
                     }
                 }
             }
@@ -183,7 +192,15 @@ impl IlgCompiler {
             ));
             for (arg_index, object_index) in atom.arguments().iter().enumerate() {
                 let object_node_id = self.object_index_to_node_index[object_index];
-                graph.add_edge(node_id, object_node_id, arg_index);
+                graph.add_edge(
+                    node_id,
+                    object_node_id,
+                    if self.config.use_edge_colours {
+                        arg_index
+                    } else {
+                        0
+                    },
+                );
             }
             self.goal_atom_to_node_index.insert(atom.clone(), node_id);
         }
@@ -250,6 +267,7 @@ mod tests {
     fn test_config() -> IlgConfig {
         IlgConfig {
             ignore_static_atoms: true,
+            use_edge_colours: true,
         }
     }
 

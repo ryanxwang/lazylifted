@@ -15,3 +15,4 @@ successor-generator = "full-reducer"
 [wl-model.data-generator.partial-space-dense-ranking.graph-compiler.rslg]
 ignore-static-atoms = true
 objects-coloured-by-static-information = true
+use-edge-colours = true

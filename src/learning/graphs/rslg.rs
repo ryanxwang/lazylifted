@@ -19,6 +19,7 @@ use strum_macros::{EnumCount as EnumCountMacro, FromRepr};
 pub struct RslgConfig {
     pub ignore_static_atoms: bool,
     pub objects_coloured_by_static_information: bool,
+    pub use_edge_colours: bool,
 }
 
 #[derive(Debug)]
@@ -235,7 +236,15 @@ impl RslgCompiler {
 
             for (arg_index, object_index) in atom.arguments().iter().enumerate() {
                 let object_node_id = self.object_index_to_node_index[object_index];
-                graph.add_edge(node_id, object_node_id, arg_index);
+                graph.add_edge(
+                    node_id,
+                    object_node_id,
+                    if self.config.use_edge_colours {
+                        arg_index
+                    } else {
+                        0
+                    },
+                );
             }
         }
 
@@ -464,6 +473,7 @@ mod tests {
         RslgConfig {
             ignore_static_atoms: true,
             objects_coloured_by_static_information: true,
+            use_edge_colours: true,
         }
     }
 
