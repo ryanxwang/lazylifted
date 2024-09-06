@@ -20,6 +20,7 @@ pub struct RslgConfig {
     pub ignore_static_atoms: bool,
     pub objects_coloured_by_static_information: bool,
     pub use_edge_colours: bool,
+    pub object_edges_from_static_information: bool,
 }
 
 #[derive(Debug)]
@@ -63,7 +64,7 @@ impl RslgCompiler {
         // predicate information. This would nicely allow modelling any domain
         // with an underlying graph. What about arity > 2? Projection?
         // map from predicate index to exponent
-        let static_predicate_map: HashMap<usize, usize> = task
+        let singular_static_predicate_map: HashMap<usize, usize> = task
             .object_static_information_predicates()
             .iter()
             .enumerate()
@@ -86,7 +87,7 @@ impl RslgCompiler {
             let colour = if config.objects_coloured_by_static_information {
                 let mut colour: usize = 0;
                 for predicate_index in static_predicates {
-                    colour += 1 << static_predicate_map[predicate_index];
+                    colour += 1 << singular_static_predicate_map[predicate_index];
                 }
                 colour
             } else {
@@ -271,6 +272,23 @@ impl RslgCompiler {
                 object.index,
                 graph.add_node(self.get_object_colour(object.index)),
             );
+        }
+
+        // Unlike for static object colours, we don't need to worry about
+        // collision between edge colours for edges between objects
+        if self.config.object_edges_from_static_information {
+            task.object_pair_static_information()
+                .iter()
+                .for_each(|(&(u, v), pred_indices)| {
+                    let u_node = self.object_index_to_node_index[&u];
+                    let v_node = self.object_index_to_node_index[&v];
+                    let colour = pred_indices.iter().map(|&pred_index| 1 << pred_index).sum();
+
+                    // when we don't use edge colours, maybe we should just
+                    // colour these all the same, but then there is literally no
+                    // point right?
+                    graph.add_edge(u_node, v_node, colour);
+                });
         }
 
         self.base_graph = Some(graph);
@@ -474,6 +492,7 @@ mod tests {
             ignore_static_atoms: true,
             objects_coloured_by_static_information: true,
             use_edge_colours: true,
+            object_edges_from_static_information: true,
         }
     }
 

@@ -19,8 +19,9 @@ use strum_macros::{EnumCount as EnumCountMacro, FromRepr};
 #[serde(rename_all = "kebab-case")]
 pub struct AoagConfig {
     pub ignore_static_atoms: bool,
-    pub objects_coloured_by_static_information: bool,
     pub use_edge_colours: bool,
+    pub objects_coloured_by_static_information: bool,
+    pub object_edges_from_static_information: bool,
 }
 
 #[derive(Debug)]
@@ -233,6 +234,23 @@ impl AoagCompiler {
             );
         }
 
+        // Unlike for static object colours, we don't need to worry about
+        // collision between edge colours for edges between objects
+        if self.config.object_edges_from_static_information {
+            task.object_pair_static_information()
+                .iter()
+                .for_each(|(&(u, v), pred_indices)| {
+                    let u_node = self.object_index_to_node_index[&u];
+                    let v_node = self.object_index_to_node_index[&v];
+                    let colour = pred_indices.iter().map(|&pred_index| 1 << pred_index).sum();
+
+                    // when we don't use edge colours, maybe we should just
+                    // colour these all the same, but then there is literally no
+                    // point right?
+                    graph.add_edge(u_node, v_node, colour);
+                });
+        }
+
         for atom in task.goal.atoms() {
             if self.config.ignore_static_atoms
                 && self.static_predicates.contains(&atom.predicate_index())
@@ -352,6 +370,7 @@ mod tests {
             ignore_static_atoms: true,
             objects_coloured_by_static_information: true,
             use_edge_colours: true,
+            object_edges_from_static_information: true,
         }
     }
 

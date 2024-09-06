@@ -21,5 +21,6 @@ layer-sibling-weight = 2.0
 
 [wl-model.data-generator.partial-space-dense-ranking.graph-compiler.aoag]
 ignore-static-atoms = true
-objects-coloured-by-static-information = true
 use-edge-colours = true
+objects-coloured-by-static-information = true
+object-edges-from-static-information = true
