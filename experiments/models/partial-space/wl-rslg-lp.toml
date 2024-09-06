@@ -1,7 +1,7 @@
 [wl-model]
 validate = true
 tune = true
-round = true
+round = false
 explain-colours = false
 
 [wl-model.model.ranker.lp]
@@ -23,4 +23,4 @@ layer-sibling-weight = 2.0
 ignore-static-atoms = true
 use-edge-colours = true
 objects-coloured-by-static-information = true
-object-edges-from-static-information = true
+object-edges-from-static-information = false
