@@ -8,5 +8,8 @@ ranker-name = "ranksvm"
 iters = 2
 set-or-multiset = "set"
 
-[wl-model.data-generator.state-space-ilg-ranking]
+[wl-model.data-generator.state-space-ranking]
 successor-generator = "full-reducer"
+
+[wl-model.data-generator.state-space-ranking.graph-compiler.ilg]
+ignore-static-atoms = true

@@ -1,6 +1,8 @@
 use std::fmt::Debug;
 
-use crate::learning::graphs::{AoagCompiler, ColourDictionary, IlgCompiler, RslgCompiler};
+use crate::learning::graphs::{
+    AoagCompiler, AoagConfig, ColourDictionary, IlgCompiler, IlgConfig, RslgCompiler, RslgConfig,
+};
 use crate::search::successor_generators::SuccessorGeneratorName;
 use crate::search::{DBState, PartialAction, Task};
 use petgraph::{graph::Graph, Undirected};
@@ -14,24 +16,28 @@ pub trait Compiler<T>: Debug {
     fn compile(&self, arg: &T, colour_dictionary: Option<&mut ColourDictionary>) -> CGraph;
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Copy)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub enum StateCompilerName {
-    Ilg,
-    Aoag,
-    Rslg,
+pub enum StateCompilerConfig {
+    Ilg(IlgConfig),
+    Aoag(AoagConfig),
+    Rslg(RslgConfig),
 }
 
-impl StateCompilerName {
+impl StateCompilerConfig {
     pub fn create(
         &self,
         task: &Task,
         successor_generator_name: SuccessorGeneratorName,
     ) -> Box<dyn Compiler<DBState>> {
         match self {
-            StateCompilerName::Ilg => Box::new(IlgCompiler::new(task)),
-            StateCompilerName::Aoag => Box::new(AoagCompiler::new(task, successor_generator_name)),
-            StateCompilerName::Rslg => Box::new(RslgCompiler::new(task, successor_generator_name)),
+            StateCompilerConfig::Ilg(config) => Box::new(IlgCompiler::new(task, config)),
+            StateCompilerConfig::Aoag(config) => {
+                Box::new(AoagCompiler::new(task, successor_generator_name, config))
+            }
+            StateCompilerConfig::Rslg(config) => {
+                Box::new(RslgCompiler::new(task, successor_generator_name, config))
+            }
         }
     }
 }
@@ -46,36 +52,37 @@ pub trait PartialActionCompiler: Debug {
     ) -> CGraph;
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Copy)]
+// TODO-soon: might be a good idea to merge the two graph config types, not sure
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub enum PartialActionCompilerName {
-    Ilg,
-    Rslg,
-    Aoag,
+pub enum PartialActionCompilerConfig {
+    Ilg(IlgConfig),
+    Rslg(RslgConfig),
+    Aoag(AoagConfig),
 }
 
-impl PartialActionCompilerName {
+impl PartialActionCompilerConfig {
     pub fn create(
         &self,
         task: &Task,
         successor_generator_name: SuccessorGeneratorName,
     ) -> Box<dyn PartialActionCompiler> {
         match self {
-            PartialActionCompilerName::Ilg => Box::new(IlgCompiler::new(task)),
-            PartialActionCompilerName::Rslg => {
-                Box::new(RslgCompiler::new(task, successor_generator_name))
+            PartialActionCompilerConfig::Ilg(config) => Box::new(IlgCompiler::new(task, config)),
+            PartialActionCompilerConfig::Rslg(config) => {
+                Box::new(RslgCompiler::new(task, successor_generator_name, config))
             }
-            PartialActionCompilerName::Aoag => {
-                Box::new(AoagCompiler::new(task, successor_generator_name))
+            PartialActionCompilerConfig::Aoag(config) => {
+                Box::new(AoagCompiler::new(task, successor_generator_name, config))
             }
         }
     }
 
-    pub fn to_state_space_compiler_name(&self) -> StateCompilerName {
+    pub fn to_state_space_compiler_config(&self) -> StateCompilerConfig {
         match self {
-            PartialActionCompilerName::Ilg => StateCompilerName::Ilg,
-            PartialActionCompilerName::Rslg => StateCompilerName::Rslg,
-            PartialActionCompilerName::Aoag => StateCompilerName::Aoag,
+            PartialActionCompilerConfig::Ilg(config) => StateCompilerConfig::Ilg(config.clone()),
+            PartialActionCompilerConfig::Rslg(config) => StateCompilerConfig::Rslg(config.clone()),
+            PartialActionCompilerConfig::Aoag(config) => StateCompilerConfig::Aoag(config.clone()),
         }
     }
 }

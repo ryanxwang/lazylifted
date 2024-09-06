@@ -1,4 +1,4 @@
-use crate::learning::graphs::{Compiler, StateCompilerName};
+use crate::learning::graphs::{Compiler, StateCompilerConfig};
 use crate::learning::models::{Evaluate, WlModel};
 use crate::search::successor_generators::SuccessorGeneratorName;
 use crate::search::{DBState, Heuristic, HeuristicValue, Task};
@@ -9,7 +9,7 @@ use std::path::Path;
 pub struct WlStateHeuristic {
     model: WlModel,
     successor_generator_name: SuccessorGeneratorName,
-    compiler_name: StateCompilerName,
+    compiler_name: StateCompilerConfig,
     compiler: Option<Box<dyn Compiler<DBState>>>,
 }
 

@@ -1,7 +1,7 @@
 use crate::{
     learning::{
         data_generators::DataGenerator,
-        graphs::{CGraph, ColourDictionary, PartialActionCompilerName},
+        graphs::{CGraph, ColourDictionary, PartialActionCompilerConfig},
         models::{
             RankingPair, RankingRelation, RankingTrainingData, TrainingData, TrainingInstance,
         },
@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "kebab-case")]
 pub struct PartialSpaceRankingConfig {
     pub successor_generator: SuccessorGeneratorName,
-    pub graph_compiler: PartialActionCompilerName,
+    pub graph_compiler: PartialActionCompilerConfig,
     pub group_partial_actions: bool,
 }
 

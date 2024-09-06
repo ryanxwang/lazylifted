@@ -1,7 +1,7 @@
 use crate::{
     learning::{
         data_generators::{DataGenerator, DataGeneratorConfig},
-        graphs::{CGraph, ColourDictionary, PartialActionCompilerName, StateCompilerName},
+        graphs::{CGraph, ColourDictionary, PartialActionCompilerConfig, StateCompilerConfig},
         ml::MlModel,
         models::{
             model_utils::{extract_from_zip, zip_files, PICKLE_FILE_NAME, RON_FILE_NAME},
@@ -63,30 +63,36 @@ impl WlModel {
 
     /// When evaluating, the heuristic needs to know which compiler to use to
     /// input the right graph
-    pub fn partial_action_compiler_name(&self) -> Option<PartialActionCompilerName> {
+    pub fn partial_action_compiler_config(&self) -> Option<PartialActionCompilerConfig> {
         match &self.config.data_generator {
-            DataGeneratorConfig::PartialSpaceRanking(config) => Some(config.graph_compiler),
-            DataGeneratorConfig::PartialSpaceRegression(config) => Some(config.graph_compiler),
-            DataGeneratorConfig::PartialSpaceDenseRanking(config) => Some(config.graph_compiler),
+            DataGeneratorConfig::PartialSpaceRanking(config) => Some(config.graph_compiler.clone()),
+            DataGeneratorConfig::PartialSpaceRegression(config) => {
+                Some(config.graph_compiler.clone())
+            }
+            DataGeneratorConfig::PartialSpaceDenseRanking(config) => {
+                Some(config.graph_compiler.clone())
+            }
             DataGeneratorConfig::StateSpaceRanking(_)
             | DataGeneratorConfig::StateSpaceRegression(_) => None,
         }
     }
 
-    pub fn state_compiler_name(&self) -> Option<StateCompilerName> {
+    pub fn state_compiler_name(&self) -> Option<StateCompilerConfig> {
         match &self.config.data_generator {
-            DataGeneratorConfig::StateSpaceRanking(config) => Some(config.graph_compiler),
-            DataGeneratorConfig::StateSpaceRegression(config) => Some(config.graph_compiler),
+            DataGeneratorConfig::StateSpaceRanking(config) => Some(config.graph_compiler.clone()),
+            DataGeneratorConfig::StateSpaceRegression(config) => {
+                Some(config.graph_compiler.clone())
+            }
             // these are partial space configs, but they can still be used for
             // state space search once trained
             DataGeneratorConfig::PartialSpaceRanking(config) => {
-                Some(config.graph_compiler.to_state_space_compiler_name())
+                Some(config.graph_compiler.to_state_space_compiler_config())
             }
             DataGeneratorConfig::PartialSpaceRegression(config) => {
-                Some(config.graph_compiler.to_state_space_compiler_name())
+                Some(config.graph_compiler.to_state_space_compiler_config())
             }
             DataGeneratorConfig::PartialSpaceDenseRanking(config) => {
-                Some(config.graph_compiler.to_state_space_compiler_name())
+                Some(config.graph_compiler.to_state_space_compiler_config())
             }
         }
     }

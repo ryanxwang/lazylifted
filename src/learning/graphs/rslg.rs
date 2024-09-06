@@ -6,6 +6,7 @@ use crate::{
         Negatable, PartialAction, PartialEffects, SuccessorGenerator, Task, NO_PARTIAL,
     },
 };
+use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet},
     fmt::Display,
@@ -13,14 +14,19 @@ use std::{
 use strum::EnumCount;
 use strum_macros::{EnumCount as EnumCountMacro, FromRepr};
 
-// TODO-soon: make these runtime config options
-const NO_STATIC_PREDICATES: bool = true;
-const OBJECTS_COLOURED_BY_STATIC_PREDICATES: bool = true;
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "kebab-case")]
+pub struct RslgConfig {
+    pub ignore_static_atoms: bool,
+    pub objects_coloured_by_static_information: bool,
+}
 
 #[derive(Debug)]
 pub struct RslgCompiler {
     /// Successor generator to use
     successor_generator: Box<dyn SuccessorGenerator>,
+    /// Configuration for the compiler
+    config: RslgConfig,
     /// A precompiled graph for the task.
     base_graph: Option<CGraph>,
     /// A map from object index to node index in the base graph.
@@ -45,7 +51,11 @@ pub struct RslgCompiler {
 }
 
 impl RslgCompiler {
-    pub fn new(task: &Task, successor_generator_name: SuccessorGeneratorName) -> Self {
+    pub fn new(
+        task: &Task,
+        successor_generator_name: SuccessorGeneratorName,
+        config: &RslgConfig,
+    ) -> Self {
         // TODO-soon: not only can we use static predicates of arity 1 to
         // produce the initial colours, we can also use those of arity 2 to
         // initialise some edges in the graph with colours representing static
@@ -59,7 +69,7 @@ impl RslgCompiler {
             .map(|(i, &p)| (p, i))
             .collect();
 
-        let max_object_colours = if OBJECTS_COLOURED_BY_STATIC_PREDICATES {
+        let max_object_colours = if config.objects_coloured_by_static_information {
             // can't just use the maximum seen colour, as this needs to be
             // instance agnostic, so we ask the task for the maximum number of
             // static predicates that could appear in any instance
@@ -72,7 +82,7 @@ impl RslgCompiler {
         let mut object_colour_names = HashMap::new();
 
         for static_predicates in task.object_static_information() {
-            let colour = if OBJECTS_COLOURED_BY_STATIC_PREDICATES {
+            let colour = if config.objects_coloured_by_static_information {
                 let mut colour: usize = 0;
                 for predicate_index in static_predicates {
                     colour += 1 << static_predicate_map[predicate_index];
@@ -85,7 +95,7 @@ impl RslgCompiler {
 
             object_colours.push(colour);
             object_colour_names.insert(colour, {
-                if OBJECTS_COLOURED_BY_STATIC_PREDICATES {
+                if config.objects_coloured_by_static_information {
                     let mut pred_names = vec![];
                     for predicate_index in static_predicates {
                         pred_names.push(task.predicates[*predicate_index].name.clone().to_string());
@@ -105,6 +115,7 @@ impl RslgCompiler {
 
         let mut compiler = Self {
             successor_generator: successor_generator_name.create(task),
+            config: config.clone(),
             base_graph: None,
             object_index_to_node_index: HashMap::new(),
             goal_atom: task
@@ -215,7 +226,9 @@ impl RslgCompiler {
         }
 
         for (atom, atom_type) in atoms {
-            if NO_STATIC_PREDICATES && self.static_predicates.contains(&atom.predicate_index()) {
+            if self.config.ignore_static_atoms
+                && self.static_predicates.contains(&atom.predicate_index())
+            {
                 continue;
             }
             let node_id = graph.add_node(self.get_atom_colour(atom.predicate_index(), atom_type));
@@ -447,10 +460,18 @@ mod tests {
     use super::*;
     use crate::test_utils::*;
 
+    fn test_config() -> RslgConfig {
+        RslgConfig {
+            ignore_static_atoms: true,
+            objects_coloured_by_static_information: true,
+        }
+    }
+
     #[test]
     fn blocksworld_precompilation() {
         let task = Task::from_text(BLOCKSWORLD_DOMAIN_TEXT, BLOCKSWORLD_PROBLEM13_TEXT);
-        let compiler = RslgCompiler::new(&task, SuccessorGeneratorName::FullReducer);
+        let compiler =
+            RslgCompiler::new(&task, SuccessorGeneratorName::FullReducer, &test_config());
 
         let graph = compiler.base_graph.as_ref().unwrap();
         assert_eq!(graph.node_count(), 4);
@@ -467,7 +488,8 @@ mod tests {
     #[test]
     fn blocksworld_compilation() {
         let task = Task::from_text(BLOCKSWORLD_DOMAIN_TEXT, BLOCKSWORLD_PROBLEM13_TEXT);
-        let compiler = RslgCompiler::new(&task, SuccessorGeneratorName::FullReducer);
+        let compiler =
+            RslgCompiler::new(&task, SuccessorGeneratorName::FullReducer, &test_config());
         let successor_generator = SuccessorGeneratorName::FullReducer.create(&task);
 
         let state = task.initial_state.clone();

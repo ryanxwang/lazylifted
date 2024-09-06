@@ -12,4 +12,6 @@ set-or-multiset = "multiset"
 
 [wl-model.data-generator.state-space-regression]
 successor-generator = "full-reducer"
-graph-compiler = "ilg"
+
+[wl-model.data-generator.state-space-regression.graph-compiler.ilg]
+ignore-static-atoms = true

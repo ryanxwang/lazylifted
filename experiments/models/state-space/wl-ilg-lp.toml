@@ -12,4 +12,6 @@ set-or-multiset = "set"
 
 [wl-model.data-generator.state-space-ranking]
 successor-generator = "full-reducer"
-graph-compiler = "ilg"
+
+[wl-model.data-generator.state-space-ranking.graph-compiler.ilg]
+ignore-static-atoms = true

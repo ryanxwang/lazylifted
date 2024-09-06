@@ -1,7 +1,7 @@
 use crate::{
     learning::{
         data_generators::DataGenerator,
-        graphs::{CGraph, ColourDictionary, StateCompilerName},
+        graphs::{CGraph, ColourDictionary, StateCompilerConfig},
         models::{RegressionTrainingData, TrainingData, TrainingInstance},
     },
     search::successor_generators::SuccessorGeneratorName,
@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "kebab-case")]
 pub struct StateSpaceRegressionConfig {
     pub successor_generator: SuccessorGeneratorName,
-    pub graph_compiler: StateCompilerName,
+    pub graph_compiler: StateCompilerConfig,
 }
 
 #[derive(Debug)]

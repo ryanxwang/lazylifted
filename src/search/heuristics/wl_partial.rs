@@ -1,4 +1,4 @@
-use crate::learning::graphs::{PartialActionCompiler, PartialActionCompilerName};
+use crate::learning::graphs::{PartialActionCompiler, PartialActionCompilerConfig};
 use crate::learning::models::{Evaluate, WlModel};
 use crate::search::successor_generators::SuccessorGeneratorName;
 use crate::search::{DBState, Heuristic, HeuristicValue, PartialAction, Task};
@@ -8,7 +8,7 @@ use std::path::Path;
 #[derive(Debug)]
 pub struct WlPartialHeuristic {
     model: WlModel,
-    compiler_name: PartialActionCompilerName,
+    compiler_name: PartialActionCompilerConfig,
     successor_generator_name: SuccessorGeneratorName,
     compiler: Option<Box<dyn PartialActionCompiler>>,
 }
@@ -19,7 +19,7 @@ impl WlPartialHeuristic {
         let model = WlModel::load(py, saved_model);
         let successor_generator_name = model.successor_generator_name();
 
-        match model.partial_action_compiler_name() {
+        match model.partial_action_compiler_config() {
             Some(compiler_name) => Self {
                 model,
                 compiler: None,

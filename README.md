@@ -84,4 +84,4 @@ OS.
 ## References
 
 - Corrêa, A. B.; Pommerening, F.; Helmert, M.; and Francès, G. 2020. Lifted Successor Generation using Query Optimization Techniques. In Proc. ICAPS 2020, pp. 80-89. [[pdf]](https://ai.dmi.unibas.ch/papers/correa-et-al-icaps2020.pdf)
-- Chen, D. Z.; Trevizan, F. W.; and Thiébaux, S. 2024. Return to Tradition: Learning Reliable Heuristics with Classical Machine Learning. In Proc. ICAPS 2024. [[pdl]](https://openreview.net/pdf?id=zVO8ZRIg7Q)
+- Chen, D. Z.; Trevizan, F. W.; and Thiébaux, S. 2024. Return to Tradition: Learning Reliable Heuristics with Classical Machine Learning. In Proc. ICAPS 2024. [[pdf]](https://openreview.net/pdf?id=zVO8ZRIg7Q)

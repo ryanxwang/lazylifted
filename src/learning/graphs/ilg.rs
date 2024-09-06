@@ -20,8 +20,6 @@ use std::fmt::Display;
 use strum::EnumCount;
 use strum_macros::{EnumCount as EnumCountMacro, FromRepr};
 
-const NO_STATIC_PREDICATES: bool = true;
-
 /// Colours of atom nodes in the ILG.
 #[allow(clippy::enum_variant_names)]
 #[derive(Debug, Clone, PartialEq, Eq, EnumCountMacro, Copy, FromRepr)]
@@ -45,9 +43,16 @@ impl Display for AtomNodeType {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct IlgConfig {
+    pub ignore_static_atoms: bool,
+}
+
 /// A compiler to convert states to ILGs.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IlgCompiler {
+    config: IlgConfig,
     base_graph: Option<CGraph>,
     object_index_to_node_index: HashMap<usize, NodeID>,
     goal_atom_to_node_index: HashMap<Atom, NodeID>,
@@ -56,8 +61,9 @@ pub struct IlgCompiler {
 }
 
 impl IlgCompiler {
-    pub fn new(task: &Task) -> Self {
+    pub fn new(task: &Task, config: &IlgConfig) -> Self {
         let mut compiler = Self {
+            config: config.clone(),
             base_graph: None,
             object_index_to_node_index: HashMap::new(),
             goal_atom_to_node_index: HashMap::new(),
@@ -116,7 +122,9 @@ impl IlgCompiler {
             .clone();
 
         for atom in state.atoms() {
-            if NO_STATIC_PREDICATES && self.static_predicates.contains(&atom.predicate_index()) {
+            if self.config.ignore_static_atoms
+                && self.static_predicates.contains(&atom.predicate_index())
+            {
                 continue;
             }
             match self.goal_atom_to_node_index.get(&atom) {
@@ -159,7 +167,9 @@ impl IlgCompiler {
         }
 
         for atom in task.goal.atoms() {
-            if NO_STATIC_PREDICATES && self.static_predicates.contains(&atom.predicate_index()) {
+            if self.config.ignore_static_atoms
+                && self.static_predicates.contains(&atom.predicate_index())
+            {
                 continue;
             }
             let atom = match atom {
@@ -237,10 +247,16 @@ mod tests {
         assert_eq!(IlgCompiler::get_atom_colour(1, AtomNodeType::NonGoal), 6);
     }
 
+    fn test_config() -> IlgConfig {
+        IlgConfig {
+            ignore_static_atoms: true,
+        }
+    }
+
     #[test]
     fn blocksworld_precompilation() {
         let task = Task::from_text(BLOCKSWORLD_DOMAIN_TEXT, BLOCKSWORLD_PROBLEM13_TEXT);
-        let compiler = IlgCompiler::new(&task);
+        let compiler = IlgCompiler::new(&task, &test_config());
 
         let graph = compiler.base_graph.as_ref().unwrap();
         assert_eq!(graph.node_count(), 9);
@@ -274,7 +290,7 @@ mod tests {
     #[test]
     fn blocksworld_compilation() {
         let task = Task::from_text(BLOCKSWORLD_DOMAIN_TEXT, BLOCKSWORLD_PROBLEM13_TEXT);
-        let compiler = IlgCompiler::new(&task);
+        let compiler = IlgCompiler::new(&task, &test_config());
 
         let graph = compiler.compile(&task.initial_state, None);
 

@@ -12,4 +12,7 @@ set-or-multiset = "set"
 
 [wl-model.data-generator.partial-space-regression]
 successor-generator = "full-reducer"
-graph-compiler = "aoag"
+
+[wl-model.data-generator.partial-space-regression.graph-compiler.aoag]
+ignore-static-atoms = true
+objects-coloured-by-static-information = true

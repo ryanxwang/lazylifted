@@ -85,7 +85,11 @@ mod tests {
             data_generator: DataGeneratorConfig::StateSpaceRanking(
                 crate::learning::data_generators::StateSpaceRankingConfig {
                     successor_generator: SuccessorGeneratorName::FullReducer,
-                    graph_compiler: crate::learning::graphs::StateCompilerName::Ilg,
+                    graph_compiler: crate::learning::graphs::StateCompilerConfig::Ilg(
+                        crate::learning::graphs::IlgConfig {
+                            ignore_static_atoms: true,
+                        },
+                    ),
                 },
             ),
             preprocessing_option:
