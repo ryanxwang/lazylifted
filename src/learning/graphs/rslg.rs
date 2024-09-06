@@ -58,12 +58,6 @@ impl RslgCompiler {
         successor_generator_name: SuccessorGeneratorName,
         config: &RslgConfig,
     ) -> Self {
-        // TODO-soon: not only can we use static predicates of arity 1 to
-        // produce the initial colours, we can also use those of arity 2 to
-        // initialise some edges in the graph with colours representing static
-        // predicate information. This would nicely allow modelling any domain
-        // with an underlying graph. What about arity > 2? Projection?
-        // map from predicate index to exponent
         let singular_static_predicate_map: HashMap<usize, usize> = task
             .object_static_information_predicates()
             .iter()
