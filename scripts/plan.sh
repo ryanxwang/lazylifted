@@ -14,9 +14,9 @@ model_str=$(sed 's/-/_/g' <<< $model_type)-$(sed 's/-/_/g' <<< $model)
 log_dir=planning_logs/$model_str/$domain
 plan_dir=plans/$model_str/$domain
 
-HTG_REGEX=".*-htg$"
+HTG_REGEX=".*-hbf$"
 if [[ $domain =~ $HTG_REGEX ]]; then
-    domain_no_suffix=$(sed 's/-htg$//' <<< $domain)
+    domain_no_suffix=$(sed 's/-hbf$//' <<< $domain)
     domain_dir=benchmarks/htg/$domain_no_suffix
 else
     domain_dir=benchmarks/ipc23-learning/$domain
