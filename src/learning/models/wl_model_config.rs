@@ -21,8 +21,8 @@ pub struct WlModelConfig {
     /// true.
     #[serde(default = "default_tune")]
     pub tune: bool,
-    // TODO-someday: this really should be a command line flag, not a part of the
-    // model config, but this is convenient for now
+    // TODO-someday: this really should be a command line flag, not a part of
+    // the model config, but this is convenient for now
     //
     // UPDATE: This might actually be fine/good? Changing to a "someday".
     #[serde(default = "default_explain_colours")]

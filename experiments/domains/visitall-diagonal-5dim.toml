@@ -1,0 +1,3 @@
+domain_pddl = "benchmarks/hbf/visitall-diagonal/5dim/domain.pddl"
+problems_dir = "benchmarks/hbf/visitall-diagonal/5dim/training"
+plans_dir = "benchmarks/hbf/visitall-diagonal/5dim/training_plans"

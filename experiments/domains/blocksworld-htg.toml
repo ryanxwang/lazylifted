@@ -1,3 +1,0 @@
-domain_pddl = "benchmarks/htg/blocksworld/domain.pddl"
-problems_dir = "benchmarks/htg/blocksworld/training"
-plans_dir = "benchmarks/htg/blocksworld/training_plans"
