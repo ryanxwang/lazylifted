@@ -10,7 +10,7 @@ model=$2
 
 model_str=$(sed 's/-/_/g' <<< $model_type)-$(sed 's/-/_/g' <<< $model)
 
-domains=("blocksworld" "childsnack" "ferry" "floortile" "miconic" "rovers" "satellite" "sokoban" "spanner" "transport" "blocksworld-htg")
+domains=("blocksworld" "childsnack" "ferry" "floortile" "miconic" "rovers" "satellite" "sokoban" "spanner" "transport" "blocksworld-hbf")
 csvs=()
 
 mkdir -p planning_results/$model_str

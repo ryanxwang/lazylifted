@@ -8,11 +8,13 @@ alpha = 1e-7
 
 [wl-model.wl]
 iters = 4
+set-or-multiset = "set"
 
 [wl-model.data-generator.partial-space-regression]
 successor-generator = "full-reducer"
 
-[wl-model.data-generator.partial-space-dense-ranking.graph-compiler.rslg]
+[wl-model.data-generator.partial-space-regression.graph-compiler.aoag]
 ignore-static-atoms = true
 objects-coloured-by-static-information = true
+object-edges-from-static-information = false
 use-edge-colours = true

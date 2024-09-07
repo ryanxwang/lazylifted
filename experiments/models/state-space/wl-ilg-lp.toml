@@ -1,6 +1,6 @@
 [wl-model]
-validate = true
-tune = true
+validate = false
+tune = false
 round = true
 
 [wl-model.model.ranker.lp]
