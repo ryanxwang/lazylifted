@@ -1,7 +1,7 @@
 [wl-model]
 validate = true
 tune = true
-round = false
+round = true
 explain-colours = false
 
 [wl-model.model.ranker.lp]
