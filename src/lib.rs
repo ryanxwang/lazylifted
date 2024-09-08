@@ -1,5 +1,5 @@
-#![warn(dead_code)]
 #![warn(missing_debug_implementations)]
+#![deny(dead_code)]
 #![deny(non_ascii_idents)]
 #![deny(trivial_casts)]
 #![deny(trivial_numeric_casts)]

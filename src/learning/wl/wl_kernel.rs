@@ -46,12 +46,6 @@ impl WlKernel {
         }
     }
 
-    pub fn reset(&mut self) {
-        self.hashes = HashMap::new();
-        self.statistics = WlStatistics::new();
-        self.mode = Mode::Train;
-    }
-
     /// Compute colour histograms for some graph. This will run the
     /// Weisfeiler-Lehman algorithm on the graphs. The first time this is
     /// called, the kernel will be in training mode and will create new hashes
