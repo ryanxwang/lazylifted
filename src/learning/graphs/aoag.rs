@@ -21,6 +21,9 @@ pub struct AoagConfig {
     pub ignore_static_atoms: bool,
     pub use_edge_colours: bool,
     pub objects_coloured_by_static_information: bool,
+    // TODO-soon: this results in massive memory use on satellite and rovers,
+    // need to fix that (also a lot of features on rovers even on small wl
+    // iterations)
     pub object_edges_from_static_information: bool,
 }
 
