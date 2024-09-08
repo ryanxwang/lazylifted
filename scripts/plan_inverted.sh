@@ -10,7 +10,7 @@ model=$2
 domain=$3
 instance=$4
 
-model_str=$(sed 's/-/_/g' <<< $model_type)-$(sed 's/-/_/g' <<< $model)
+model_str=$(sed 's/-/_/g' <<< $model_type)-$(sed 's/-/_/g' <<< $model)-inverted
 log_dir=planning_logs/$model_str/$domain
 plan_dir=plans/$model_str/$domain
 
@@ -41,9 +41,9 @@ instance_str=$(sed 's/\//_/g' <<< $instance)
 plan_file=$plan_dir/$instance_str.plan
 
 if [ "$model_type" == "partial-space" ]; then
-    subcommand="partial-action-search"
-elif [ "$model_type" == "state-space" ]; then
     subcommand="state-space-search"
+elif [ "$model_type" == "state-space" ]; then
+    subcommand="partial-action-search"
 else
     echo "Unsupported model type"
     exit 1
