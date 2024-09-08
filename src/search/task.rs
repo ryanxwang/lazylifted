@@ -36,6 +36,8 @@ pub struct Task {
 
 impl Task {
     pub fn from_path(domain_path: &PathBuf, problem_path: &PathBuf) -> Self {
+        // TODO-someday: I should just remove my own parser code and use the
+        // pddl crate
         let domain_text =
             fs::read_to_string(domain_path).expect("Failed to read domain file, does it exist?");
         let problem_text =
