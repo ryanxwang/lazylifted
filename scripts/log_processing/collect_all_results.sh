@@ -1,14 +1,11 @@
 #!/bin/bash
 
-if [ $# -ne 2 ]; then
-    echo "Usage: $0 <model_type> <model>"
+if [ $# -ne 1 ]; then
+    echo "Usage: $0 <model_str>"
     exit 1
 fi
 
-model_type=$1
-model=$2
-
-model_str=$(sed 's/-/_/g' <<< $model_type)-$(sed 's/-/_/g' <<< $model)
+model_str=$1
 
 domains=("blocksworld" "childsnack" "ferry" "floortile" "miconic" "rovers" "satellite" "sokoban" "spanner" "transport" "blocksworld-hbf")
 csvs=()
