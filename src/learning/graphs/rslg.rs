@@ -2,8 +2,8 @@
 use crate::{
     learning::graphs::{CGraph, ColourDictionary, Compiler, NodeID, PartialActionCompiler},
     search::{
-        successor_generators::SuccessorGeneratorName, Action, ActionSchema, Atom, DBState,
-        Negatable, PartialAction, PartialEffects, SuccessorGenerator, Task, NO_PARTIAL,
+        successor_generators::SuccessorGeneratorName, ActionSchema, Atom, DBState, Negatable,
+        PartialAction, PartialEffects, SuccessorGenerator, Task, NO_PARTIAL,
     },
 };
 use serde::{Deserialize, Serialize};
@@ -143,19 +143,22 @@ impl RslgCompiler {
         colour_dictionary: Option<&mut ColourDictionary>,
     ) -> CGraph {
         let mut graph = self.base_graph.clone().unwrap();
-        let action_schema = &self.action_schemas[partial_action.schema_index()];
-
-        let applicable_actions: Vec<Action> = if *partial_action == NO_PARTIAL {
-            vec![]
-        } else {
-            self.successor_generator
-                .get_applicable_actions_from_partial(state, action_schema, partial_action)
-        };
 
         let PartialEffects {
             unavoidable_effects,
             optional_effects,
-        } = partial_action.get_partial_effects(action_schema, &applicable_actions);
+        } = if *partial_action == NO_PARTIAL {
+            PartialEffects {
+                unavoidable_effects: HashSet::new(),
+                optional_effects: HashSet::new(),
+            }
+        } else {
+            let action_schema = &self.action_schemas[partial_action.schema_index()];
+            let applicable_actions = self
+                .successor_generator
+                .get_applicable_actions_from_partial(state, action_schema, partial_action);
+            partial_action.get_partial_effects(action_schema, &applicable_actions)
+        };
 
         let (unavoidable_adds, unavoidable_deletes) = unavoidable_effects.into_iter().fold(
             (HashSet::new(), HashSet::new()),
@@ -479,6 +482,7 @@ impl Display for AtomGoalType {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::search::Action;
     use crate::test_utils::*;
 
     fn test_config() -> RslgConfig {
