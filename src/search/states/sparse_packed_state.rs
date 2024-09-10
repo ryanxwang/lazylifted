@@ -7,7 +7,7 @@ use internment::Intern;
 use lru::LruCache;
 use std::{
     cell::RefCell,
-    collections::{BTreeSet, HashMap},
+    collections::{BTreeSet, HashMap, HashSet},
     num::NonZeroUsize,
 };
 
@@ -57,6 +57,8 @@ pub struct SparseStatePacker {
     // We cache only for fast unpacking but not for packing, as we never pack
     // the same state twice.
     unpacked_states_cache: RefCell<LruCache<SparsePackedState, DBState>>,
+    static_predicate_indices: HashSet<usize>,
+    static_relations: HashMap<usize, Relation>,
 }
 
 impl SparseStatePacker {
@@ -90,11 +92,21 @@ impl SparseStatePacker {
             }
         }
 
+        // We deal with static predicates by not packing them at all. Instead,
+        // we store them in the packer and return them as is when unpacking.
+        let static_predicate_indices = task.static_predicates().clone();
+        let mut static_relations = HashMap::new();
+        for &i in &static_predicate_indices {
+            static_relations.insert(i, task.initial_state.relations[i].clone());
+        }
+
         Self {
             hash_multipliers,
             obj_to_hash_index,
             hash_index_to_obj,
             unpacked_states_cache: RefCell::new(LruCache::new(NonZeroUsize::new(1000).unwrap())),
+            static_predicate_indices,
+            static_relations,
         }
     }
 
@@ -103,8 +115,17 @@ impl SparseStatePacker {
         let mut predicate_symbols = Vec::with_capacity(state.relations.len());
 
         for relation in &state.relations {
-            let mut packed_relation = Vec::with_capacity(relation.tuples.len());
             let predicate_index = relation.predicate_symbol;
+
+            // If the predicate is static, we don't need to pack it, it will be the
+            // same in all states.
+            if self.static_predicate_indices.contains(&predicate_index) {
+                packed_relations.push(Vec::new());
+                predicate_symbols.push(predicate_index);
+                continue;
+            }
+
+            let mut packed_relation = Vec::with_capacity(relation.tuples.len());
             for tuple in relation.tuples.iter() {
                 let mut hash = 0;
                 for (i, &x) in tuple.iter().enumerate() {
@@ -116,7 +137,7 @@ impl SparseStatePacker {
             // sorting ensures that the hash is unique for each state
             packed_relation.sort_unstable();
             packed_relations.push(packed_relation);
-            predicate_symbols.push(relation.predicate_symbol);
+            predicate_symbols.push(predicate_index);
         }
 
         // rywang: I've thought about adding to the unpacking cache here as
@@ -139,6 +160,14 @@ impl SparseStatePacker {
         let mut relations = Vec::with_capacity(packed_state.packed_relations.len());
 
         for (i, packed_relation) in packed_state.packed_relations.iter().enumerate() {
+            if self
+                .static_predicate_indices
+                .contains(&packed_state.predicate_symbols[i])
+            {
+                relations.push(self.static_relations[&packed_state.predicate_symbols[i]].clone());
+                continue;
+            }
+
             let mut tuples = BTreeSet::new();
             let predicate_index = packed_state.predicate_symbols[i];
             for &hash in packed_relation.iter() {
