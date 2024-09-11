@@ -13,17 +13,13 @@ use std::{
     fmt::{self, Display, Formatter},
 };
 
-/// A ground atom is a vector of object indices. It only makes sense in the
-/// context of a specific predicate, see [`Relation`].
-pub type GroundAtom = SmallTuple;
-
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub struct Relation {
     /// The predicate symbol of this relation.
     pub predicate_symbol: usize,
     /// The tuples of the relation. This is a [`BTreeSet`] as
     /// [`HashSet`](std::collections::HashSet) does not implement [`Hash`] trait.
-    pub tuples: BTreeSet<GroundAtom>,
+    pub tuples: BTreeSet<SmallTuple>,
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
@@ -49,8 +45,8 @@ impl DBState {
         self.nullary_atoms[index] = v;
     }
 
-    pub fn insert_tuple_in_relation(&mut self, ga: GroundAtom, id: usize) {
-        self.relations[id].tuples.insert(ga);
+    pub fn insert_tuple_in_relation(&mut self, ground_atom: SmallTuple, id: usize) {
+        self.relations[id].tuples.insert(ground_atom);
     }
 
     pub fn from_problem(

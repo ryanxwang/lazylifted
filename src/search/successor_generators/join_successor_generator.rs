@@ -1,4 +1,3 @@
-use crate::search::states::GroundAtom;
 use crate::search::successor_generators::{
     JoinAlgorithm, PrecompiledActionData, SuccessorGenerator,
 };
@@ -259,7 +258,7 @@ fn is_trivially_inapplicable(action: &ActionSchema, state: &DBState) -> bool {
     false
 }
 
-fn instantiate_effect(effect: &Negatable<AtomSchema>, action: &Action) -> GroundAtom {
+fn instantiate_effect(effect: &Negatable<AtomSchema>, action: &Action) -> SmallTuple {
     effect
         .arguments()
         .iter()

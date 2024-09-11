@@ -1,5 +1,4 @@
 use crate::search::database::{hash_join, Table};
-use crate::search::states::GroundAtom;
 use crate::search::{
     raw_small_tuple, AtomSchema, DBState, Negatable, RawSmallTuple, SchemaArgument, SmallTuple,
 };
@@ -120,7 +119,7 @@ fn select_tuples(
     free_and_param_index: &[(usize, usize)],
     objects_per_param: &[HashSet<usize>],
     fixed_schema_params: &HashMap<usize, usize>,
-) -> Vec<GroundAtom> {
+) -> Vec<SmallTuple> {
     // TODO-soon: we spend a decent bit of time inside this closure (in fact,
     // that most of our time in the finding the applicable actions), can it be
     // faster?
