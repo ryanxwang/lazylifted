@@ -51,7 +51,7 @@ pub struct IlgConfig {
 }
 
 /// A compiler to convert states to ILGs.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug)]
 pub struct IlgCompiler {
     config: IlgConfig,
     base_graph: Option<CGraph>,
@@ -233,7 +233,7 @@ impl PartialActionCompiler for IlgCompiler {
 mod tests {
 
     use super::*;
-    use crate::test_utils::*;
+    use crate::{search::small_tuple, test_utils::*};
 
     #[test]
     fn node_type_to_i32() {
@@ -320,7 +320,7 @@ mod tests {
                 Negatable::Positive(atom) => atom,
             };
             assert!(compiler.goal_atom_to_node_index.contains_key(atom));
-            if atom.predicate_index() == 4 && atom.arguments() == vec![1, 2] {
+            if atom.predicate_index() == 4 && atom.arguments() == small_tuple![1, 2] {
                 // (on b2 b3) is an achieved goal
                 assert_eq!(
                     graph[compiler.goal_atom_to_node_index[atom]],

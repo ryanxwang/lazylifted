@@ -1,18 +1,15 @@
-use smallvec::SmallVec;
-
-const TYPICAL_TUPLE_SIZE: usize = 5;
-pub type Tuple = SmallVec<[usize; TYPICAL_TUPLE_SIZE]>;
+use crate::search::SmallTuple;
 
 /// Data structure containing a set of tuples and indices corresponding to the
 /// free variable index in each tuple position.
 #[derive(Debug, Clone)]
 pub struct Table {
-    pub tuples: Vec<Tuple>,
+    pub tuples: Vec<SmallTuple>,
     pub tuple_index: Vec<i32>,
 }
 
 impl Table {
-    pub fn new(tuples: Vec<Tuple>, tuple_index: Vec<i32>) -> Self {
+    pub fn new(tuples: Vec<SmallTuple>, tuple_index: Vec<i32>) -> Self {
         Self {
             tuples,
             tuple_index,

@@ -1,18 +1,19 @@
 use crate::parsed_types::{Atom as ParsedAtom, Name};
-use crate::search::{object_tuple, AtomSchema, Negatable, ObjectTuple, SchemaArgument, Task};
-use serde::{Deserialize, Serialize};
+use crate::search::{AtomSchema, Negatable, SchemaArgument, SmallTuple, Task};
 use std::collections::HashMap;
+
+use super::raw_small_tuple;
 
 /// An [`Atom`] is similar to a [`crate::search::AtomSchema`], except that
 /// state atoms are fully grounded.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Atom {
     predicate_index: usize,
-    arguments: ObjectTuple,
+    arguments: SmallTuple,
 }
 
 impl Atom {
-    pub fn new(predicate_index: usize, arguments: ObjectTuple) -> Self {
+    pub fn new(predicate_index: usize, arguments: SmallTuple) -> Self {
         Self {
             predicate_index,
             arguments,
@@ -27,15 +28,16 @@ impl Atom {
         let predicate_index = *predicate_table
             .get(atom.predicate_name())
             .expect("Goal atom predicate not found in domain predicate table.");
-        let arguments = atom
-            .values()
-            .iter()
-            .map(|name| {
-                *object_table
-                    .get(name)
-                    .expect("Goal atom argument not found in object table.")
-            })
-            .collect();
+        let arguments = SmallTuple::new(
+            atom.values()
+                .iter()
+                .map(|name| {
+                    *object_table
+                        .get(name)
+                        .expect("Goal atom argument not found in object table.")
+                })
+                .collect(),
+        );
 
         Self {
             predicate_index,
@@ -49,7 +51,7 @@ impl Atom {
     }
 
     #[inline(always)]
-    pub fn arguments(&self) -> &[usize] {
+    pub fn arguments(&self) -> &SmallTuple {
         &self.arguments
     }
 
@@ -85,7 +87,7 @@ impl Negatable<Atom> {
     }
 
     #[inline(always)]
-    pub fn arguments(&self) -> &[usize] {
+    pub fn arguments(&self) -> &SmallTuple {
         self.underlying().arguments()
     }
 }
@@ -94,7 +96,7 @@ impl TryFrom<AtomSchema> for Atom {
     type Error = ();
 
     fn try_from(value: AtomSchema) -> Result<Self, Self::Error> {
-        let mut arguments = object_tuple![];
+        let mut arguments = raw_small_tuple![];
         for argument in value.arguments() {
             match argument {
                 SchemaArgument::Constant(index) => arguments.push(*index),
@@ -104,7 +106,7 @@ impl TryFrom<AtomSchema> for Atom {
             }
         }
 
-        Ok(Self::new(value.predicate_index(), arguments))
+        Ok(Self::new(value.predicate_index(), arguments.into()))
     }
 }
 

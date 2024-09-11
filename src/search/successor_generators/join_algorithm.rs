@@ -1,6 +1,8 @@
 use crate::search::database::{hash_join, Table};
 use crate::search::states::GroundAtom;
-use crate::search::{object_tuple, AtomSchema, DBState, Negatable, ObjectTuple, SchemaArgument};
+use crate::search::{
+    raw_small_tuple, AtomSchema, DBState, Negatable, RawSmallTuple, SchemaArgument, SmallTuple,
+};
 use std::collections::{HashMap, HashSet, VecDeque};
 
 #[derive(Debug)]
@@ -122,7 +124,7 @@ fn select_tuples(
     // TODO-soon: we spend a decent bit of time inside this closure (in fact,
     // that most of our time in the finding the applicable actions), can it be
     // faster?
-    let tuple_matches = |tuple: &ObjectTuple| -> bool {
+    let tuple_matches = |tuple: &SmallTuple| -> bool {
         // the tuple matches the atom if
         // 1. when the atom is a constant, the tuple has the same value
         // 2. when the atom is a free variable, the type of the tuple is a
@@ -170,7 +172,7 @@ fn select_tuples(
         // variables. We then remove those tuples that are present in the
         // state.
 
-        fn product(l: &HashSet<ObjectTuple>, r: HashSet<usize>) -> HashSet<ObjectTuple> {
+        fn product(l: &HashSet<RawSmallTuple>, r: HashSet<usize>) -> HashSet<RawSmallTuple> {
             l.iter()
                 .flat_map(|x| {
                     r.iter().map(move |y| {
@@ -195,11 +197,12 @@ fn select_tuples(
         };
         let mut all_tuples = get_relevant_objects(0)
             .iter()
-            .map(|&x| object_tuple![x])
-            .collect::<HashSet<ObjectTuple>>();
+            .map(|&x| raw_small_tuple![x])
+            .collect::<HashSet<RawSmallTuple>>();
         for atom_index in 1..atom.arguments().len() {
             all_tuples = product(&all_tuples, get_relevant_objects(atom_index));
         }
+        let all_tuples: HashSet<SmallTuple> = all_tuples.into_iter().map(SmallTuple::new).collect();
 
         for tuple in all_tuples {
             assert!(tuple_matches(&tuple));

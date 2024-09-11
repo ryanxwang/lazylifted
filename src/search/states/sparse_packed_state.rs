@@ -1,7 +1,7 @@
 use crate::search::{
-    object_tuple,
-    states::{DBState, GroundAtom, Relation},
-    Task,
+    raw_small_tuple,
+    states::{DBState, Relation},
+    RawSmallTuple, SmallTuple, Task,
 };
 use internment::Intern;
 use lru::LruCache;
@@ -171,8 +171,8 @@ impl SparseStatePacker {
             let mut tuples = BTreeSet::new();
             let predicate_index = packed_state.predicate_symbols[i];
             for &hash in packed_relation.iter() {
-                let mut tuple: GroundAtom =
-                    object_tuple![0; self.hash_multipliers[predicate_index].len()];
+                let mut tuple: RawSmallTuple =
+                    raw_small_tuple![0; self.hash_multipliers[predicate_index].len()];
                 let mut hash = hash;
                 for j in (0..self.hash_multipliers[predicate_index].len()).rev() {
                     let multiplier = self.hash_multipliers[predicate_index][j];
@@ -183,7 +183,7 @@ impl SparseStatePacker {
                     hash -= multiplier * index as u64;
                 }
                 assert_eq!(hash, 0);
-                tuples.insert(tuple);
+                tuples.insert(SmallTuple::new(tuple));
             }
             relations.push(Relation {
                 predicate_symbol: predicate_index,

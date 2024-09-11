@@ -3,8 +3,8 @@ use crate::search::successor_generators::{
     JoinAlgorithm, PrecompiledActionData, SuccessorGenerator,
 };
 use crate::search::{
-    Action, ActionSchema, AtomSchema, DBState, Negatable, ObjectTuple, PartialAction, Task,
-    NO_PARTIAL,
+    Action, ActionSchema, AtomSchema, DBState, Negatable, PartialAction, RawSmallTuple, SmallTuple,
+    Task, NO_PARTIAL,
 };
 use std::collections::HashMap;
 use std::fmt::Debug;
@@ -150,7 +150,8 @@ where
                         assert!(arg.is_constant());
                         arg.get_index()
                     })
-                    .collect();
+                    .collect::<RawSmallTuple>()
+                    .into();
 
                 if effect.is_negated() {
                     new_state.relations[effect.predicate_index()]
@@ -219,14 +220,15 @@ fn precompile_action_data(task: &Task, action_schema: &ActionSchema) -> Precompi
 fn is_ground_action_applicable(action: &ActionSchema, state: &DBState) -> bool {
     for precondition in action.preconditions() {
         let index = precondition.predicate_index();
-        let tuple: ObjectTuple = precondition
+        let tuple: SmallTuple = precondition
             .arguments()
             .iter()
             .map(|arg| {
                 assert!(arg.is_constant());
                 arg.get_index()
             })
-            .collect();
+            .collect::<RawSmallTuple>()
+            .into();
 
         let tuples_in_relation = &state.relations[index].tuples;
         if tuples_in_relation.contains(&tuple) == precondition.is_negated() {
@@ -268,7 +270,8 @@ fn instantiate_effect(effect: &Negatable<AtomSchema>, action: &Action) -> Ground
                 action.instantiation[arg.get_index()]
             }
         })
-        .collect()
+        .collect::<RawSmallTuple>()
+        .into()
 }
 
 #[cfg(test)]

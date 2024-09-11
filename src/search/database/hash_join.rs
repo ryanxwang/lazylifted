@@ -11,9 +11,9 @@ pub fn hash_join(t1: &mut Table, t2: &Table) {
         let mut cartesian_product = Vec::new();
         for tuple1 in &t1.tuples {
             for tuple2 in &t2.tuples {
-                let mut new_tuple = tuple1.clone();
+                let mut new_tuple = tuple1.raw().clone();
                 new_tuple.extend(tuple2.iter().cloned());
-                cartesian_product.push(new_tuple);
+                cartesian_product.push(new_tuple.into());
             }
         }
         t1.tuples = cartesian_product;
@@ -48,7 +48,7 @@ pub fn hash_join(t1: &mut Table, t2: &Table) {
 
                 hash_join_map.get(&key).into_iter().flat_map(|tuples| {
                     tuples.iter().map(|tuple2| {
-                        let mut new_tuple = tuple1.clone();
+                        let mut new_tuple = tuple1.raw().clone();
                         new_tuple.extend(
                             tuple2
                                 .iter()
@@ -56,7 +56,7 @@ pub fn hash_join(t1: &mut Table, t2: &Table) {
                                 .filter(|(j, _)| !to_remove.contains(j))
                                 .map(|(_, c)| *c),
                         );
-                        new_tuple
+                        new_tuple.into()
                     })
                 })
             })
@@ -67,33 +67,36 @@ pub fn hash_join(t1: &mut Table, t2: &Table) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::search::database::table::Tuple;
-    use smallvec::smallvec;
+    use crate::search::{small_tuple, SmallTuple};
 
     #[test]
     fn test_join() {
         let mut t1 = Table::new(
             vec![
-                smallvec![1, 2, 3],
-                smallvec![1, 2, 4],
-                smallvec![3, 2, 3],
-                smallvec![3, 5, 1],
+                small_tuple![1, 2, 3],
+                small_tuple![1, 2, 4],
+                small_tuple![3, 2, 3],
+                small_tuple![3, 5, 1],
             ],
             vec![0, 1, 2],
         );
         let t2 = Table::new(
-            vec![smallvec![2, 3, 5], smallvec![2, 3, 7], smallvec![5, 1, 2]],
+            vec![
+                small_tuple![2, 3, 5],
+                small_tuple![2, 3, 7],
+                small_tuple![5, 1, 2],
+            ],
             vec![1, 2, 3],
         );
 
         hash_join(&mut t1, &t2);
 
-        let expected_tuples: Vec<Tuple> = vec![
-            smallvec![1, 2, 3, 5],
-            smallvec![1, 2, 3, 7],
-            smallvec![3, 2, 3, 5],
-            smallvec![3, 2, 3, 7],
-            smallvec![3, 5, 1, 2],
+        let expected_tuples: Vec<SmallTuple> = vec![
+            small_tuple![1, 2, 3, 5],
+            small_tuple![1, 2, 3, 7],
+            small_tuple![3, 2, 3, 5],
+            small_tuple![3, 2, 3, 7],
+            small_tuple![3, 5, 1, 2],
         ];
         assert_eq!(t1.tuples, expected_tuples);
         assert_eq!(t1.tuple_index, vec![0, 1, 2, 3]);
@@ -101,16 +104,16 @@ mod tests {
 
     #[test]
     fn test_join_no_match() {
-        let mut t1 = Table::new(vec![smallvec![1, 2], smallvec![1, 4]], vec![0, 1]);
-        let t2 = Table::new(vec![smallvec![2, 3], smallvec![2, 5]], vec![2, 3]);
+        let mut t1 = Table::new(vec![small_tuple![1, 2], small_tuple![1, 4]], vec![0, 1]);
+        let t2 = Table::new(vec![small_tuple![2, 3], small_tuple![2, 5]], vec![2, 3]);
 
         hash_join(&mut t1, &t2);
 
-        let expected_tuples: Vec<Tuple> = vec![
-            smallvec![1, 2, 2, 3],
-            smallvec![1, 2, 2, 5],
-            smallvec![1, 4, 2, 3],
-            smallvec![1, 4, 2, 5],
+        let expected_tuples: Vec<SmallTuple> = vec![
+            small_tuple![1, 2, 2, 3],
+            small_tuple![1, 2, 2, 5],
+            small_tuple![1, 4, 2, 3],
+            small_tuple![1, 4, 2, 5],
         ];
         assert_eq!(t1.tuples, expected_tuples);
         assert_eq!(t1.tuple_index, vec![0, 1, 2, 3]);

@@ -30,19 +30,18 @@ pub fn project(t: &mut Table, over: &HashSet<i32>) {
 
 #[cfg(test)]
 mod tests {
-    use crate::search::database::table::Tuple;
 
     use super::*;
-    use smallvec::smallvec;
+    use crate::search::{small_tuple, SmallTuple};
 
     #[test]
     fn test_project() {
         let mut table = Table::new(
             vec![
-                smallvec![1, 2, 3],
-                smallvec![1, 2, 4],
-                smallvec![1, 3, 4],
-                smallvec![2, 3, 4],
+                small_tuple![1, 2, 3],
+                small_tuple![1, 2, 4],
+                small_tuple![1, 3, 4],
+                small_tuple![2, 3, 4],
             ],
             vec![0, 1, 2],
         );
@@ -52,8 +51,11 @@ mod tests {
         project(&mut table, &columns);
 
         assert_eq!(table.tuples.len(), 3);
-        let expected_tuples: Vec<Tuple> =
-            vec![smallvec![1, 2, 3], smallvec![1, 2, 4], smallvec![1, 3, 4]];
+        let expected_tuples: Vec<SmallTuple> = vec![
+            small_tuple![1, 2, 3],
+            small_tuple![1, 2, 4],
+            small_tuple![1, 3, 4],
+        ];
         assert_eq!(table.tuples, expected_tuples);
         assert_eq!(table.tuple_index, vec![0, 1, 2]);
     }

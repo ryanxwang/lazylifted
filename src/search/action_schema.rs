@@ -170,7 +170,7 @@ impl PartialEq for ActionSchema {
 mod tests {
     use super::*;
     use crate::{
-        search::{object_tuple, Task},
+        search::{small_tuple, Task},
         test_utils::*,
     };
     // use smallvec::smallvec;
@@ -190,10 +190,10 @@ mod tests {
         assert_eq!(
             effects,
             vec![
-                Negatable::Positive(Atom::new(3, object_tuple![3])),
-                Negatable::Negative(Atom::new(0, object_tuple![3])),
-                Negatable::Negative(Atom::new(1, object_tuple![3])),
-                Negatable::Negative(Atom::new(2, object_tuple![])),
+                Negatable::Positive(Atom::new(3, small_tuple![3])),
+                Negatable::Negative(Atom::new(0, small_tuple![3])),
+                Negatable::Negative(Atom::new(1, small_tuple![3])),
+                Negatable::Negative(Atom::new(2, small_tuple![])),
             ]
         )
     }

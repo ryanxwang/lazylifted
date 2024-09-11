@@ -1,5 +1,5 @@
 use crate::parsed_types::{Atom as ParsedAtom, Name, Term};
-use crate::search::{Atom, Negatable};
+use crate::search::{Atom, Negatable, SmallTuple};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -120,13 +120,15 @@ impl AtomSchema {
     pub fn ground(&self, object_indices: &[usize]) -> Atom {
         Atom::new(
             self.predicate_index,
-            self.arguments
-                .iter()
-                .map(|arg| match arg {
-                    SchemaArgument::Constant(index) => *index,
-                    SchemaArgument::Free(index) => *object_indices.get(*index).unwrap(),
-                })
-                .collect(),
+            SmallTuple::new(
+                self.arguments
+                    .iter()
+                    .map(|arg| match arg {
+                        SchemaArgument::Constant(index) => *index,
+                        SchemaArgument::Free(index) => *object_indices.get(*index).unwrap(),
+                    })
+                    .collect(),
+            ),
         )
     }
 
@@ -136,9 +138,11 @@ impl AtomSchema {
             && self
                 .arguments
                 .iter()
-                .zip(atom.arguments())
-                .all(|(schema_arg, atom_arg)| match schema_arg {
-                    SchemaArgument::Constant(index) => *index == *atom_arg,
+                .enumerate()
+                .all(|(index, schema_arg)| match schema_arg {
+                    SchemaArgument::Constant(object_index) => {
+                        *object_index == atom.arguments()[index]
+                    }
                     SchemaArgument::Free(_) => true,
                 })
     }
