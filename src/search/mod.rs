@@ -7,6 +7,7 @@ mod goal;
 pub mod heuristics;
 mod negatable;
 mod object;
+mod object_tuple;
 mod partial_action;
 mod plan;
 mod predicate;
@@ -19,7 +20,6 @@ pub mod states;
 pub mod successor_generators;
 mod task;
 mod transition;
-mod utils;
 mod validate;
 mod verbosity;
 
@@ -31,6 +31,7 @@ pub use goal::Goal;
 pub use heuristics::{Heuristic, HeuristicValue};
 pub use negatable::Negatable;
 pub use object::Object;
+pub(crate) use object_tuple::{object_tuple, ObjectTuple};
 pub(crate) use partial_action::{PartialAction, PartialActionDiff, PartialEffects, NO_PARTIAL};
 pub use plan::Plan;
 pub use predicate::Predicate;
@@ -42,9 +43,5 @@ pub use states::DBState;
 pub use successor_generators::SuccessorGenerator;
 pub use task::Task;
 pub(crate) use transition::Transition;
-pub(crate) use utils::ObjectTuple;
 pub use validate::validate;
 pub use verbosity::Verbosity;
-
-#[allow(unused_imports)]
-pub(crate) use utils::object_tuple;
