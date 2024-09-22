@@ -56,6 +56,16 @@ pub struct AtomSchema {
 }
 
 impl AtomSchema {
+    #[cfg(test)]
+    /// This is only used for testing. [`AtomSchema`]s should always be created
+    /// from the parsed task.
+    pub fn new(predicate_index: usize, arguments: Vec<SchemaArgument>) -> Self {
+        Self {
+            predicate_index,
+            arguments,
+        }
+    }
+
     pub fn from_parsed(
         atom: &ParsedAtom<Term>,
         predicate_table: &HashMap<Name, usize>,

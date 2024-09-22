@@ -1,0 +1,174 @@
+use global_counter::global_counter;
+
+use crate::search::{
+    datalog::{arguments::Arguments, term::Term},
+    AtomSchema, SchemaArgument,
+};
+
+global_counter!(ATOM_COUNTER, usize, 0);
+
+#[derive(Debug, Clone)]
+pub struct Atom {
+    id: usize,
+    arguments: Arguments,
+    predicate_index: usize,
+    // An artificial predicate is a predicate that is not present in the
+    // original task
+    is_artificial_predicate: bool,
+}
+
+impl Atom {
+    pub fn new(
+        arguments: Arguments,
+        predicate_index: usize,
+        is_artificial_predicate: bool,
+    ) -> Self {
+        let id = ATOM_COUNTER.get_cloned();
+        ATOM_COUNTER.inc();
+        Self {
+            id,
+            arguments,
+            predicate_index,
+            is_artificial_predicate,
+        }
+    }
+
+    pub fn new_from_atom_schema(atom: &AtomSchema) -> Self {
+        let arguments = Arguments::new(
+            atom.arguments()
+                .iter()
+                .map(|schema_argument| match schema_argument {
+                    SchemaArgument::Constant(index) => Term::new_object(*index),
+                    SchemaArgument::Free(index) => Term::new_variable(*index),
+                })
+                .collect(),
+        );
+
+        Self::new(arguments, atom.predicate_index(), false)
+    }
+
+    pub fn arguments(&self) -> &Arguments {
+        &self.arguments
+    }
+
+    pub fn with_arguments(&mut self, arguments: Arguments) {
+        self.arguments = arguments;
+    }
+
+    pub fn predicate_index(&self) -> usize {
+        self.predicate_index
+    }
+
+    pub fn is_artificial_predicate(&self) -> bool {
+        self.is_artificial_predicate
+    }
+
+    pub fn id(&self) -> usize {
+        self.id
+    }
+
+    pub fn is_nullary(&self) -> bool {
+        self.arguments.len() == 0
+    }
+
+    pub fn is_ground(&self) -> bool {
+        self.arguments.iter().all(|term| term.is_object())
+    }
+
+    pub fn shares_variable_with(&self, other: &Self) -> bool {
+        self.arguments.iter().any(|term| {
+            term.is_variable()
+                && other
+                    .arguments
+                    .iter()
+                    .any(|other_term| other_term.is_variable() && term == other_term)
+        })
+    }
+}
+
+impl PartialEq for Atom {
+    fn eq(&self, other: &Self) -> bool {
+        self.predicate_index == other.predicate_index && self.arguments == other.arguments
+    }
+}
+
+impl Eq for Atom {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serial_test::serial;
+
+    // Serial is needed to make sure the global counter is not modified by other
+    // tests
+
+    #[test]
+    #[serial]
+    fn test_atom_new() {
+        let arguments = Arguments::new(vec![Term::new_variable(0), Term::new_object(1)]);
+        let atom = Atom::new(arguments, 0, false);
+        assert_eq!(atom.arguments().len(), 2);
+        assert_eq!(atom.predicate_index(), 0);
+        assert!(!atom.is_artificial_predicate());
+        assert_eq!(atom.id(), ATOM_COUNTER.get_cloned() - 1)
+    }
+
+    #[test]
+    #[serial]
+    fn test_atom_new_from_atom_schema() {
+        let atom_schema = AtomSchema::new(
+            0,
+            vec![SchemaArgument::Free(0), SchemaArgument::Constant(1)],
+        );
+        let atom = Atom::new_from_atom_schema(&atom_schema);
+        assert_eq!(atom.arguments().len(), 2);
+        assert_eq!(atom.predicate_index(), 0);
+        assert!(!atom.is_artificial_predicate());
+        assert_eq!(atom.id(), ATOM_COUNTER.get_cloned() - 1);
+        assert_eq!(atom.arguments()[0], Term::new_variable(0));
+        assert_eq!(atom.arguments()[1], Term::new_object(1));
+    }
+
+    #[test]
+    fn test_atom_is_nullary() {
+        let arguments = Arguments::new(vec![]);
+        let atom = Atom::new(arguments, 0, false);
+        assert!(atom.is_nullary());
+
+        let arguments = Arguments::new(vec![Term::new_object(0), Term::new_object(1)]);
+        let atom = Atom::new(arguments, 0, false);
+        assert!(!atom.is_nullary());
+    }
+
+    #[test]
+    fn test_atom_is_ground() {
+        let arguments = Arguments::new(vec![Term::new_object(0), Term::new_object(1)]);
+        let atom = Atom::new(arguments, 0, false);
+        assert!(atom.is_ground());
+
+        let arguments = Arguments::new(vec![Term::new_variable(0), Term::new_object(1)]);
+        let atom = Atom::new(arguments, 0, false);
+        assert!(!atom.is_ground());
+    }
+
+    #[test]
+    fn test_atom_shares_variable_with() {
+        let arguments1 = Arguments::new(vec![Term::new_variable(0), Term::new_object(1)]);
+        let atom1 = Atom::new(arguments1, 0, false);
+
+        let arguments2 = Arguments::new(vec![Term::new_variable(0), Term::new_object(1)]);
+        let atom2 = Atom::new(arguments2, 0, false);
+
+        assert!(atom1.shares_variable_with(&atom2));
+
+        // Different variables should lead to false
+        let arguments3 = Arguments::new(vec![Term::new_variable(1), Term::new_object(1)]);
+        let atom3 = Atom::new(arguments3, 0, false);
+        assert!(!atom1.shares_variable_with(&atom3));
+
+        // No variables should lead to false, even if same object
+        let arguments4 = Arguments::new(vec![Term::new_object(1), Term::new_object(1)]);
+        let atom4 = Atom::new(arguments4, 0, false);
+        assert!(!atom1.shares_variable_with(&atom4));
+    }
+}

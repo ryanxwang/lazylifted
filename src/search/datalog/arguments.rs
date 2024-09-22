@@ -2,7 +2,7 @@ use std::{ops::Index, slice::SliceIndex};
 
 use crate::search::datalog::term::Term;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Arguments {
     terms: Vec<Term>,
 }
@@ -14,6 +14,10 @@ impl Arguments {
 
     pub fn len(&self) -> usize {
         self.terms.len()
+    }
+
+    pub fn iter(&self) -> std::slice::Iter<'_, Term> {
+        self.terms.iter()
     }
 }
 
