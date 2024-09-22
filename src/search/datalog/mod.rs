@@ -1,3 +1,6 @@
+#![allow(dead_code)]
+#![allow(unused_imports)]
+
 mod annotation;
 mod arguments;
 mod atom;
@@ -8,7 +11,7 @@ mod term;
 mod transformation_options;
 mod weighted_grounder;
 
-pub(crate) use annotation::{Annotation, AnnotationGenerator};
+pub(crate) use annotation::{Annotation, AnnotationGenerator, RuleCategory};
 pub(crate) use program::Program as DatalogProgram;
 pub(crate) use transformation_options::TransformationOptions as DatalogTransformationOptions;
 pub(crate) use weighted_grounder::{

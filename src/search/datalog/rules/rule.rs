@@ -1,5 +1,12 @@
+use crate::search::datalog::rules::generic_rule::GenericRule;
+
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub enum Rule {
-    Generic,
+    Generic(GenericRule),
+}
+
+impl Rule {
+    pub fn new_generic(rule: GenericRule) -> Self {
+        Self::Generic(rule)
+    }
 }

@@ -1,10 +1,7 @@
 #[derive(Debug, Clone)]
 pub struct TransformationOptions {
-    #[allow(dead_code)]
     pub rename_variables: bool,
-    #[allow(dead_code)]
     pub collapse_predicates: bool,
-    #[allow(dead_code)]
     pub remove_action_predicate: bool,
 }
 

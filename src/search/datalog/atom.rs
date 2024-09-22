@@ -4,7 +4,7 @@ use global_counter::global_counter;
 
 use crate::search::{
     datalog::{arguments::Arguments, term::Term},
-    AtomSchema, SchemaArgument,
+    ActionSchema, AtomSchema, SchemaArgument,
 };
 
 type AtomId = usize;
@@ -48,6 +48,18 @@ impl Atom {
         );
 
         Self::new(arguments, atom.predicate_index(), false)
+    }
+
+    pub fn new_from_action_schema(action_schema: &ActionSchema, predicate_index: usize) -> Self {
+        let arguments = Arguments::new(
+            action_schema
+                .parameters()
+                .iter()
+                .map(|schema_parameter| Term::new_variable(schema_parameter.index()))
+                .collect(),
+        );
+
+        Self::new(arguments, predicate_index, true)
     }
 
     pub fn arguments(&self) -> &Arguments {
@@ -105,6 +117,7 @@ impl Display for Atom {
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
     use serial_test::serial;
 

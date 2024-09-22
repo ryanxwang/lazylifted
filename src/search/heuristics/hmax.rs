@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::search::{
     datalog::{
         Annotation, AnnotationGenerator, DatalogHeuristicType, DatalogProgram,
@@ -9,9 +11,7 @@ use std::rc::Rc;
 
 #[derive(Debug)]
 pub struct HmaxHeuristic {
-    #[allow(dead_code)]
     program: DatalogProgram,
-    #[allow(dead_code)]
     grounder: WeightedGrounder,
 }
 
