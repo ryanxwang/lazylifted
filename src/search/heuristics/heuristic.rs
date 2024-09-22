@@ -1,4 +1,5 @@
 use crate::search::heuristics::goal_counting::GoalCounting;
+use crate::search::heuristics::hmax::HmaxHeuristic;
 use crate::search::heuristics::wl_partial::WlPartialHeuristic;
 use crate::search::heuristics::wl_state::WlStateHeuristic;
 use crate::search::heuristics::zero_heuristic::ZeroHeuristic;
@@ -37,6 +38,8 @@ pub enum StateHeuristicNames {
     Wl,
     #[clap(help = "The goal counting heuristic.")]
     GoalCounting,
+    #[clap(name = "hmax", help = "The h_max heuristic.")]
+    Hmax,
     #[clap(name = "zero", help = "The zero heuristic.")]
     ZeroHeuristic,
 }
@@ -52,6 +55,7 @@ impl StateHeuristicNames {
             StateHeuristicNames::GoalCounting => {
                 Box::new(GoalCounting::new(task.clone(), successor_generator_name))
             }
+            StateHeuristicNames::Hmax => Box::new(HmaxHeuristic::new(task.clone())),
             StateHeuristicNames::Wl => {
                 let saved_model = saved_model
                     .as_ref()

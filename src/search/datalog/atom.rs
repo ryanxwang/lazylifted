@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use global_counter::global_counter;
 
 use crate::search::{
@@ -5,11 +7,12 @@ use crate::search::{
     AtomSchema, SchemaArgument,
 };
 
-global_counter!(ATOM_COUNTER, usize, 0);
+type AtomId = usize;
+global_counter!(ATOM_COUNTER, AtomId, 0);
 
 #[derive(Debug, Clone)]
 pub struct Atom {
-    id: usize,
+    id: AtomId,
     arguments: Arguments,
     predicate_index: usize,
     // An artificial predicate is a predicate that is not present in the
@@ -93,6 +96,12 @@ impl PartialEq for Atom {
 }
 
 impl Eq for Atom {}
+
+impl Display for Atom {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}{}", self.predicate_index, self.arguments)
+    }
+}
 
 #[cfg(test)]
 mod tests {

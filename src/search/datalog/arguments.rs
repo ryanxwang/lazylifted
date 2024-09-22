@@ -1,4 +1,8 @@
-use std::{ops::Index, slice::SliceIndex};
+use std::{
+    fmt::{Display, Formatter},
+    ops::Index,
+    slice::SliceIndex,
+};
 
 use crate::search::datalog::term::Term;
 
@@ -53,5 +57,18 @@ impl<'a> IntoIterator for &'a mut Arguments {
 
     fn into_iter(self) -> Self::IntoIter {
         self.terms.iter_mut()
+    }
+}
+
+impl Display for Arguments {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        write!(f, "(")?;
+        for (i, term) in self.terms.iter().enumerate() {
+            if i > 0 {
+                write!(f, ", ")?;
+            }
+            write!(f, "{}", term)?;
+        }
+        write!(f, ")")
     }
 }

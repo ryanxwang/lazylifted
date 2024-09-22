@@ -1,3 +1,5 @@
+use std::fmt::{Display, Formatter};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TermType {
     Object,
@@ -29,5 +31,14 @@ impl Term {
 
     pub fn is_variable(&self) -> bool {
         self.term_type == TermType::Variable
+    }
+}
+
+impl Display for Term {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        match self.term_type {
+            TermType::Object => write!(f, "{}", self.index),
+            TermType::Variable => write!(f, "?{}", self.index),
+        }
     }
 }
