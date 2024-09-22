@@ -3,6 +3,7 @@ mod action_schema;
 mod atom;
 mod atom_schema;
 pub mod database;
+pub mod datalog;
 mod goal;
 pub mod heuristics;
 mod negatable;
