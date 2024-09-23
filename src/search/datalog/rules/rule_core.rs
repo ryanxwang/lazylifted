@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::search::datalog::{
     atom::Atom,
     rules::utils::{VariablePositionMap, VariableSource},
@@ -28,6 +30,10 @@ impl RuleCore {
     /// Create a new [`RuleCore`] with the given effect, conditions, weight, and
     /// annotation.
     pub fn new(effect: Atom, conditions: Vec<Atom>, weight: f64, annotation: Annotation) -> Self {
+        assert!(
+            !conditions.is_empty(),
+            "Datalog rules cannot have empty condition"
+        );
         let is_effect_ground = effect.is_ground();
         let variable_position_map = VariablePositionMap::new(&effect);
         let variable_source = VariableSource::new(&effect, &conditions);
@@ -55,5 +61,33 @@ impl RuleCore {
     /// Get whether the rule's effect (head) is ground.
     pub fn head_is_ground(&self) -> bool {
         self.is_effect_ground
+    }
+}
+
+impl PartialEq for RuleCore {
+    fn eq(&self, other: &Self) -> bool {
+        self.effect == other.effect
+            && self.conditions == other.conditions
+            && self.weight == other.weight
+            && self.annotation == other.annotation
+    }
+}
+
+impl Eq for RuleCore {}
+
+impl Display for RuleCore {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} <- ", self.effect)?;
+        for (i, condition) in self.conditions.iter().enumerate() {
+            if i > 0 {
+                write!(f, ", ")?;
+            }
+            write!(f, "{}", condition)?;
+        }
+        write!(
+            f,
+            "  | weight: {}; annotation: {}",
+            self.weight, self.annotation
+        )
     }
 }

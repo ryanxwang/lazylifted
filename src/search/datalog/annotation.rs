@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{fmt::Display, rc::Rc};
 
 use crate::search::{datalog::program::Program, Task};
 
@@ -10,7 +10,7 @@ pub enum RuleCategory {
     ActionEffect,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Annotation {
     None,
 }
@@ -19,6 +19,14 @@ impl Annotation {
     pub fn execute(&self, _head: usize, _program: &Program) {
         match self {
             Annotation::None => {}
+        }
+    }
+}
+
+impl Display for Annotation {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Annotation::None => write!(f, "None"),
         }
     }
 }
