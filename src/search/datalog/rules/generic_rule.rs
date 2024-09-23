@@ -23,10 +23,12 @@ impl GenericRule {
         Self { core, schema_index }
     }
 
+    #[inline(always)]
     pub fn core(&self) -> &RuleCore {
         &self.core
     }
 
+    #[inline(always)]
     pub fn schema_index(&self) -> usize {
         self.schema_index
     }

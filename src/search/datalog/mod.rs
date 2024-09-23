@@ -8,12 +8,12 @@ mod fact;
 mod program;
 mod rules;
 mod term;
-mod transformation_options;
+mod transformations;
 mod weighted_grounder;
 
 pub(crate) use annotation::{Annotation, AnnotationGenerator, RuleCategory};
 pub(crate) use program::Program as DatalogProgram;
-pub(crate) use transformation_options::TransformationOptions as DatalogTransformationOptions;
+pub(crate) use transformations::TransformationOptions as DatalogTransformationOptions;
 pub(crate) use weighted_grounder::{
     DatalogHeuristicType, WeightedGrounder, WeightedGrounderConfig,
 };

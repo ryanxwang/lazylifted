@@ -2,7 +2,7 @@
 pub struct TransformationOptions {
     pub rename_variables: bool,
     pub collapse_predicates: bool,
-    pub remove_action_predicate: bool,
+    pub remove_action_predicates: bool,
 }
 
 impl TransformationOptions {
@@ -14,7 +14,7 @@ impl TransformationOptions {
         Self {
             rename_variables,
             collapse_predicates,
-            remove_action_predicate,
+            remove_action_predicates: remove_action_predicate,
         }
     }
 }
@@ -24,7 +24,7 @@ impl Default for TransformationOptions {
         Self {
             rename_variables: true,
             collapse_predicates: true,
-            remove_action_predicate: true,
+            remove_action_predicates: true,
         }
     }
 }

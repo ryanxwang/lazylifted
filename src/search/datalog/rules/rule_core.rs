@@ -49,18 +49,31 @@ impl RuleCore {
     }
 
     /// Get the effect of the rule.
+    #[inline(always)]
     pub fn effect(&self) -> &Atom {
         &self.effect
     }
 
     /// Get the conditions of the rule.
+    #[inline(always)]
     pub fn conditions(&self) -> &[Atom] {
         &self.conditions
     }
 
     /// Get whether the rule's effect (head) is ground.
+    #[inline(always)]
     pub fn head_is_ground(&self) -> bool {
         self.is_effect_ground
+    }
+
+    #[inline(always)]
+    pub fn weight(&self) -> f64 {
+        self.weight
+    }
+
+    #[inline(always)]
+    pub fn annotation(&self) -> &Annotation {
+        &self.annotation
     }
 }
 
