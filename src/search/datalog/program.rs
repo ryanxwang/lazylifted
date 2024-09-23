@@ -8,7 +8,7 @@ use crate::search::{
         atom::Atom,
         fact::Fact,
         rules::{GenericRule, Rule},
-        transformation_options::TransformationOptions,
+        transformations::TransformationOptions,
         AnnotationGenerator, RuleCategory,
     },
     ActionSchema, Task,
@@ -21,12 +21,12 @@ const PANIC_ON_NEGATIVE_PRECONDITIONS: bool = false;
 
 #[derive(Debug)]
 pub struct Program {
-    rules: Vec<Rule>,
-    task: Rc<Task>,
+    pub(super) rules: Vec<Rule>,
+    pub(super) task: Rc<Task>,
     // Predicate names for the atoms, including ones generated when building the
     // program.
-    predicate_names: Vec<String>,
-    predicate_name_to_index: HashMap<String, usize>,
+    pub(super) predicate_names: Vec<String>,
+    pub(super) predicate_name_to_index: HashMap<String, usize>,
 }
 
 impl Program {
@@ -163,7 +163,7 @@ impl Program {
                 Some(Rule::new_generic(GenericRule::new(
                     effect,
                     conditions.clone(),
-                    1.0,
+                    0.0,
                     annotation,
                     action_schema.index(),
                 )))
@@ -217,24 +217,24 @@ mod tests {
                 // pickup applicability rule
                 "(5(?0) <- 2(), 1(?0), 0(?0)  | weight: 1; annotation: None; schema_index: 0)",
                 // pickup effect rules, only one add effect (holding ?ob)
-                "(3(?0) <- 5(?0)  | weight: 1; annotation: None; schema_index: 0)",
+                "(3(?0) <- 5(?0)  | weight: 0; annotation: None; schema_index: 0)",
                 // putdown applicability rule
                 "(6(?0) <- 3(?0)  | weight: 1; annotation: None; schema_index: 1)",
                 // putdown effect rules, add effects (clear ?ob), (arm-empty), (on-table ?ob)
-                "(0(?0) <- 6(?0)  | weight: 1; annotation: None; schema_index: 1)",
-                "(2() <- 6(?0)  | weight: 1; annotation: None; schema_index: 1)",
-                "(1(?0) <- 6(?0)  | weight: 1; annotation: None; schema_index: 1)",
+                "(0(?0) <- 6(?0)  | weight: 0; annotation: None; schema_index: 1)",
+                "(2() <- 6(?0)  | weight: 0; annotation: None; schema_index: 1)",
+                "(1(?0) <- 6(?0)  | weight: 0; annotation: None; schema_index: 1)",
                 // stack applicability rule
                 "(7(?0, ?1) <- 3(?0), 0(?1)  | weight: 1; annotation: None; schema_index: 2)",
                 // stack effect rules, add effects (arm-empty) (clear ?ob) (on ?ob ?underob)
-                "(2() <- 7(?0, ?1)  | weight: 1; annotation: None; schema_index: 2)",
-                "(0(?0) <- 7(?0, ?1)  | weight: 1; annotation: None; schema_index: 2)",
-                "(4(?0, ?1) <- 7(?0, ?1)  | weight: 1; annotation: None; schema_index: 2)",
+                "(2() <- 7(?0, ?1)  | weight: 0; annotation: None; schema_index: 2)",
+                "(0(?0) <- 7(?0, ?1)  | weight: 0; annotation: None; schema_index: 2)",
+                "(4(?0, ?1) <- 7(?0, ?1)  | weight: 0; annotation: None; schema_index: 2)",
                 // unstack applicability rule
                 "(8(?0, ?1) <- 2(), 0(?0), 4(?0, ?1)  | weight: 1; annotation: None; schema_index: 3)",
                 // unstack effect rules, add effects (holding ?ob) (clear ?underob)
-                "(3(?0) <- 8(?0, ?1)  | weight: 1; annotation: None; schema_index: 3)",
-                "(0(?1) <- 8(?0, ?1)  | weight: 1; annotation: None; schema_index: 3)"
+                "(3(?0) <- 8(?0, ?1)  | weight: 0; annotation: None; schema_index: 3)",
+                "(0(?1) <- 8(?0, ?1)  | weight: 0; annotation: None; schema_index: 3)"
             ]
         );
     }
