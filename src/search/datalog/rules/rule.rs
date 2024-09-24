@@ -1,14 +1,20 @@
 use std::fmt::Display;
 
+use strum_macros::EnumIs;
+
 use crate::search::datalog::{
-    atom::Atom, rules::generic_rule::GenericRule, rules::project_rule::ProjectRule,
-    rules::rule_core::RuleCore, rules::utils::VariableSource, Annotation,
+    atom::Atom,
+    rules::rule_core::RuleCore,
+    rules::utils::VariableSource,
+    rules::{GenericRule, ProductRule, ProjectRule},
+    Annotation,
 };
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, PartialEq, EnumIs)]
 pub enum Rule {
     Generic(GenericRule),
     Project(ProjectRule),
+    Product(ProductRule),
 }
 
 impl Rule {
@@ -24,6 +30,7 @@ impl Rule {
         match self {
             Rule::Generic(rule) => rule.core(),
             Rule::Project(rule) => rule.core(),
+            Rule::Product(rule) => rule.core(),
         }
     }
 
@@ -31,6 +38,7 @@ impl Rule {
         match self {
             Rule::Generic(rule) => rule.core_mut(),
             Rule::Project(rule) => rule.core_mut(),
+            Rule::Product(rule) => rule.core_mut(),
         }
     }
 
@@ -64,6 +72,7 @@ impl Rule {
         match self {
             Rule::Generic(rule) => Some(rule.schema_index()),
             Rule::Project(_) => None,
+            Rule::Product(_) => None,
         }
     }
 
@@ -95,6 +104,7 @@ impl Display for Rule {
         match self {
             Rule::Generic(rule) => write!(f, "{}", rule),
             Rule::Project(rule) => write!(f, "{}", rule),
+            Rule::Product(rule) => write!(f, "{}", rule),
         }
     }
 }

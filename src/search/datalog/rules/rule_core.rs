@@ -142,8 +142,6 @@ impl PartialEq for RuleCore {
     }
 }
 
-impl Eq for RuleCore {}
-
 impl Display for RuleCore {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{} <- ", self.effect)?;

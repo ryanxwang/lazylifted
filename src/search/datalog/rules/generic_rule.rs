@@ -1,11 +1,16 @@
 use std::fmt::Display;
 
-use crate::search::datalog::{atom::Atom, rules::rule_core::RuleCore, Annotation};
+use crate::search::datalog::{
+    atom::Atom,
+    rules::rule_core::RuleCore,
+    rules::{ProductRule, ProjectRule},
+    Annotation,
+};
 
 /// A [`GenericRule`] that corresponds to a rule generated from an action
 /// schema. It is a simple wrapper around a [`RuleCore`] with an additional
 /// field to store the index of the schema that generated the rule.
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GenericRule {
     core: RuleCore,
     schema_index: usize,
@@ -36,6 +41,19 @@ impl GenericRule {
     #[inline(always)]
     pub fn schema_index(&self) -> usize {
         self.schema_index
+    }
+
+    pub fn to_project_rule(&self) -> ProjectRule {
+        ProjectRule::new_from_core(self.core.clone())
+    }
+
+    pub fn to_product_rule(&self) -> ProductRule {
+        ProductRule::new(
+            self.core.effect().clone(),
+            self.core.conditions().to_vec(),
+            self.core.weight(),
+            self.core.annotation().clone(),
+        )
     }
 }
 

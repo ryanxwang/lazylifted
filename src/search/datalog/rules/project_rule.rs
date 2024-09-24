@@ -9,7 +9,7 @@ use crate::search::datalog::{atom::Atom, rules::rule_core::RuleCore, Annotation}
 ///
 /// Helmert, M. 2009. Concise Finite-Domain Pepresentations for PDDL Planning
 /// Tasks. AIJ, 173: 503-535.
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ProjectRule {
     core: RuleCore,
 }
@@ -18,12 +18,18 @@ impl ProjectRule {
     /// Create a new [`ProjectRule`] with the given effect, condition, weight,
     /// and annotation.
     pub fn new(effect: Atom, condition: Atom, weight: f64, annotation: Annotation) -> Self {
-        assert!(effect.is_variable_unique());
-        assert!(condition.is_variable_unique());
-        assert!(condition
-            .variables_set()
-            .is_superset(&effect.variables_set()));
         let core = RuleCore::new(effect, vec![condition], weight, annotation);
+        Self::new_from_core(core)
+    }
+
+    pub(super) fn new_from_core(core: RuleCore) -> Self {
+        assert!(core.effect().is_variable_unique());
+        assert_eq!(core.conditions().len(), 1);
+        assert!(core.conditions()[0].is_variable_unique());
+        assert!(core.conditions()[0]
+            .variables_set()
+            .is_superset(&core.effect().variables_set()));
+
         Self { core }
     }
 

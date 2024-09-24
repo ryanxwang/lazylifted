@@ -13,7 +13,6 @@ pub struct WlStateHeuristic {
     compiler: Option<Box<dyn Compiler<DBState>>>,
 }
 
-/// A heuristic that uses the WL-ILG model to evaluate states.
 impl WlStateHeuristic {
     pub fn load(saved_model: &Path) -> Self {
         let py = unsafe { Python::assume_gil_acquired() };

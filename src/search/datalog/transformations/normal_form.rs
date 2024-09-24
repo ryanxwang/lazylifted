@@ -1,9 +1,11 @@
+use std::collections::HashSet;
+
 use crate::search::{
     datalog::{
         arguments::Arguments,
         atom::Atom,
         program::Program,
-        rules::{ProjectRule, Rule},
+        rules::{GenericRule, ProjectRule, Rule},
         term::Term,
         transformations::connected_components::split_into_connected_components,
         Annotation,
@@ -66,6 +68,28 @@ fn project_away_constant_arguments(mut program: Program) -> Program {
     program
 }
 
+/// Check if a rule is a product rule, which is a rule where none of the
+/// conditions share any variables.
+fn is_product_rule(rule: &Rule) -> bool {
+    let mut seen_variables = HashSet::new();
+    for condition in rule.conditions() {
+        for argument in condition.arguments() {
+            if argument.is_object() {
+                continue;
+            }
+            if seen_variables.contains(argument) {
+                return false;
+            }
+            seen_variables.insert(argument);
+        }
+    }
+    true
+}
+
+fn convert_to_join_rules(rule: &Rule) -> Vec<Rule> {
+    todo!()
+}
+
 pub fn convert_rules_to_normal_form(mut program: Program) -> Program {
     for i in 0..program.rules.len() {
         program = split_into_connected_components(program, i);
@@ -73,6 +97,30 @@ pub fn convert_rules_to_normal_form(mut program: Program) -> Program {
 
     program = project_away_constant_arguments(program);
 
+    let mut new_rules = vec![];
+    for rule in program.rules {
+        if rule.conditions().len() == 1 {
+            let new_rule = if let Rule::Generic(generic_rule) = &rule {
+                Rule::Project(generic_rule.to_project_rule())
+            } else {
+                rule
+            };
+            assert!(new_rule.is_project());
+            new_rules.push(new_rule);
+        } else if is_product_rule(&rule) {
+            let new_rule = if let Rule::Generic(generic_rule) = &rule {
+                Rule::Product(generic_rule.to_product_rule())
+            } else {
+                panic!("Expecting all non-projection rules to be generic at this point of normalisation")
+            };
+            assert!(new_rule.is_product());
+            new_rules.push(new_rule);
+        } else {
+            new_rules.append(&mut convert_to_join_rules(&rule));
+        }
+    }
+
+    program.rules = new_rules;
     program
 }
 
