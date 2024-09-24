@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{collections::HashSet, fmt::Display};
 
 use global_counter::global_counter;
 
@@ -98,6 +98,27 @@ impl Atom {
                     .iter()
                     .any(|other_term| other_term.is_variable() && term == other_term)
         })
+    }
+
+    pub fn variables(&self) -> Vec<usize> {
+        self.arguments
+            .iter()
+            .filter_map(|term| {
+                if term.is_variable() {
+                    Some(term.index())
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    pub fn variables_set(&self) -> HashSet<usize> {
+        self.variables().into_iter().collect()
+    }
+
+    pub fn is_variable_unique(&self) -> bool {
+        self.variables().len() == self.variables_set().len()
     }
 }
 

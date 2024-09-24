@@ -44,6 +44,11 @@ impl Program {
         program
     }
 
+    #[cfg(test)]
+    pub fn new_raw_for_tests(task: Rc<Task>, annotation_generator: AnnotationGenerator) -> Self {
+        Self::new(task, annotation_generator)
+    }
+
     /// Generate a program for the given task. This is intentionally not public
     /// because users should use [`Self::new_with_transformations`] instead.
     fn new(task: Rc<Task>, annotation_generator: AnnotationGenerator) -> Self {
@@ -180,6 +185,16 @@ impl Program {
     fn applicability_predicate_name(action_schema: &ActionSchema) -> String {
         format!("applicable-{}", action_schema.name())
     }
+
+    /// Create a new auxillary predicate, do all the bookkeeping and return the
+    /// index of the predicate.
+    pub(super) fn new_auxillary_predicate(&mut self) -> usize {
+        let index = self.predicate_names.len();
+        let name = format!("p${}", index);
+        self.predicate_names.push(name.clone());
+        self.predicate_name_to_index.insert(name, index);
+        index
+    }
 }
 
 #[cfg(test)]
@@ -190,19 +205,14 @@ mod tests {
     use crate::test_utils::*;
 
     #[test]
-    fn test_new_program_without_transformations() {
+    fn test_new_raw_program() {
         let task = Rc::new(Task::from_text(
             BLOCKSWORLD_DOMAIN_TEXT,
             BLOCKSWORLD_PROBLEM13_TEXT,
         ));
         let annotation_generator: AnnotationGenerator = Box::new(|_, _| Annotation::None);
-        let transformation_options = TransformationOptions::new(false, false, false);
 
-        let program = Program::new_with_transformations(
-            task.clone(),
-            annotation_generator,
-            &transformation_options,
-        );
+        let program = Program::new_raw_for_tests(task.clone(), annotation_generator);
 
         assert_eq!(
             program.predicate_names,
@@ -246,61 +256,6 @@ mod tests {
                 // unstack effect rules, add effects (holding ?ob) (clear ?underob)
                 "(3(?0) <- 8(?0, ?1)  | weight: 0; annotation: None; schema_index: 3)",
                 "(0(?1) <- 8(?0, ?1)  | weight: 0; annotation: None; schema_index: 3)"
-            ]
-        );
-    }
-
-    #[test]
-    fn test_new_program_with_action_predicate_removal() {
-        let task = Rc::new(Task::from_text(
-            BLOCKSWORLD_DOMAIN_TEXT,
-            BLOCKSWORLD_PROBLEM13_TEXT,
-        ));
-        let annotation_generator: AnnotationGenerator = Box::new(|_, _| Annotation::None);
-        let transformation_options = TransformationOptions::new(false, false, true);
-
-        let program = Program::new_with_transformations(
-            task.clone(),
-            annotation_generator,
-            &transformation_options,
-        );
-
-        // the action predicates are still recorded, even if not used in the
-        // rules
-        assert_eq!(
-            program.predicate_names,
-            vec![
-                "clear",
-                "on-table",
-                "arm-empty",
-                "holding",
-                "on",
-                "applicable-pickup",
-                "applicable-putdown",
-                "applicable-stack",
-                "applicable-unstack"
-            ]
-        );
-        assert_eq!(
-            program
-                .rules
-                .iter()
-                .map(|rule| format!("{}", rule))
-                .collect_vec(),
-            vec![
-                // pickup rules, only one add effect (holding ?ob)
-                "(3(?0) <- 2(), 1(?0), 0(?0)  | weight: 1; annotation: None; schema_index: 0)",
-                // putdown rules, add effects (clear ?ob), (arm-empty), (on-table ?ob)
-                "(0(?0) <- 3(?0)  | weight: 1; annotation: None; schema_index: 1)",
-                "(2() <- 3(?0)  | weight: 1; annotation: None; schema_index: 1)",
-                "(1(?0) <- 3(?0)  | weight: 1; annotation: None; schema_index: 1)",
-                // stack rules, add effects (arm-empty) (clear ?ob) (on ?ob ?underob)
-                "(2() <- 3(?0), 0(?1)  | weight: 1; annotation: None; schema_index: 2)",
-                "(0(?0) <- 3(?0), 0(?1)  | weight: 1; annotation: None; schema_index: 2)",
-                "(4(?0, ?1) <- 3(?0), 0(?1)  | weight: 1; annotation: None; schema_index: 2)",
-                // unstack applicability rule, add effects (holding ?ob) (clear ?underob)
-                "(3(?0) <- 2(), 0(?0), 4(?0, ?1)  | weight: 1; annotation: None; schema_index: 3)",
-                "(0(?1) <- 2(), 0(?0), 4(?0, ?1)  | weight: 1; annotation: None; schema_index: 3)"
             ]
         );
     }

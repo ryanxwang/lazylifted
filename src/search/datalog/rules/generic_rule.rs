@@ -29,6 +29,11 @@ impl GenericRule {
     }
 
     #[inline(always)]
+    pub fn core_mut(&mut self) -> &mut RuleCore {
+        &mut self.core
+    }
+
+    #[inline(always)]
     pub fn schema_index(&self) -> usize {
         self.schema_index
     }

@@ -11,9 +11,9 @@ mod term;
 mod transformations;
 mod weighted_grounder;
 
-pub(crate) use annotation::{Annotation, AnnotationGenerator, RuleCategory};
-pub(crate) use program::Program as DatalogProgram;
-pub(crate) use transformations::TransformationOptions as DatalogTransformationOptions;
-pub(crate) use weighted_grounder::{
+pub(super) use annotation::{Annotation, AnnotationGenerator, RuleCategory};
+pub(super) use program::Program as DatalogProgram;
+pub(super) use transformations::TransformationOptions as DatalogTransformationOptions;
+pub(super) use weighted_grounder::{
     DatalogHeuristicType, WeightedGrounder, WeightedGrounderConfig,
 };

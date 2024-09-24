@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use crate::search::datalog::{
     atom::Atom,
-    rules::utils::{VariablePositionMap, VariableSource},
+    rules::utils::{VariablePositionInEffect, VariableSource},
     Annotation,
 };
 
@@ -21,7 +21,7 @@ pub struct RuleCore {
     /// Whether the rule is ground, i.e. the effect contains no variables.
     is_effect_ground: bool,
     /// The mapping of variables to their positions in the effect atom.
-    variable_position_map: VariablePositionMap,
+    variable_position_in_effect: VariablePositionInEffect,
     /// The lookup table for variables in the rule.
     variable_source: VariableSource,
 }
@@ -35,7 +35,7 @@ impl RuleCore {
             "Datalog rules cannot have empty condition"
         );
         let is_effect_ground = effect.is_ground();
-        let variable_position_map = VariablePositionMap::new(&effect);
+        let variable_position_in_effect = VariablePositionInEffect::new(&effect);
         let variable_source = VariableSource::new(&effect, &conditions);
         Self {
             effect,
@@ -43,7 +43,7 @@ impl RuleCore {
             weight,
             annotation,
             is_effect_ground,
-            variable_position_map,
+            variable_position_in_effect,
             variable_source,
         }
     }
@@ -60,6 +60,11 @@ impl RuleCore {
         &self.conditions
     }
 
+    #[inline(always)]
+    pub fn set_condition(&mut self, conditions: Vec<Atom>) {
+        self.conditions = conditions;
+    }
+
     /// Get whether the rule's effect (head) is ground.
     #[inline(always)]
     pub fn head_is_ground(&self) -> bool {
@@ -74,6 +79,16 @@ impl RuleCore {
     #[inline(always)]
     pub fn annotation(&self) -> &Annotation {
         &self.annotation
+    }
+
+    #[inline(always)]
+    pub fn variable_source(&self) -> &VariableSource {
+        &self.variable_source
+    }
+
+    #[inline(always)]
+    pub fn variable_source_mut(&mut self) -> &mut VariableSource {
+        &mut self.variable_source
     }
 }
 
