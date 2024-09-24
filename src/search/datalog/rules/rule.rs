@@ -6,7 +6,7 @@ use crate::search::datalog::{
     atom::Atom,
     rules::rule_core::RuleCore,
     rules::utils::VariableSource,
-    rules::{GenericRule, ProductRule, ProjectRule},
+    rules::{GenericRule, JoinRule, ProductRule, ProjectRule},
     Annotation,
 };
 
@@ -15,6 +15,7 @@ pub enum Rule {
     Generic(GenericRule),
     Project(ProjectRule),
     Product(ProductRule),
+    Join(JoinRule),
 }
 
 impl Rule {
@@ -31,6 +32,7 @@ impl Rule {
             Rule::Generic(rule) => rule.core(),
             Rule::Project(rule) => rule.core(),
             Rule::Product(rule) => rule.core(),
+            Rule::Join(rule) => rule.core(),
         }
     }
 
@@ -39,6 +41,7 @@ impl Rule {
             Rule::Generic(rule) => rule.core_mut(),
             Rule::Project(rule) => rule.core_mut(),
             Rule::Product(rule) => rule.core_mut(),
+            Rule::Join(rule) => rule.core_mut(),
         }
     }
 
@@ -71,8 +74,7 @@ impl Rule {
     pub fn schema_index(&self) -> Option<usize> {
         match self {
             Rule::Generic(rule) => Some(rule.schema_index()),
-            Rule::Project(_) => None,
-            Rule::Product(_) => None,
+            Rule::Project(_) | Rule::Product(_) | Rule::Join(_) => None,
         }
     }
 
@@ -105,6 +107,7 @@ impl Display for Rule {
             Rule::Generic(rule) => write!(f, "{}", rule),
             Rule::Project(rule) => write!(f, "{}", rule),
             Rule::Product(rule) => write!(f, "{}", rule),
+            Rule::Join(rule) => write!(f, "{}", rule),
         }
     }
 }
