@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use crate::search::datalog::{
     atom::Atom, rules::generic_rule::GenericRule, rules::project_rule::ProjectRule,
-    rules::utils::VariableSource, Annotation,
+    rules::rule_core::RuleCore, rules::utils::VariableSource, Annotation,
 };
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -16,41 +16,48 @@ impl Rule {
         Self::Generic(rule)
     }
 
-    pub fn effect(&self) -> &Atom {
+    pub fn new_project(rule: ProjectRule) -> Self {
+        Self::Project(rule)
+    }
+
+    fn core(&self) -> &RuleCore {
         match self {
-            Rule::Generic(rule) => rule.core().effect(),
-            Rule::Project(rule) => rule.core().effect(),
+            Rule::Generic(rule) => rule.core(),
+            Rule::Project(rule) => rule.core(),
         }
     }
 
-    pub fn conditions(&self) -> &[Atom] {
+    fn core_mut(&mut self) -> &mut RuleCore {
         match self {
-            Rule::Generic(rule) => rule.core().conditions(),
-            Rule::Project(rule) => rule.core().conditions(),
+            Rule::Generic(rule) => rule.core_mut(),
+            Rule::Project(rule) => rule.core_mut(),
         }
+    }
+
+    #[inline(always)]
+    pub fn effect(&self) -> &Atom {
+        self.core().effect()
+    }
+
+    #[inline(always)]
+    pub fn conditions(&self) -> &[Atom] {
+        self.core().conditions()
     }
 
     /// Update the conditions of the rule. Please make sure that the variable
     /// source is also updated.
     pub fn set_condition(&mut self, conditions: Vec<Atom>) {
-        match self {
-            Rule::Generic(rule) => rule.core_mut().set_condition(conditions),
-            Rule::Project(rule) => rule.core_mut().set_condition(conditions),
-        }
+        self.core_mut().set_condition(conditions);
     }
 
+    #[inline(always)]
     pub fn weight(&self) -> f64 {
-        match self {
-            Rule::Generic(rule) => rule.core().weight(),
-            Rule::Project(rule) => rule.core().weight(),
-        }
+        self.core().weight()
     }
 
+    #[inline(always)]
     pub fn annotation(&self) -> &Annotation {
-        match self {
-            Rule::Generic(rule) => rule.core().annotation(),
-            Rule::Project(rule) => rule.core().annotation(),
-        }
+        self.core().annotation()
     }
 
     pub fn schema_index(&self) -> Option<usize> {
@@ -60,18 +67,13 @@ impl Rule {
         }
     }
 
+    #[inline(always)]
     pub fn variable_source(&self) -> &VariableSource {
-        match self {
-            Rule::Generic(rule) => rule.core().variable_source(),
-            Rule::Project(rule) => rule.core().variable_source(),
-        }
+        self.core().variable_source()
     }
 
     pub fn variable_source_mut(&mut self) -> &mut VariableSource {
-        match self {
-            Rule::Generic(rule) => rule.core_mut().variable_source_mut(),
-            Rule::Project(rule) => rule.core_mut().variable_source_mut(),
-        }
+        self.core_mut().variable_source_mut()
     }
 
     pub fn condition_variables(&self) -> Vec<usize> {
@@ -79,6 +81,12 @@ impl Rule {
             .iter()
             .flat_map(|atom| atom.variables())
             .collect()
+    }
+
+    /// Update the condition at the given index, will update the variable source
+    /// as well.
+    pub fn update_single_condition(&mut self, condition: Atom, index: usize) {
+        self.core_mut().update_single_condition(condition, index);
     }
 }
 

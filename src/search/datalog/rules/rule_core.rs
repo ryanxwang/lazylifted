@@ -1,8 +1,8 @@
-use std::fmt::Display;
+use std::{collections::HashMap, fmt::Display};
 
 use crate::search::datalog::{
     atom::Atom,
-    rules::utils::{VariablePositionInEffect, VariableSource},
+    rules::utils::{VariablePositionInBody, VariablePositionInEffect, VariableSource},
     Annotation,
 };
 
@@ -89,6 +89,47 @@ impl RuleCore {
     #[inline(always)]
     pub fn variable_source_mut(&mut self) -> &mut VariableSource {
         &mut self.variable_source
+    }
+
+    pub fn update_single_condition(&mut self, condition: Atom, index: usize) {
+        let new_argument_index: HashMap<usize, usize> = condition
+            .arguments()
+            .iter()
+            .enumerate()
+            .map(|(i, arg)| {
+                assert!(arg.is_variable());
+                (arg.index(), i)
+            })
+            .collect();
+
+        for table_index in 0..self.variable_source.table().len() {
+            if self.variable_source.table()[table_index].condition_index() == index {
+                let variable_index = self
+                    .variable_source
+                    .get_variable_index_from_table_index(table_index);
+                match self.variable_source.table()[table_index] {
+                    VariablePositionInBody::Direct {
+                        condition_index, ..
+                    } => {
+                        self.variable_source.table_mut()[table_index] =
+                            VariablePositionInBody::Direct {
+                                condition_index,
+                                argument_index: new_argument_index[&variable_index],
+                            };
+                    }
+                    VariablePositionInBody::Indirect {
+                        condition_index, ..
+                    } => {
+                        panic!(
+                            "Cannot update indirect variable position in body: {}",
+                            condition_index
+                        );
+                    }
+                }
+            }
+        }
+
+        self.conditions[index] = condition;
     }
 }
 

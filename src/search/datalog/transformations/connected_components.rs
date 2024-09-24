@@ -271,6 +271,8 @@ mod tests {
         );
         assert_eq!(
             program.rules[7].variable_source().to_string(),
+            // TODO-someday We don't delete variables that no long exist in the
+            // rule, this probably isn't a problem, but also isn't ideal
             "VariableSource {\n  ?0: Indirect { condition_index: 1, table_index: 0 }\n  ?1: Indirect { condition_index: 1, table_index: 1 }\n}"
         );
         assert_eq!(
@@ -279,15 +281,15 @@ mod tests {
         );
         assert_eq!(
             program.rules[9].variable_source().to_string(),
-            "VariableSource {\n  ?0: Direct { condition_index: 0, variable_index: 0 }\n}"
+            "VariableSource {\n  ?0: Direct { condition_index: 0, argument_index: 0 }\n}"
         );
         assert_eq!(
             program.rules[10].variable_source().to_string(),
-            "VariableSource {\n  ?0: Direct { condition_index: 0, variable_index: 0 }\n  ?1: Direct { condition_index: 1, variable_index: 1 }\n}"
+            "VariableSource {\n  ?0: Direct { condition_index: 0, argument_index: 0 }\n  ?1: Direct { condition_index: 1, argument_index: 1 }\n}"
         );
         assert_eq!(
             program.rules[11].variable_source().to_string(),
-            "VariableSource {\n  ?0: Direct { condition_index: 0, variable_index: 0 }\n  ?1: Direct { condition_index: 1, variable_index: 1 }\n}"
+            "VariableSource {\n  ?0: Direct { condition_index: 0, argument_index: 0 }\n  ?1: Direct { condition_index: 1, argument_index: 1 }\n}"
         );
     }
 }

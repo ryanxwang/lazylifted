@@ -39,11 +39,11 @@ pub enum VariablePositionInBody {
     /// find the variable in the condition at the
     /// [`condition_index`](VariablePositionInBody::Direct::condition_index),
     /// and it is the
-    /// [`variable_index`](VariablePositionInBody::Direct::variable_index)-th
+    /// [`argument_index`](VariablePositionInBody::Direct::argument_index)-th
     /// argument of the condition.
     Direct {
         condition_index: usize,
-        variable_index: usize,
+        argument_index: usize,
     },
     /// An [`Indirect`](VariablePositionInBody::Indirect) entry means that we
     /// can find the variable in the [`VariableSource`] of the achiever rule of
@@ -53,6 +53,8 @@ pub enum VariablePositionInBody {
     /// [`table_index`](VariablePositionInBody::Indirect::table_index).
     Indirect {
         condition_index: usize,
+        // we probably don't actually need this, knowing the variable index is
+        // enough
         table_index: usize,
     },
 }
@@ -86,11 +88,11 @@ impl Display for VariablePositionInBody {
         match self {
             Self::Direct {
                 condition_index,
-                variable_index,
+                argument_index,
             } => write!(
                 f,
-                "Direct {{ condition_index: {}, variable_index: {} }}",
-                condition_index, variable_index
+                "Direct {{ condition_index: {}, argument_index: {} }}",
+                condition_index, argument_index
             ),
             Self::Indirect {
                 condition_index,
@@ -151,7 +153,7 @@ impl VariableSource {
                 Some(position) => {
                     table.push(VariablePositionInBody::Direct {
                         condition_index: position.0,
-                        variable_index: position.1,
+                        argument_index: position.1,
                     });
                 }
                 None => {
@@ -169,6 +171,10 @@ impl VariableSource {
 
     pub fn table(&self) -> &[VariablePositionInBody] {
         &self.table
+    }
+
+    pub(super) fn table_mut(&mut self) -> &mut [VariablePositionInBody] {
+        &mut self.table
     }
 
     pub fn get_variable_index_from_table_index(&self, table_index: usize) -> usize {

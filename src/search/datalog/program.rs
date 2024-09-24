@@ -19,8 +19,10 @@ use crate::search::{
 /// additional relaxation of the planning problem on top of delete relaxation.
 const PANIC_ON_NEGATIVE_PRECONDITIONS: bool = false;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Program {
+    // Don't forget to update the PartialEq implementation when adding new
+    // fields.
     pub(super) rules: Vec<Rule>,
     pub(super) task: Rc<Task>,
     // Predicate names for the atoms, including ones generated when building the
@@ -194,6 +196,14 @@ impl Program {
         self.predicate_names.push(name.clone());
         self.predicate_name_to_index.insert(name, index);
         index
+    }
+}
+
+impl PartialEq for Program {
+    fn eq(&self, other: &Self) -> bool {
+        self.rules == other.rules
+            && self.predicate_name_to_index == other.predicate_name_to_index
+            && self.predicate_names == other.predicate_names
     }
 }
 
