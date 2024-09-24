@@ -8,7 +8,7 @@ pub enum TermType {
     Variable,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, EnumIs)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, EnumIs, PartialOrd, Ord)]
 pub enum Term {
     Object(usize),
     Variable(usize),

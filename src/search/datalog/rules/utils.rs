@@ -1,5 +1,9 @@
 use crate::search::datalog::{atom::Atom, term::Term};
-use std::collections::HashMap;
+use itertools::Itertools;
+use std::{
+    collections::{HashMap, HashSet},
+    fmt::Display,
+};
 use strum_macros::EnumIs;
 
 /// This is a map to keep track of the position of variables in the effect of a
@@ -77,6 +81,29 @@ impl VariablePositionInBody {
     }
 }
 
+impl Display for VariablePositionInBody {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Direct {
+                condition_index,
+                variable_index,
+            } => write!(
+                f,
+                "Direct {{ condition_index: {}, variable_index: {} }}",
+                condition_index, variable_index
+            ),
+            Self::Indirect {
+                condition_index,
+                table_index,
+            } => write!(
+                f,
+                "Indirect {{ condition_index: {}, table_index: {} }}",
+                condition_index, table_index
+            ),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct VariableSource {
     /// A table that maps variables to their positions in the conditions of a
@@ -88,17 +115,19 @@ pub struct VariableSource {
 
 impl VariableSource {
     pub fn new(effect: &Atom, conditions: &[Atom]) -> Self {
-        let mut all_variables = vec![];
+        let mut all_variables = HashSet::new();
         for term in effect.arguments() {
             if term.is_variable() {
-                all_variables.push(term.to_owned());
+                all_variables.insert(term.to_owned());
             }
         }
         for term in conditions.iter().flat_map(|atom| atom.arguments()) {
             if term.is_variable() {
-                all_variables.push(term.to_owned());
+                all_variables.insert(term.to_owned());
             }
         }
+        // Sort the variables to ensure that the order is deterministic.
+        let all_variables: Vec<_> = all_variables.into_iter().sorted().collect();
 
         let mut table = vec![];
         let mut variable_index_to_table_index = HashMap::new();
@@ -189,6 +218,20 @@ impl VariableSource {
                 };
             }
         }
+    }
+}
+
+impl Display for VariableSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "VariableSource {{")?;
+        for (i, position) in self.table.iter().enumerate() {
+            write!(
+                f,
+                "\n  ?{}: {}",
+                self.table_index_to_variable_index[&i], position
+            )?;
+        }
+        write!(f, "\n}}")
     }
 }
 

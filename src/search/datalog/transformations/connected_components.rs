@@ -262,6 +262,32 @@ mod tests {
                 "(10(?0) <- 0(?0), 4(?0, ?1)  | weight: 0; annotation: None; schema_index: 3)",
                 "(11(?1) <- 0(?0), 4(?0, ?1)  | weight: 0; annotation: None; schema_index: 3)",
             ]
-        )
+        );
+
+        // additionally check that the variable sources of split rules are correct
+        assert_eq!(
+            program.rules[0].variable_source().to_string(),
+            "VariableSource {\n  ?0: Indirect { condition_index: 1, table_index: 0 }\n}"
+        );
+        assert_eq!(
+            program.rules[7].variable_source().to_string(),
+            "VariableSource {\n  ?0: Indirect { condition_index: 1, table_index: 0 }\n  ?1: Indirect { condition_index: 1, table_index: 1 }\n}"
+        );
+        assert_eq!(
+            program.rules[8].variable_source().to_string(),
+            "VariableSource {\n  ?0: Indirect { condition_index: 1, table_index: 0 }\n  ?1: Indirect { condition_index: 1, table_index: 1 }\n}"
+        );
+        assert_eq!(
+            program.rules[9].variable_source().to_string(),
+            "VariableSource {\n  ?0: Direct { condition_index: 0, variable_index: 0 }\n}"
+        );
+        assert_eq!(
+            program.rules[10].variable_source().to_string(),
+            "VariableSource {\n  ?0: Direct { condition_index: 0, variable_index: 0 }\n  ?1: Direct { condition_index: 1, variable_index: 1 }\n}"
+        );
+        assert_eq!(
+            program.rules[11].variable_source().to_string(),
+            "VariableSource {\n  ?0: Direct { condition_index: 0, variable_index: 0 }\n  ?1: Direct { condition_index: 1, variable_index: 1 }\n}"
+        );
     }
 }
