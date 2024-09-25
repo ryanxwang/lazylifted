@@ -19,7 +19,7 @@ impl HmaxHeuristic {
     pub fn new(task: Rc<Task>) -> Self {
         let program = DatalogProgram::new_with_transformations(
             task,
-            Self::get_annotation_generator(),
+            &Self::get_annotation_generator(),
             &Self::get_transformation_options(),
         );
         let config = WeightedGrounderConfig {

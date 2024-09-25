@@ -159,7 +159,7 @@ fn select_tuples(
 
     let mut tuples = Vec::new();
 
-    if !atom.is_negated() {
+    if atom.is_positive() {
         for tuple in &state.relations[atom.predicate_index()].tuples {
             if tuple_matches(tuple) {
                 tuples.push(tuple.clone());

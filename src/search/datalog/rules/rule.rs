@@ -27,6 +27,10 @@ impl Rule {
         Self::Project(rule)
     }
 
+    pub fn new_product(rule: ProductRule) -> Self {
+        Self::Product(rule)
+    }
+
     pub fn new_join(rule: JoinRule) -> Self {
         Self::Join(rule)
     }

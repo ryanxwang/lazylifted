@@ -119,7 +119,7 @@ impl RslgCompiler {
                 .atoms()
                 .iter()
                 .map(|atom| {
-                    assert!(!atom.is_negated());
+                    assert!(atom.is_positive());
                     atom.underlying().to_owned()
                 })
                 .collect(),

@@ -54,7 +54,7 @@ mod tests {
         ));
         let annotation_generator: AnnotationGenerator = Box::new(|_, _| Annotation::None);
 
-        let mut program = Program::new_raw_for_tests(task.clone(), annotation_generator);
+        let mut program = Program::new_raw_for_tests(task.clone(), &annotation_generator);
         program = remove_action_predicates(program);
 
         // the action predicates are still recorded, even if not used in the

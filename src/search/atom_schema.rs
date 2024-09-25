@@ -194,13 +194,13 @@ impl Negatable<AtomSchema> {
 
     pub fn partially_ground(&self, object_indices: &[usize]) -> Self {
         Negatable::new(
-            self.is_negated(),
+            self.is_negative(),
             self.underlying().partially_ground(object_indices),
         )
     }
 
     pub fn ground(&self, object_indices: &[usize]) -> Negatable<Atom> {
-        Negatable::new(self.is_negated(), self.underlying().ground(object_indices))
+        Negatable::new(self.is_negative(), self.underlying().ground(object_indices))
     }
 
     pub fn includes(&self, atom: &Atom) -> bool {

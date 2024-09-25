@@ -99,7 +99,7 @@ pub(super) fn split_into_connected_components(
                 .push(program.rules[target_rule_index].conditions()[component[0]].clone());
         } else {
             // Otherwise, we will need to create a new rule for this component
-            let aux_predicate = program.new_auxillary_predicate();
+            let aux_predicate = program.new_auxillary_predicate(None);
             let new_rule_conditions: Vec<Atom> = component
                 .iter()
                 .map(|&condition_index| {
@@ -206,7 +206,7 @@ mod tests {
         ));
         let annotation_generator: AnnotationGenerator = Box::new(|_, _| Annotation::None);
 
-        let mut program = Program::new_raw_for_tests(task.clone(), annotation_generator);
+        let mut program = Program::new_raw_for_tests(task.clone(), &annotation_generator);
         // we normally remove action predicates before splitting into connected
         // components, so we do it here as well
         program = remove_action_predicates(program);
@@ -296,7 +296,7 @@ mod tests {
         let task = Rc::new(Task::from_text(SPANNER_DOMAIN_TEXT, SPANNER_PROBLEM10_TEXT));
         let annotation_generator: AnnotationGenerator = Box::new(|_, _| Annotation::None);
 
-        let mut program = Program::new_raw_for_tests(task.clone(), annotation_generator);
+        let mut program = Program::new_raw_for_tests(task.clone(), &annotation_generator);
         // we normally remove action predicates before splitting into connected
         // components, so we do it here as well
         program = remove_action_predicates(program);

@@ -14,6 +14,8 @@ use crate::search::{
     ActionSchema, Task,
 };
 
+use super::transformations::convert_rules_to_normal_form;
+
 #[derive(Debug, Clone)]
 pub struct Program {
     // Don't forget to update the PartialEq implementation when adding new
@@ -29,7 +31,7 @@ pub struct Program {
 impl Program {
     pub fn new_with_transformations(
         task: Rc<Task>,
-        annotation_generator: AnnotationGenerator,
+        annotation_generator: &AnnotationGenerator,
         transformation_options: &TransformationOptions,
     ) -> Self {
         let mut program = Self::new(task.clone(), annotation_generator);
@@ -37,18 +39,19 @@ impl Program {
         if transformation_options.remove_action_predicates {
             program = remove_action_predicates(program);
         }
+        program = convert_rules_to_normal_form(program);
 
         program
     }
 
     #[cfg(test)]
-    pub fn new_raw_for_tests(task: Rc<Task>, annotation_generator: AnnotationGenerator) -> Self {
+    pub fn new_raw_for_tests(task: Rc<Task>, annotation_generator: &AnnotationGenerator) -> Self {
         Self::new(task, annotation_generator)
     }
 
     /// Generate a program for the given task. This is intentionally not public
     /// because users should use [`Self::new_with_transformations`] instead.
-    fn new(task: Rc<Task>, annotation_generator: AnnotationGenerator) -> Self {
+    fn new(task: Rc<Task>, annotation_generator: &AnnotationGenerator) -> Self {
         let mut predicate_names: Vec<String> = task
             .predicates
             .iter()
@@ -66,14 +69,14 @@ impl Program {
                 action_schema,
                 &mut predicate_names,
                 &mut predicate_name_to_index,
-                &annotation_generator,
+                annotation_generator,
                 task.clone(),
             ));
 
             rules.append(&mut Self::generate_action_effect_rules(
                 action_schema,
                 &mut predicate_name_to_index,
-                &annotation_generator,
+                annotation_generator,
                 task.clone(),
             ));
         }
@@ -114,7 +117,7 @@ impl Program {
             .preconditions()
             .iter()
             .map(|p| {
-                if p.is_negated() {
+                if p.is_negative() {
                     panic!("Negative preconditions are not supported for Datalog");
                 } else {
                     Atom::new_from_atom_schema(p.underlying())
@@ -157,7 +160,7 @@ impl Program {
             .effects()
             .iter()
             .filter_map(|e| {
-                if e.is_negated() {
+                if e.is_negative() {
                     return None;
                 }
 
@@ -180,10 +183,21 @@ impl Program {
     }
 
     /// Create a new auxillary predicate, do all the bookkeeping and return the
-    /// index of the predicate.
-    pub(super) fn new_auxillary_predicate(&mut self) -> usize {
+    /// index of the predicate. If name is provided, will check that it is not
+    /// already in use.
+    pub(super) fn new_auxillary_predicate(&mut self, name: Option<String>) -> usize {
         let index = self.predicate_names.len();
-        let name = format!("p${}", index);
+        let name = match name {
+            Some(name) => {
+                assert!(
+                    !self.predicate_name_to_index.contains_key(&name),
+                    "Predicate name {} already exists",
+                    name
+                );
+                name
+            }
+            None => format!("p${}", index),
+        };
         self.predicate_names.push(name.clone());
         self.predicate_name_to_index.insert(name, index);
         index
@@ -213,7 +227,7 @@ mod tests {
         ));
         let annotation_generator: AnnotationGenerator = Box::new(|_, _| Annotation::None);
 
-        let program = Program::new_raw_for_tests(task.clone(), annotation_generator);
+        let program = Program::new_raw_for_tests(task.clone(), &annotation_generator);
 
         assert_eq!(
             program.predicate_names,

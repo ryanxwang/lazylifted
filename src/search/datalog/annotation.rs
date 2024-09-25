@@ -8,6 +8,7 @@ use crate::search::{datalog::program::Program, Task};
 pub enum RuleCategory {
     ActionApplicability { schema_index: usize },
     ActionEffect,
+    Goal,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

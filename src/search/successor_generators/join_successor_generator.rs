@@ -128,7 +128,7 @@ where
             }
 
             let index = effect.predicate_index();
-            new_state.nullary_atoms[index] = !effect.is_negated();
+            new_state.nullary_atoms[index] = effect.is_positive();
         }
 
         assert!(action_schema
@@ -152,7 +152,7 @@ where
                     .collect::<RawSmallTuple>()
                     .into();
 
-                if effect.is_negated() {
+                if effect.is_negative() {
                     new_state.relations[effect.predicate_index()]
                         .tuples
                         .remove(&atom);
@@ -168,7 +168,7 @@ where
                     continue;
                 }
                 let atom = instantiate_effect(effect, action);
-                if effect.is_negated() {
+                if effect.is_negative() {
                     new_state.relations[effect.predicate_index()]
                         .tuples
                         .remove(&atom);
@@ -230,7 +230,7 @@ fn is_ground_action_applicable(action: &ActionSchema, state: &DBState) -> bool {
             .into();
 
         let tuples_in_relation = &state.relations[index].tuples;
-        if tuples_in_relation.contains(&tuple) == precondition.is_negated() {
+        if tuples_in_relation.contains(&tuple) == precondition.is_negative() {
             // Either this is a negative precondition and the tuple is present
             // or this is a positive precondition and the tuple is not present
             return false;
@@ -247,10 +247,10 @@ fn is_trivially_inapplicable(action: &ActionSchema, state: &DBState) -> bool {
         }
 
         let index = precond.predicate_index();
-        if precond.is_negated() && state.nullary_atoms[index] {
+        if precond.is_negative() && state.nullary_atoms[index] {
             return true;
         }
-        if !precond.is_negated() && !state.nullary_atoms[index] {
+        if precond.is_positive() && !state.nullary_atoms[index] {
             return true;
         }
     }

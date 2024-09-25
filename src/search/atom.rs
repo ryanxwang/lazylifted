@@ -115,7 +115,7 @@ impl TryFrom<Negatable<AtomSchema>> for Negatable<Atom> {
 
     fn try_from(value: Negatable<AtomSchema>) -> Result<Self, Self::Error> {
         Ok(Negatable::new(
-            value.is_negated(),
+            value.is_negative(),
             Atom::try_from(value.underlying().to_owned())?,
         ))
     }

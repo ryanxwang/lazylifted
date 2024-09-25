@@ -55,7 +55,7 @@ fn project_away_constant_arguments(mut program: Program) -> Program {
                 .cloned()
                 .collect();
 
-            let aux_predicate_index = program.new_auxillary_predicate();
+            let aux_predicate_index = program.new_auxillary_predicate(None);
             let aux_atom = Atom::new(Arguments::new(free_variables), aux_predicate_index, true);
             let project_rule = Rule::new_project(ProjectRule::new(
                 aux_atom.clone(),
@@ -319,7 +319,7 @@ mod tests {
         ));
         let annotation_generator: AnnotationGenerator = Box::new(|_, _| Annotation::None);
 
-        let mut program = Program::new_raw_for_tests(task, annotation_generator);
+        let mut program = Program::new_raw_for_tests(task, &annotation_generator);
         let original_program = program.clone();
         program = project_away_constant_arguments(program);
 
@@ -334,7 +334,7 @@ mod tests {
         ));
         let annotation_generator: AnnotationGenerator = Box::new(|_, _| Annotation::None);
 
-        let mut program = Program::new_raw_for_tests(task, annotation_generator);
+        let mut program = Program::new_raw_for_tests(task, &annotation_generator);
         program = remove_action_predicates(program);
         program = convert_rules_to_normal_form(program);
 
@@ -421,7 +421,7 @@ mod tests {
         let task = Rc::new(Task::from_text(SPANNER_DOMAIN_TEXT, SPANNER_PROBLEM10_TEXT));
         let annotation_generator: AnnotationGenerator = Box::new(|_, _| Annotation::None);
 
-        let mut program = Program::new_raw_for_tests(task.clone(), annotation_generator);
+        let mut program = Program::new_raw_for_tests(task.clone(), &annotation_generator);
         program = remove_action_predicates(program);
         program = convert_rules_to_normal_form(program);
 

@@ -94,7 +94,7 @@ impl DBState {
             relations.tuples.contains(atom.arguments())
         };
 
-        in_state != atom.is_negated()
+        in_state != atom.is_negative()
     }
 
     pub fn atoms(&self) -> Vec<Atom> {
