@@ -6,8 +6,8 @@ mod rule;
 mod rule_core;
 mod utils;
 
-pub use generic_rule::GenericRule;
-pub use join_rule::JoinRule;
-pub use product_rule::ProductRule;
-pub use project_rule::ProjectRule;
-pub use rule::Rule;
+pub(super) use generic_rule::GenericRule;
+pub(super) use join_rule::JoinRule;
+pub(super) use product_rule::ProductRule;
+pub(super) use project_rule::ProjectRule;
+pub(super) use rule::Rule;

@@ -1,4 +1,5 @@
 mod connected_components;
+mod join_cost;
 mod normal_form;
 mod remove_action_predicates;
 mod transformation_options;

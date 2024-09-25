@@ -27,6 +27,10 @@ impl Rule {
         Self::Project(rule)
     }
 
+    pub fn new_join(rule: JoinRule) -> Self {
+        Self::Join(rule)
+    }
+
     fn core(&self) -> &RuleCore {
         match self {
             Rule::Generic(rule) => rule.core(),
@@ -95,9 +99,25 @@ impl Rule {
     }
 
     /// Update the condition at the given index, will update the variable source
-    /// as well.
+    /// as well. Only supports dropping constant arguments of the condition.
     pub fn update_single_condition(&mut self, condition: Atom, index: usize) {
         self.core_mut().update_single_condition(condition, index);
+    }
+
+    /// Merge some conditions together into the provided new condition. Will
+    /// update variable source to point into the variable source of the rule
+    /// creating the new condition when appropriate.
+    pub fn merge_conditions(
+        &mut self,
+        condition_indices_to_merge: &[usize],
+        new_condition: Atom,
+        new_condition_variable_source: &VariableSource,
+    ) {
+        self.core_mut().merge_conditions(
+            condition_indices_to_merge,
+            new_condition,
+            new_condition_variable_source,
+        );
     }
 }
 

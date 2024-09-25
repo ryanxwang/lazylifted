@@ -14,11 +14,6 @@ use crate::search::{
     ActionSchema, Task,
 };
 
-/// If true, the program will panic if a negative precondition is encountered.
-/// Otherwise, the precondition will be ignored, which is equivalent to an
-/// additional relaxation of the planning problem on top of delete relaxation.
-const PANIC_ON_NEGATIVE_PRECONDITIONS: bool = false;
-
 #[derive(Debug, Clone)]
 pub struct Program {
     // Don't forget to update the PartialEq implementation when adding new
@@ -118,15 +113,11 @@ impl Program {
         let conditions = action_schema
             .preconditions()
             .iter()
-            .filter_map(|p| {
+            .map(|p| {
                 if p.is_negated() {
-                    if PANIC_ON_NEGATIVE_PRECONDITIONS {
-                        panic!("Negated preconditions are not supported for Datalog");
-                    } else {
-                        None
-                    }
+                    panic!("Negative preconditions are not supported for Datalog");
                 } else {
-                    Some(Atom::new_from_atom_schema(p.underlying()))
+                    Atom::new_from_atom_schema(p.underlying())
                 }
             })
             // According to comments in Powerlifted, this has an effect in

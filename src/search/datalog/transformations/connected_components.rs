@@ -199,7 +199,7 @@ mod tests {
     use std::rc::Rc;
 
     #[test]
-    fn test_connected_components_splitting() {
+    fn test_connected_components_splitting_blocksworld() {
         let task = Rc::new(Task::from_text(
             BLOCKSWORLD_DOMAIN_TEXT,
             BLOCKSWORLD_PROBLEM13_TEXT,
@@ -271,8 +271,6 @@ mod tests {
         );
         assert_eq!(
             program.rules[7].variable_source().to_string(),
-            // TODO-someday We don't delete variables that no long exist in the
-            // rule, this probably isn't a problem, but also isn't ideal
             "VariableSource {\n  ?0: Indirect { condition_index: 1, table_index: 0 }\n  ?1: Indirect { condition_index: 1, table_index: 1 }\n}"
         );
         assert_eq!(
@@ -290,6 +288,52 @@ mod tests {
         assert_eq!(
             program.rules[11].variable_source().to_string(),
             "VariableSource {\n  ?0: Direct { condition_index: 0, argument_index: 0 }\n  ?1: Direct { condition_index: 1, argument_index: 1 }\n}"
+        );
+    }
+
+    #[test]
+    fn test_connected_components_splitting_spanner() {
+        let task = Rc::new(Task::from_text(SPANNER_DOMAIN_TEXT, SPANNER_PROBLEM10_TEXT));
+        let annotation_generator: AnnotationGenerator = Box::new(|_, _| Annotation::None);
+
+        let mut program = Program::new_raw_for_tests(task.clone(), annotation_generator);
+        // we normally remove action predicates before splitting into connected
+        // components, so we do it here as well
+        program = remove_action_predicates(program);
+
+        for rule_index in 0..program.rules.len() {
+            program = split_into_connected_components(program, rule_index);
+        }
+
+        assert_eq!(
+            program.predicate_names,
+            vec![
+                "at",
+                "carrying",
+                "usable",
+                "link",
+                "tightened",
+                "loose",
+                "applicable-walk",
+                "applicable-pickup_spanner",
+                "applicable-tighten_nut"
+            ]
+        );
+
+        assert_eq!(
+            program
+                .rules
+                .iter()
+                .map(|rule| format!("{}", rule))
+                .collect_vec(),
+            vec![
+                // walk adds (at ?m ?end)
+                "(0(?2, ?1) <- 3(?0, ?1), 0(?2, ?0)  | weight: 1; annotation: None; schema_index: 0)",
+                // pickup_spanner adds (carrying ?m ?s)
+                "(1(?2, ?1) <- 0(?1, ?0), 0(?2, ?0)  | weight: 1; annotation: None; schema_index: 1)",
+                // tighten_nut adds (tightened ?n)
+                "(4(?3) <- 5(?3), 2(?1), 1(?2, ?1), 0(?3, ?0), 0(?2, ?0)  | weight: 1; annotation: None; schema_index: 2)",
+            ]
         );
     }
 }

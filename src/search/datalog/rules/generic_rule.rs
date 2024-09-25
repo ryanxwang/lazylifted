@@ -3,7 +3,7 @@ use std::fmt::Display;
 use crate::search::datalog::{
     atom::Atom,
     rules::rule_core::RuleCore,
-    rules::{ProductRule, ProjectRule},
+    rules::{JoinRule, ProductRule, ProjectRule},
     Annotation,
 };
 
@@ -48,12 +48,11 @@ impl GenericRule {
     }
 
     pub fn to_product_rule(&self) -> ProductRule {
-        ProductRule::new(
-            self.core.effect().clone(),
-            self.core.conditions().to_vec(),
-            self.core.weight(),
-            self.core.annotation().clone(),
-        )
+        ProductRule::new_from_core(self.core.clone())
+    }
+
+    pub fn to_join_rule(&self) -> JoinRule {
+        JoinRule::new_from_core(self.core.clone())
     }
 }
 

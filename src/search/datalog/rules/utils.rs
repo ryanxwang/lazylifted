@@ -110,9 +110,9 @@ impl Display for VariablePositionInBody {
 pub struct VariableSource {
     /// A table that maps variables to their positions in the conditions of a
     /// rule.
-    table: Vec<VariablePositionInBody>,
-    variable_index_to_table_index: HashMap<usize, usize>,
-    table_index_to_variable_index: HashMap<usize, usize>,
+    pub(super) table: Vec<VariablePositionInBody>,
+    pub(super) variable_index_to_table_index: HashMap<usize, usize>,
+    pub(super) table_index_to_variable_index: HashMap<usize, usize>,
 }
 
 impl VariableSource {
@@ -222,6 +222,37 @@ impl VariableSource {
                     condition_index,
                     table_index: indirect_variable_index,
                 };
+            }
+        }
+    }
+
+    pub fn add_indirect_entry(
+        &mut self,
+        variable_index: usize,
+        condition_index: usize,
+        indirect_table_index: usize,
+    ) {
+        let table_index = self
+            .variable_index_to_table_index
+            .get(&variable_index)
+            .copied();
+        match table_index {
+            Some(table_index) => {
+                panic!(
+                    "Variable {:?} already has an entry in the table at index {}",
+                    variable_index, table_index
+                );
+            }
+            None => {
+                let our_table_index = self.table.len();
+                self.table.push(VariablePositionInBody::Indirect {
+                    condition_index,
+                    table_index: indirect_table_index,
+                });
+                self.variable_index_to_table_index
+                    .insert(variable_index, our_table_index);
+                self.table_index_to_variable_index
+                    .insert(our_table_index, variable_index);
             }
         }
     }

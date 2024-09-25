@@ -1,13 +1,17 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, hash::Hash};
+
+use itertools::Itertools;
 
 use crate::search::{
     datalog::{
         arguments::Arguments,
         atom::Atom,
         program::Program,
-        rules::{GenericRule, ProjectRule, Rule},
+        rules::{GenericRule, JoinRule, ProjectRule, Rule},
         term::Term,
-        transformations::connected_components::split_into_connected_components,
+        transformations::{
+            connected_components::split_into_connected_components, join_cost::JoinCostType,
+        },
         Annotation,
     },
     Task,
@@ -86,8 +90,172 @@ fn is_product_rule(rule: &Rule) -> bool {
     true
 }
 
-fn convert_to_join_rules(rule: &Rule) -> Vec<Rule> {
-    todo!()
+/// To help splitting off some conditions, find all the arguments for the new
+/// auxiliary predicate that will be created. This is the intersection of
+/// - all the variables in the conditions that will be split off
+/// - all the variables in the rest of the rule, including the effect
+fn find_arguments_for_split_condition(
+    original_rule: &Rule,
+    split_condition_indices: &[usize],
+) -> Arguments {
+    let mut terms_in_new_condition = HashSet::new();
+    for &index in split_condition_indices {
+        terms_in_new_condition.extend(
+            original_rule.conditions()[index]
+                .arguments()
+                .iter()
+                .filter(|argument| argument.is_variable())
+                .cloned(),
+        );
+    }
+
+    let mut remaining_terms = HashSet::new();
+    for (condition_index, condition) in original_rule.conditions().iter().enumerate() {
+        if split_condition_indices.contains(&condition_index) {
+            continue;
+        }
+        remaining_terms.extend(
+            condition
+                .arguments()
+                .iter()
+                .filter(|argument| argument.is_variable())
+                .cloned(),
+        );
+    }
+    remaining_terms.extend(
+        original_rule
+            .effect()
+            .arguments()
+            .iter()
+            .filter(|argument| argument.is_variable())
+            .cloned(),
+    );
+
+    Arguments::new(
+        terms_in_new_condition
+            .intersection(&remaining_terms)
+            .cloned()
+            .sorted()
+            .collect(),
+    )
+}
+
+fn fix_split_rule_source_table(mut split_rule: Rule, join_rules_so_far: &[Rule]) -> Rule {
+    // these are the variables with a source so far in the split rule
+    let seen_variables: HashSet<usize> = split_rule
+        .conditions()
+        .iter()
+        .flat_map(|condition| condition.variables_set())
+        .collect();
+
+    for condition_index in 0..split_rule.conditions().len() {
+        for join_rule in join_rules_so_far {
+            if join_rule.effect().predicate_index()
+                != split_rule.conditions()[condition_index].predicate_index()
+            {
+                continue;
+            }
+
+            let join_rule_variable_source = join_rule.variable_source();
+            for table_index in 0..join_rule_variable_source.table().len() {
+                let variable_index =
+                    join_rule_variable_source.get_variable_index_from_table_index(table_index);
+                if seen_variables.contains(&variable_index) {
+                    continue;
+                }
+
+                // we need to add this variable to the split rule's variable source
+                split_rule.variable_source_mut().add_indirect_entry(
+                    variable_index,
+                    condition_index,
+                    table_index,
+                );
+            }
+        }
+    }
+
+    split_rule
+}
+
+fn split_rule<F>(
+    mut rule: Rule,
+    condition_indices: Vec<usize>,
+    join_rules_so_far: &[Rule],
+    aux_predicate_generator: &mut F,
+) -> (Rule, Rule)
+where
+    F: FnMut() -> usize,
+{
+    assert_eq!(condition_indices.len(), 2);
+    let aux_predicate_index = aux_predicate_generator();
+    let new_rule_conditions = condition_indices
+        .iter()
+        .map(|&index| rule.conditions()[index].clone())
+        .collect_vec();
+    let aux = Atom::new(
+        find_arguments_for_split_condition(&rule, &condition_indices),
+        aux_predicate_index,
+        true,
+    );
+    let mut split_rule = Rule::new_join(JoinRule::new(
+        aux.clone(),
+        (
+            new_rule_conditions[0].clone(),
+            new_rule_conditions[1].clone(),
+        ),
+        0.0,
+        Annotation::None,
+    ));
+
+    // We need to make sure the new split rule has the right variable source,
+    // since some of the conditions we split off could be auxiliary predicates
+    // created by previous join rules, and we need to keep track of variables
+    // that were projected away by the previous join rules.
+    split_rule = fix_split_rule_source_table(split_rule, join_rules_so_far);
+
+    // We also need to update the original rule to use the new auxiliary predicate
+    rule.merge_conditions(&condition_indices, aux, split_rule.variable_source());
+
+    (rule, split_rule)
+}
+
+fn convert_to_join_rules<F>(mut rule: Rule, mut aux_predicate_generator: F) -> Vec<Rule>
+where
+    F: FnMut() -> usize,
+{
+    let mut join_rules = vec![];
+    while rule.conditions().len() > 2 {
+        let (index1, index2) = (0..rule.conditions().len())
+            .tuple_combinations()
+            .min_by_key(|(i, j)| {
+                JoinCostType::FastDownward.calculate_join_cost(
+                    &rule,
+                    &rule.conditions()[*i],
+                    &rule.conditions()[*j],
+                )
+            })
+            .unwrap();
+        let (existing_rule, new_rule) = split_rule(
+            rule,
+            vec![index1, index2].into_iter().sorted().collect(),
+            &join_rules,
+            &mut aux_predicate_generator,
+        );
+        rule = existing_rule;
+        join_rules.push(new_rule);
+    }
+    // Each iteration should reduce the number of conditions by 1
+    assert_eq!(rule.conditions().len(), 2);
+
+    // Now we just convert rule directly to a join rule
+    let new_rule = if let Rule::Generic(generic_rule) = rule {
+        Rule::Join(generic_rule.to_join_rule())
+    } else {
+        panic!("Expecting all non-projection rules to be generic at this point of normalisation")
+    };
+    join_rules.push(new_rule);
+
+    join_rules
 }
 
 pub fn convert_rules_to_normal_form(mut program: Program) -> Program {
@@ -116,7 +284,17 @@ pub fn convert_rules_to_normal_form(mut program: Program) -> Program {
             assert!(new_rule.is_product());
             new_rules.push(new_rule);
         } else {
-            new_rules.append(&mut convert_to_join_rules(&rule));
+            new_rules.append(&mut convert_to_join_rules(rule, || {
+                // This code is copied from
+                // [`Program::new_auxillary_predicate`], we cannot just call it
+                // because that would need to mutably borrow the entire program,
+                // which we cannot do here.
+                let index = program.predicate_names.len();
+                let name = format!("p${}", index);
+                program.predicate_names.push(name.clone());
+                program.predicate_name_to_index.insert(name, index);
+                index
+            }));
         }
     }
 
@@ -146,5 +324,160 @@ mod tests {
         program = project_away_constant_arguments(program);
 
         assert_eq!(program, original_program);
+    }
+
+    #[test]
+    fn test_convert_blocksworld_to_normal_form() {
+        let task = Rc::new(Task::from_text(
+            BLOCKSWORLD_DOMAIN_TEXT,
+            BLOCKSWORLD_PROBLEM13_TEXT,
+        ));
+        let annotation_generator: AnnotationGenerator = Box::new(|_, _| Annotation::None);
+
+        let mut program = Program::new_raw_for_tests(task, annotation_generator);
+        program = remove_action_predicates(program);
+        program = convert_rules_to_normal_form(program);
+
+        assert_eq!(
+            program.predicate_names,
+            vec![
+                "clear",
+                "on-table",
+                "arm-empty",
+                "holding",
+                "on",
+                "applicable-pickup",
+                "applicable-putdown",
+                "applicable-stack",
+                "applicable-unstack",
+                "p$9",
+                "p$10",
+                "p$11",
+            ]
+        );
+
+        // all the schema indices should be gone since no rule should still be
+        // generic
+        assert_eq!(
+            program
+                .rules
+                .iter()
+                .map(|rule| format!("{}", rule))
+                .collect_vec(),
+            vec![
+                // the pickup rule for adding (holding ?ob) gets split into two
+                "(3(?0) <- 2(), 9(?0)  | weight: 1; annotation: None)",
+                // putdown rules, add effects (clear ?ob), (arm-empty),
+                // (on-table ?ob), these don't get split
+                "(0(?0) <- 3(?0)  | weight: 1; annotation: None)",
+                "(2() <- 3(?0)  | weight: 1; annotation: None)",
+                "(1(?0) <- 3(?0)  | weight: 1; annotation: None)",
+                // stack rules, add effects (arm-empty) (clear ?ob) (on ?ob
+                // ?underob), these also don't get split
+                "(2() <- 3(?0), 0(?1)  | weight: 1; annotation: None)",
+                "(0(?0) <- 3(?0), 0(?1)  | weight: 1; annotation: None)",
+                "(4(?0, ?1) <- 3(?0), 0(?1)  | weight: 1; annotation: None)",
+                // unstack applicability rule for adding (holding ?ob) and
+                // (clear ?underob), both get split
+                "(3(?0) <- 2(), 10(?0)  | weight: 1; annotation: None)",
+                "(0(?1) <- 2(), 11(?1)  | weight: 1; annotation: None)",
+                // pickup auxillary rule
+                "(9(?0) <- 1(?0), 0(?0)  | weight: 0; annotation: None)",
+                // unstack auxillary rules
+                "(10(?0) <- 0(?0), 4(?0, ?1)  | weight: 0; annotation: None)",
+                "(11(?1) <- 0(?0), 4(?0, ?1)  | weight: 0; annotation: None)",
+            ]
+        );
+
+        // additionally check that the variable sources of split rules are correct
+        assert_eq!(
+            program.rules[0].variable_source().to_string(),
+            "VariableSource {\n  ?0: Indirect { condition_index: 1, table_index: 0 }\n}"
+        );
+        assert_eq!(
+            program.rules[7].variable_source().to_string(),
+            "VariableSource {\n  ?0: Indirect { condition_index: 1, table_index: 0 }\n  ?1: Indirect { condition_index: 1, table_index: 1 }\n}"
+        );
+        assert_eq!(
+            program.rules[8].variable_source().to_string(),
+            "VariableSource {\n  ?0: Indirect { condition_index: 1, table_index: 0 }\n  ?1: Indirect { condition_index: 1, table_index: 1 }\n}"
+        );
+        assert_eq!(
+            program.rules[9].variable_source().to_string(),
+            "VariableSource {\n  ?0: Direct { condition_index: 0, argument_index: 0 }\n}"
+        );
+        assert_eq!(
+            program.rules[10].variable_source().to_string(),
+            "VariableSource {\n  ?0: Direct { condition_index: 0, argument_index: 0 }\n  ?1: Direct { condition_index: 1, argument_index: 1 }\n}"
+        );
+        assert_eq!(
+            program.rules[11].variable_source().to_string(),
+            "VariableSource {\n  ?0: Direct { condition_index: 0, argument_index: 0 }\n  ?1: Direct { condition_index: 1, argument_index: 1 }\n}"
+        );
+    }
+
+    #[test]
+    fn test_convert_spanner_to_normal_form() {
+        let task = Rc::new(Task::from_text(SPANNER_DOMAIN_TEXT, SPANNER_PROBLEM10_TEXT));
+        let annotation_generator: AnnotationGenerator = Box::new(|_, _| Annotation::None);
+
+        let mut program = Program::new_raw_for_tests(task.clone(), annotation_generator);
+        program = remove_action_predicates(program);
+        program = convert_rules_to_normal_form(program);
+
+        assert_eq!(
+            program.predicate_names,
+            vec![
+                "at",
+                "carrying",
+                "usable",
+                "link",
+                "tightened",
+                "loose",
+                "applicable-walk",
+                "applicable-pickup_spanner",
+                "applicable-tighten_nut",
+                "p$9",
+                "p$10",
+                "p$11",
+            ]
+        );
+
+        assert_eq!(
+            program
+                .rules
+                .iter()
+                .map(|rule| format!("{}", rule))
+                .collect_vec(),
+            vec![
+                // walk adds (at ?m ?end)
+                "(0(?2, ?1) <- 3(?0, ?1), 0(?2, ?0)  | weight: 1; annotation: None)",
+                // pickup_spanner adds (carrying ?m ?s)
+                "(1(?2, ?1) <- 0(?1, ?0), 0(?2, ?0)  | weight: 1; annotation: None)",
+                // tighten_nut adds (tightened ?n), this gets split
+                "(9(?0, ?3) <- 5(?3), 0(?3, ?0)  | weight: 0; annotation: None)",
+                "(10(?2) <- 2(?1), 1(?2, ?1)  | weight: 0; annotation: None)",
+                "(11(?0) <- 0(?2, ?0), 10(?2)  | weight: 0; annotation: None)",
+                "(4(?3) <- 9(?0, ?3), 11(?0)  | weight: 1; annotation: None)"
+            ]
+        );
+
+        // check some interesting variable sources
+        assert_eq!(
+            program.rules[2].variable_source().to_string(),
+            "VariableSource {\n  ?0: Direct { condition_index: 1, argument_index: 1 }\n  ?3: Direct { condition_index: 0, argument_index: 0 }\n}"
+        );
+        assert_eq!(
+            program.rules[3].variable_source().to_string(), 
+            "VariableSource {\n  ?1: Direct { condition_index: 0, argument_index: 0 }\n  ?2: Direct { condition_index: 1, argument_index: 0 }\n}"
+        );
+        assert_eq!(
+            program.rules[4].variable_source().to_string(),
+            "VariableSource {\n  ?0: Direct { condition_index: 0, argument_index: 1 }\n  ?2: Direct { condition_index: 0, argument_index: 0 }\n  ?1: Indirect { condition_index: 1, table_index: 0 }\n}"
+        );
+        assert_eq!(
+            program.rules[5].variable_source().to_string(),
+            "VariableSource {\n  ?0: Indirect { condition_index: 0, table_index: 0 }\n  ?1: Indirect { condition_index: 1, table_index: 2 }\n  ?2: Indirect { condition_index: 1, table_index: 1 }\n  ?3: Indirect { condition_index: 0, table_index: 1 }\n}"
+        );
     }
 }

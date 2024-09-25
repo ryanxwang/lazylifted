@@ -131,6 +131,47 @@ impl RuleCore {
 
         self.conditions[index] = condition;
     }
+
+    pub fn merge_conditions(
+        &mut self,
+        condition_indices_to_merge: &[usize],
+        new_condition: Atom,
+        new_condition_variable_source: &VariableSource,
+    ) {
+        // we shift all the original conditions forward, and then insert the new
+        // condition at the end
+        let mut new_conditions =
+            Vec::with_capacity(self.conditions.len() - condition_indices_to_merge.len() + 1);
+        let mut old_condition_index_to_new = HashMap::new();
+        for (i, condition) in self.conditions.iter().enumerate() {
+            if condition_indices_to_merge.contains(&i) {
+                continue;
+            }
+            new_conditions.push(condition.clone());
+            old_condition_index_to_new.insert(i, new_conditions.len() - 1);
+        }
+        new_conditions.push(new_condition);
+        self.conditions = new_conditions;
+
+        // update the variable source
+        for table_index in 0..self.variable_source.table().len() {
+            let condition_index = self.variable_source.table()[table_index].condition_index();
+            if condition_indices_to_merge.contains(&condition_index) {
+                let variable_index = self
+                    .variable_source
+                    .get_variable_index_from_table_index(table_index);
+                let table_index_in_indirect_source = new_condition_variable_source
+                    .get_table_index_from_variable_index(variable_index);
+                self.variable_source.table[table_index] = VariablePositionInBody::Indirect {
+                    condition_index: self.conditions.len() - 1,
+                    table_index: table_index_in_indirect_source,
+                };
+            } else {
+                let new_condition_index = old_condition_index_to_new[&condition_index];
+                self.variable_source.table[table_index].set_condition_index(new_condition_index);
+            }
+        }
+    }
 }
 
 impl PartialEq for RuleCore {

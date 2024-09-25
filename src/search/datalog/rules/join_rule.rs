@@ -21,7 +21,7 @@ impl JoinRule {
         Self::new_from_core(core)
     }
 
-    pub fn new_from_core(core: RuleCore) -> Self {
+    pub(super) fn new_from_core(core: RuleCore) -> Self {
         assert_eq!(core.conditions().len(), 2);
         let mut joining_variable_positions = HashMap::new();
         for (i, term1) in core.conditions()[0].arguments().iter().enumerate() {
