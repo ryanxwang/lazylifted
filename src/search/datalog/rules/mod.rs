@@ -11,3 +11,4 @@ pub(super) use join_rule::JoinRule;
 pub(super) use product_rule::ProductRule;
 pub(super) use project_rule::ProjectRule;
 pub(super) use rule::Rule;
+pub(super) use rule_core::RuleIndex;

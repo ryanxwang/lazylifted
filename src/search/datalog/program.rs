@@ -7,19 +7,21 @@ use crate::search::{
     datalog::{
         atom::Atom,
         fact::Fact,
-        rules::{GenericRule, Rule},
-        transformations::{remove_action_predicates, TransformationOptions},
+        rules::{GenericRule, Rule, RuleIndex},
+        transformations::{
+            add_goal_rule, convert_rules_to_normal_form, generate_static_facts,
+            remove_action_predicates, TransformationOptions,
+        },
         AnnotationGenerator, RuleCategory,
     },
     ActionSchema, Task,
 };
 
-use super::transformations::convert_rules_to_normal_form;
-
 #[derive(Debug, Clone)]
 pub struct Program {
     // Don't forget to update the PartialEq implementation when adding new
     // fields.
+    pub(super) facts: Vec<Fact>,
     pub(super) rules: Vec<Rule>,
     pub(super) task: Rc<Task>,
     // Predicate names for the atoms, including ones generated when building the
@@ -40,6 +42,12 @@ impl Program {
             program = remove_action_predicates(program);
         }
         program = convert_rules_to_normal_form(program);
+        program = add_goal_rule(program, task, annotation_generator);
+
+        program = generate_static_facts(program);
+
+        // always do this last
+        program.assign_rule_indices();
 
         program
     }
@@ -82,6 +90,7 @@ impl Program {
         }
 
         Self {
+            facts: vec![],
             rules,
             task,
             predicate_names,
@@ -201,6 +210,12 @@ impl Program {
         self.predicate_names.push(name.clone());
         self.predicate_name_to_index.insert(name, index);
         index
+    }
+
+    fn assign_rule_indices(&mut self) {
+        for (i, rule) in self.rules.iter_mut().enumerate() {
+            rule.set_index(RuleIndex::new(i));
+        }
     }
 }
 

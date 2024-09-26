@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::search::datalog::atom::Atom;
 use global_counter::global_counter;
 
@@ -56,3 +58,9 @@ impl PartialEq for Fact {
 }
 
 impl Eq for Fact {}
+
+impl Display for Fact {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "(fact {}, cost {})", self.atom, self.cost)
+    }
+}

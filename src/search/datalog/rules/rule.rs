@@ -6,7 +6,7 @@ use crate::search::datalog::{
     atom::Atom,
     rules::rule_core::RuleCore,
     rules::utils::VariableSource,
-    rules::{GenericRule, JoinRule, ProductRule, ProjectRule},
+    rules::{GenericRule, JoinRule, ProductRule, ProjectRule, RuleIndex},
     Annotation,
 };
 
@@ -51,6 +51,16 @@ impl Rule {
             Rule::Product(rule) => rule.core_mut(),
             Rule::Join(rule) => rule.core_mut(),
         }
+    }
+
+    #[inline(always)]
+    pub fn index(&self) -> RuleIndex {
+        self.core().index()
+    }
+
+    #[inline(always)]
+    pub fn set_index(&mut self, index: RuleIndex) {
+        self.core_mut().set_index(index);
     }
 
     #[inline(always)]

@@ -6,10 +6,25 @@ use crate::search::datalog::{
     Annotation,
 };
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct RuleIndex(usize);
+
+impl RuleIndex {
+    pub fn new(index: usize) -> Self {
+        Self(index)
+    }
+
+    pub fn value(&self) -> usize {
+        self.0
+    }
+}
+
 /// A [`RuleCore`] represents the core of a Datalog rule. This should be used as
 /// a component of a [`Rule`](crate::search::datalog::rules::Rule).
 #[derive(Debug, Clone)]
 pub struct RuleCore {
+    /// The index of the rule
+    index: Option<RuleIndex>,
     /// The effect of the rule.
     effect: Atom,
     /// The conditions of the rule.
@@ -38,6 +53,9 @@ impl RuleCore {
         let variable_position_in_effect = VariablePositionInEffect::new(&effect);
         let variable_source = VariableSource::new(&effect, &conditions);
         Self {
+            // Indices get actually assigned after all the program preprocessing
+            // is done
+            index: None,
             effect,
             conditions,
             weight,
@@ -46,6 +64,16 @@ impl RuleCore {
             variable_position_in_effect,
             variable_source,
         }
+    }
+
+    #[inline(always)]
+    pub fn index(&self) -> RuleIndex {
+        self.index.unwrap()
+    }
+
+    #[inline(always)]
+    pub fn set_index(&mut self, index: RuleIndex) {
+        self.index = Some(index);
     }
 
     /// Get the effect of the rule.
