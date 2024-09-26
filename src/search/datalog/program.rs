@@ -200,6 +200,7 @@ impl Program {
         let index = self.predicate_names.len();
         let name = match name {
             Some(name) => {
+                let name = format!("@{}", name);
                 assert!(
                     !self.predicate_name_to_index.contains_key(&name),
                     "Predicate name {} already exists",
@@ -207,7 +208,7 @@ impl Program {
                 );
                 name
             }
-            None => format!("p${}", index),
+            None => format!("@p{}", index),
         };
         self.predicate_names.push(name.clone());
         self.predicate_name_to_index.insert(name, index);

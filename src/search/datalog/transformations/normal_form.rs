@@ -350,9 +350,9 @@ mod tests {
                 "applicable-putdown",
                 "applicable-stack",
                 "applicable-unstack",
-                "p$9",
-                "p$10",
-                "p$11",
+                "@p9",
+                "@p10",
+                "@p11",
             ]
         );
 

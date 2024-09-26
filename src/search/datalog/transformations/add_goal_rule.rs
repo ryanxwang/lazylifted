@@ -17,7 +17,7 @@ pub fn add_goal_rule(
     task: Rc<Task>,
     annotation_generator: &AnnotationGenerator,
 ) -> Program {
-    let goal_id = program.new_auxillary_predicate(Some("aux-goal".to_string()));
+    let goal_id = program.new_auxillary_predicate(Some("goal".to_string()));
     program.goal_predicate_index = Some(goal_id);
     let goal = Atom::new(Arguments::new(vec![]), goal_id, true);
 
@@ -71,7 +71,7 @@ mod tests {
         program = add_goal_rule(program, task, &annotation_generator);
 
         assert_eq!(program.predicate_names.len(), 13);
-        assert_eq!(program.predicate_names.last().unwrap(), "aux-goal");
+        assert_eq!(program.predicate_names.last().unwrap(), "@goal");
         assert_eq!(
             program.rules.last().unwrap().to_string(),
             "(12() <- 0(3), 4(3, 1), 4(1, 2), 4(2, 0), 1(0)  | weight: 0; annotation: None)"
@@ -89,7 +89,7 @@ mod tests {
         program = add_goal_rule(program, task, &annotation_generator);
 
         assert_eq!(program.predicate_names.len(), 13);
-        assert_eq!(program.predicate_names.last().unwrap(), "aux-goal");
+        assert_eq!(program.predicate_names.last().unwrap(), "@goal");
         assert_eq!(
             program.rules.last().unwrap().to_string(),
             "(12() <- 4(5), 4(6)  | weight: 0; annotation: None)"
