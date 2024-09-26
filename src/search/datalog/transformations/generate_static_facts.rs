@@ -1,5 +1,9 @@
 use crate::search::datalog::{
-    arguments::Arguments, atom::Atom, fact::Fact, program::Program, term::Term,
+    arguments::Arguments,
+    atom::Atom,
+    fact::{Fact, FactCost},
+    program::Program,
+    term::Term,
 };
 
 pub fn generate_static_facts(mut program: Program) -> Program {
@@ -18,7 +22,7 @@ pub fn generate_static_facts(mut program: Program) -> Program {
             .collect();
         program.static_facts.push(Fact::new(
             Atom::new(Arguments::new(terms), atom.predicate_index(), false),
-            0.0,
+            FactCost::from(0.0),
         ));
     }
 

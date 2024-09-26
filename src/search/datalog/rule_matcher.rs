@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::search::datalog::rules::{Rule, RuleIndex};
+use crate::search::datalog::rules::{Rule, RuleIndex, RuleTrait};
 
 /// A [`Match`] is a reference by indices to a rule and a condition in the rule.
 #[derive(Debug, Clone)]

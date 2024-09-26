@@ -119,6 +119,11 @@ impl RuleCore {
         &mut self.variable_source
     }
 
+    #[inline(always)]
+    pub fn variable_position_in_effect(&self) -> &VariablePositionInEffect {
+        &self.variable_position_in_effect
+    }
+
     pub fn update_single_condition(&mut self, condition: Atom, index: usize) {
         let new_argument_index: HashMap<usize, usize> = condition
             .arguments()

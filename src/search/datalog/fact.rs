@@ -21,7 +21,8 @@ pub struct Fact {
 }
 
 impl Fact {
-    pub fn new(atom: Atom, cost: f64) -> Self {
+    pub fn new(atom: Atom, cost: FactCost) -> Self {
+        assert!(atom.arguments().iter().all(|term| term.is_object()));
         Self {
             atom,
             cost: FactCost::from(cost),
@@ -77,7 +78,7 @@ pub fn facts_from_state(state: &DBState, task: &Task) -> Vec<Fact> {
             .collect();
         facts.push(Fact::new(
             Atom::new(Arguments::new(terms), atom.predicate_index(), false),
-            0.0,
+            FactCost::from(0.0),
         ));
     }
 

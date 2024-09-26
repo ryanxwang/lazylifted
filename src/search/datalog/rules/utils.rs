@@ -10,7 +10,7 @@ use strum_macros::EnumIs;
 /// rule for easy access.
 #[derive(Debug, Clone)]
 pub struct VariablePositionInEffect {
-    mapping: HashMap<Term, usize>,
+    mapping: HashMap<usize, usize>,
 }
 
 impl VariablePositionInEffect {
@@ -18,18 +18,18 @@ impl VariablePositionInEffect {
         let mut mapping = HashMap::new();
         for (i, term) in effect.arguments().iter().enumerate() {
             if term.is_variable() {
-                mapping.insert(term.to_owned(), i);
+                mapping.insert(term.index(), i);
             }
         }
         Self { mapping }
     }
 
-    pub fn has_variable(&self, term: &Term) -> bool {
-        self.mapping.contains_key(term)
+    pub fn has_variable(&self, variable_index: usize) -> bool {
+        self.mapping.contains_key(&variable_index)
     }
 
-    pub fn get(&self, term: &Term) -> Option<usize> {
-        self.mapping.get(term).copied()
+    pub fn get(&self, variable_index: usize) -> Option<usize> {
+        self.mapping.get(&variable_index).copied()
     }
 }
 
@@ -286,10 +286,10 @@ mod tests {
         );
 
         let variable_position_map = VariablePositionInEffect::new(&effect);
-        assert!(!variable_position_map.has_variable(&Term::new_object(0)),);
-        assert!(variable_position_map.has_variable(&Term::new_variable(3)),);
-        assert_eq!(variable_position_map.get(&Term::new_object(0)), None);
-        assert_eq!(variable_position_map.get(&Term::new_variable(3)), Some(1));
+        assert!(!variable_position_map.has_variable(0),);
+        assert!(variable_position_map.has_variable(3),);
+        assert_eq!(variable_position_map.get(0), None);
+        assert_eq!(variable_position_map.get(3), Some(1));
     }
 
     // TODO-soon: Add tests for VariableSource

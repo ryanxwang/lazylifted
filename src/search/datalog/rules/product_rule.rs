@@ -1,7 +1,10 @@
 use std::fmt::Display;
 
 use crate::search::datalog::{
-    arguments::Arguments, atom::Atom, rules::rule_core::RuleCore, Annotation,
+    arguments::Arguments,
+    atom::Atom,
+    rules::{rule_core::RuleCore, RuleTrait},
+    Annotation,
 };
 
 #[derive(Debug, Clone, Default)]
@@ -58,18 +61,20 @@ impl ProductRule {
             reached_facts_per_condition,
         }
     }
-
-    pub fn core(&self) -> &RuleCore {
-        &self.core
-    }
-
-    pub fn core_mut(&mut self) -> &mut RuleCore {
-        &mut self.core
-    }
 }
 
 impl Display for ProductRule {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "({})", self.core)
+    }
+}
+
+impl RuleTrait for ProductRule {
+    fn core(&self) -> &RuleCore {
+        &self.core
+    }
+
+    fn core_mut(&mut self) -> &mut RuleCore {
+        &mut self.core
     }
 }

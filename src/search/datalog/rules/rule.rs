@@ -5,10 +5,86 @@ use strum_macros::EnumIs;
 use crate::search::datalog::{
     atom::Atom,
     rules::rule_core::RuleCore,
-    rules::utils::VariableSource,
+    rules::utils::{VariablePositionInEffect, VariableSource},
     rules::{GenericRule, JoinRule, ProductRule, ProjectRule, RuleIndex},
     Annotation,
 };
+
+pub trait RuleTrait {
+    fn core(&self) -> &RuleCore;
+    fn core_mut(&mut self) -> &mut RuleCore;
+
+    fn index(&self) -> RuleIndex {
+        self.core().index()
+    }
+
+    fn set_index(&mut self, index: RuleIndex) {
+        self.core_mut().set_index(index);
+    }
+
+    fn effect(&self) -> &Atom {
+        self.core().effect()
+    }
+
+    fn conditions(&self) -> &[Atom] {
+        self.core().conditions()
+    }
+
+    /// Update the conditions of the rule. Please make sure that the variable
+    /// source is also updated.
+    fn set_condition(&mut self, conditions: Vec<Atom>) {
+        self.core_mut().set_condition(conditions);
+    }
+
+    fn weight(&self) -> f64 {
+        self.core().weight()
+    }
+
+    fn annotation(&self) -> &Annotation {
+        self.core().annotation()
+    }
+
+    fn variable_position_in_effect(&self) -> &VariablePositionInEffect {
+        self.core().variable_position_in_effect()
+    }
+
+    fn variable_source(&self) -> &VariableSource {
+        self.core().variable_source()
+    }
+
+    fn variable_source_mut(&mut self) -> &mut VariableSource {
+        self.core_mut().variable_source_mut()
+    }
+
+    fn condition_variables(&self) -> Vec<usize> {
+        self.conditions()
+            .iter()
+            .flat_map(|atom| atom.variables())
+            .collect()
+    }
+
+    /// Update the condition at the given index, will update the variable source
+    /// as well. Only supports dropping constant arguments of the condition.
+    fn update_single_condition(&mut self, condition: Atom, index: usize) {
+        self.core_mut().update_single_condition(condition, index);
+    }
+
+    /// Merge some conditions together into the provided new condition. Will
+    /// update variable source to point into the variable source of the rule
+    /// creating the new condition when appropriate.
+    fn merge_conditions(
+        &mut self,
+        condition_indices_to_merge: &[usize],
+        new_condition: Atom,
+        new_condition_variable_source: &VariableSource,
+    ) {
+        self.core_mut().merge_conditions(
+            condition_indices_to_merge,
+            new_condition,
+            new_condition_variable_source,
+        );
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, EnumIs)]
 pub enum Rule {
@@ -35,6 +111,26 @@ impl Rule {
         Self::Join(rule)
     }
 
+    pub fn schema_index(&self) -> Option<usize> {
+        match self {
+            Rule::Generic(rule) => Some(rule.schema_index()),
+            Rule::Project(_) | Rule::Product(_) | Rule::Join(_) => None,
+        }
+    }
+}
+
+impl Display for Rule {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Rule::Generic(rule) => write!(f, "{}", rule),
+            Rule::Project(rule) => write!(f, "{}", rule),
+            Rule::Product(rule) => write!(f, "{}", rule),
+            Rule::Join(rule) => write!(f, "{}", rule),
+        }
+    }
+}
+
+impl RuleTrait for Rule {
     fn core(&self) -> &RuleCore {
         match self {
             Rule::Generic(rule) => rule.core(),
@@ -50,98 +146,6 @@ impl Rule {
             Rule::Project(rule) => rule.core_mut(),
             Rule::Product(rule) => rule.core_mut(),
             Rule::Join(rule) => rule.core_mut(),
-        }
-    }
-
-    #[inline(always)]
-    pub fn index(&self) -> RuleIndex {
-        self.core().index()
-    }
-
-    #[inline(always)]
-    pub fn set_index(&mut self, index: RuleIndex) {
-        self.core_mut().set_index(index);
-    }
-
-    #[inline(always)]
-    pub fn effect(&self) -> &Atom {
-        self.core().effect()
-    }
-
-    #[inline(always)]
-    pub fn conditions(&self) -> &[Atom] {
-        self.core().conditions()
-    }
-
-    /// Update the conditions of the rule. Please make sure that the variable
-    /// source is also updated.
-    pub fn set_condition(&mut self, conditions: Vec<Atom>) {
-        self.core_mut().set_condition(conditions);
-    }
-
-    #[inline(always)]
-    pub fn weight(&self) -> f64 {
-        self.core().weight()
-    }
-
-    #[inline(always)]
-    pub fn annotation(&self) -> &Annotation {
-        self.core().annotation()
-    }
-
-    pub fn schema_index(&self) -> Option<usize> {
-        match self {
-            Rule::Generic(rule) => Some(rule.schema_index()),
-            Rule::Project(_) | Rule::Product(_) | Rule::Join(_) => None,
-        }
-    }
-
-    #[inline(always)]
-    pub fn variable_source(&self) -> &VariableSource {
-        self.core().variable_source()
-    }
-
-    pub fn variable_source_mut(&mut self) -> &mut VariableSource {
-        self.core_mut().variable_source_mut()
-    }
-
-    pub fn condition_variables(&self) -> Vec<usize> {
-        self.conditions()
-            .iter()
-            .flat_map(|atom| atom.variables())
-            .collect()
-    }
-
-    /// Update the condition at the given index, will update the variable source
-    /// as well. Only supports dropping constant arguments of the condition.
-    pub fn update_single_condition(&mut self, condition: Atom, index: usize) {
-        self.core_mut().update_single_condition(condition, index);
-    }
-
-    /// Merge some conditions together into the provided new condition. Will
-    /// update variable source to point into the variable source of the rule
-    /// creating the new condition when appropriate.
-    pub fn merge_conditions(
-        &mut self,
-        condition_indices_to_merge: &[usize],
-        new_condition: Atom,
-        new_condition_variable_source: &VariableSource,
-    ) {
-        self.core_mut().merge_conditions(
-            condition_indices_to_merge,
-            new_condition,
-            new_condition_variable_source,
-        );
-    }
-}
-
-impl Display for Rule {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            Rule::Generic(rule) => write!(f, "{}", rule),
-            Rule::Project(rule) => write!(f, "{}", rule),
-            Rule::Product(rule) => write!(f, "{}", rule),
-            Rule::Join(rule) => write!(f, "{}", rule),
         }
     }
 }

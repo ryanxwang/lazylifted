@@ -1,6 +1,6 @@
 use crate::search::datalog::{
     program::Program,
-    rules::{GenericRule, Rule},
+    rules::{GenericRule, Rule, RuleTrait},
 };
 
 pub fn remove_action_predicates(program: Program) -> Program {

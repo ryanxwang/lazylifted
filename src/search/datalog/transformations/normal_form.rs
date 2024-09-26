@@ -7,7 +7,7 @@ use crate::search::{
         arguments::Arguments,
         atom::Atom,
         program::Program,
-        rules::{GenericRule, JoinRule, ProjectRule, Rule},
+        rules::{GenericRule, JoinRule, ProjectRule, Rule, RuleTrait},
         term::Term,
         transformations::{
             connected_components::split_into_connected_components, join_cost::JoinCostType,

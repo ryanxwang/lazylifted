@@ -2,7 +2,12 @@ use std::{collections::HashSet, hash::Hash};
 
 use crate::search::{
     atom,
-    datalog::{arguments::Arguments, atom::Atom, rules::Rule, term::Term},
+    datalog::{
+        arguments::Arguments,
+        atom::Atom,
+        rules::{Rule, RuleTrait},
+        term::Term,
+    },
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -1,6 +1,6 @@
 use std::{
     fmt::{Display, Formatter},
-    ops::Index,
+    ops::{Index, IndexMut},
     slice::SliceIndex,
 };
 
@@ -30,6 +30,12 @@ impl<I: SliceIndex<[Term]>> Index<I> for Arguments {
 
     fn index(&self, index: I) -> &Self::Output {
         &self.terms[index]
+    }
+}
+
+impl<I: SliceIndex<[Term]>> IndexMut<I> for Arguments {
+    fn index_mut(&mut self, index: I) -> &mut Self::Output {
+        &mut self.terms[index]
     }
 }
 

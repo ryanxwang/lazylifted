@@ -1,7 +1,11 @@
 use std::{collections::HashMap, fmt::Display};
 
 use crate::search::datalog::{
-    annotation, atom::Atom, rules::rule_core::RuleCore, term::Term, Annotation,
+    annotation,
+    atom::Atom,
+    rules::{rule_core::RuleCore, RuleTrait},
+    term::Term,
+    Annotation,
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -40,18 +44,20 @@ impl JoinRule {
             joining_variable_positions,
         }
     }
-
-    pub fn core(&self) -> &RuleCore {
-        &self.core
-    }
-
-    pub fn core_mut(&mut self) -> &mut RuleCore {
-        &mut self.core
-    }
 }
 
 impl Display for JoinRule {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "({})", self.core)
+    }
+}
+
+impl RuleTrait for JoinRule {
+    fn core(&self) -> &RuleCore {
+        &self.core
+    }
+
+    fn core_mut(&mut self) -> &mut RuleCore {
+        &mut self.core
     }
 }

@@ -4,7 +4,7 @@ use crate::search::datalog::{
     arguments::Arguments,
     atom::Atom,
     program::Program,
-    rules::{GenericRule, Rule},
+    rules::{GenericRule, Rule, RuleTrait},
     term::Term,
     Annotation,
 };

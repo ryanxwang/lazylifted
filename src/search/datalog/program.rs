@@ -7,7 +7,7 @@ use crate::search::{
     datalog::{
         atom::Atom,
         fact::Fact,
-        rules::{GenericRule, Rule, RuleIndex},
+        rules::{GenericRule, Rule, RuleIndex, RuleTrait},
         transformations::{
             add_goal_rule, convert_rules_to_normal_form, generate_static_facts,
             remove_action_predicates, TransformationOptions,

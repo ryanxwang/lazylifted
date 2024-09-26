@@ -1,9 +1,11 @@
 use crate::search::{
     datalog::{
+        atom::Atom,
         fact::{self, facts_from_state, Fact, FactRegistry},
         program::Program,
         rule_matcher::{self, RuleMatcher},
-        rules::Rule,
+        rules::{JoinRule, ProductRule, ProjectRule, Rule, RuleTrait},
+        term::Term,
     },
     DBState,
 };
@@ -75,21 +77,26 @@ impl WeightedGrounder {
             {
                 let rule = &program.rules[rule_match.rule_index.value()];
 
+                let mut new_facts = vec![];
                 match rule {
-                    #[allow(unused_variables)]
                     Rule::Project(project_rule) => {
-                        todo!()
+                        assert_eq!(rule_match.condition_index, 0);
+                        project(project_rule, current_fact, &mut new_facts);
                     }
                     #[allow(unused_variables)]
                     Rule::Product(product_rule) => {
                         todo!()
                     }
-                    #[allow(unused_variables)]
                     Rule::Join(join_rule) => {
-                        todo!()
+                        join(
+                            join_rule,
+                            current_fact,
+                            rule_match.condition_index,
+                            &mut new_facts,
+                        );
                     }
                     Rule::Generic(_) => {
-                        panic!("All rules should be normalized to Project, Product, or Join rules")
+                        panic!("All rules should be normalised to Project, Product, or Join rules")
                     }
                 }
             }
@@ -97,4 +104,39 @@ impl WeightedGrounder {
 
         f64::INFINITY
     }
+}
+
+fn project(rule: &ProjectRule, fact: &Fact, new_facts: &mut Vec<Fact>) {
+    let mut effect_arguments = rule.effect().arguments().clone();
+
+    for (i, term) in rule.conditions()[0].arguments().iter().enumerate() {
+        match term {
+            Term::Object(_) => {
+                // check that it matches the fact
+                if fact.atom().arguments()[i] != *term {
+                    return;
+                }
+            }
+            Term::Variable(variable_index) => {
+                let position_in_effect = rule.variable_position_in_effect().get(*variable_index);
+                if let Some(position_in_effect) = position_in_effect {
+                    effect_arguments[position_in_effect] = fact.atom().arguments()[i];
+                }
+            }
+        }
+    }
+
+    new_facts.push(Fact::new(
+        Atom::new(
+            effect_arguments,
+            rule.effect().predicate_index(),
+            rule.effect().is_artificial_predicate(),
+        ),
+        fact.cost() + rule.weight(),
+    ));
+}
+
+#[allow(unused_variables, clippy::ptr_arg)]
+fn join(rule: &JoinRule, fact: &Fact, fact_index_in_condition: usize, new_facts: &mut Vec<Fact>) {
+    todo!()
 }
