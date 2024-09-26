@@ -76,12 +76,15 @@ impl WeightedGrounder {
                 let rule = &program.rules[rule_match.rule_index.value()];
 
                 match rule {
+                    #[allow(unused_variables)]
                     Rule::Project(project_rule) => {
                         todo!()
                     }
+                    #[allow(unused_variables)]
                     Rule::Product(product_rule) => {
                         todo!()
                     }
+                    #[allow(unused_variables)]
                     Rule::Join(join_rule) => {
                         todo!()
                     }
