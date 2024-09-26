@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use strum_macros::EnumIs;
 
 /// Wrapper around a type to indicate that it can be negated. Some types that
@@ -32,5 +34,17 @@ impl<T> Negatable<T> {
 impl<T> From<T> for Negatable<T> {
     fn from(value: T) -> Self {
         Self::Positive(value)
+    }
+}
+
+impl<T> Display for Negatable<T>
+where
+    T: Display,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Positive(value) => write!(f, "{}", value),
+            Self::Negative(value) => write!(f, "(not {})", value),
+        }
     }
 }

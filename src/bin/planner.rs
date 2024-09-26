@@ -47,6 +47,14 @@ struct Cli {
     )]
     successor_generator_name: SuccessorGeneratorName,
     #[arg(
+        help = "Whether to remove negative preconditions from the problem. \
+        This is not generally necessary, but may be important for some \
+        heuristics. Don't use this unless you know you need it.",
+        long = "remove-negative-preconditions",
+        id = "REMOVE_NEGATIVE_PRECONDITIONS"
+    )]
+    remove_negative_preconditions: bool,
+    #[arg(
         help = "The saved model (as a path) to use for the heuristic \
         evaluator, only needed for heuristics that require training.",
         short = 'm',
@@ -124,7 +132,10 @@ fn main() {
         .compact()
         .init();
 
-    let task = Task::from_path(&cli.domain, &cli.problem);
+    let mut task = Task::from_path(&cli.domain, &cli.problem);
+    if cli.remove_negative_preconditions {
+        task.remove_negative_preconditions();
+    }
 
     // Assume GIL is required
     Python::with_gil(|_| plan(cli, task));

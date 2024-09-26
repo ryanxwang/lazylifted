@@ -41,6 +41,13 @@ impl Predicate {
         }
     }
 
+    pub fn negative_auxiliary_predicate(&self, index: usize) -> Self {
+        let mut negative_predicate = self.clone();
+        negative_predicate.name = Name::new(format!("not@{}", self.name));
+        negative_predicate.index = index;
+        negative_predicate
+    }
+
     pub fn mark_as_static(&mut self) {
         self.is_static = true;
     }

@@ -3,6 +3,7 @@ use crate::parsed_types::{
 };
 use crate::search::{Action, Atom, AtomSchema, Negatable, PartialAction};
 use std::collections::HashMap;
+use std::fmt::Display;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct SchemaParameter {
@@ -158,11 +159,58 @@ impl ActionSchema {
             .map(|effect| effect.ground(&action.instantiation))
             .collect()
     }
+
+    /// Remove all the negative preconditions from the action schema, and update
+    /// the effects to also add/delete the auxiliary negative predicates.
+    pub fn update_with_auxiliary_negative_predicates(
+        &mut self,
+        original_predicate_to_negative_predicate: &HashMap<usize, usize>,
+    ) {
+        for precondition in &mut self.preconditions {
+            if precondition.is_negative() {
+                let predicate_index = precondition.predicate_index();
+                let negative_predicate_index = *original_predicate_to_negative_predicate
+                    .get(&predicate_index)
+                    .expect("Negative predicate not found in auxiliary predicate table");
+                *precondition =
+                    precondition.negate_with_auxiliary_predicate(negative_predicate_index);
+            }
+        }
+
+        let mut new_effects = Vec::new();
+        for effect in &self.effects {
+            if let Some(negative_predicate_index) =
+                original_predicate_to_negative_predicate.get(&effect.predicate_index())
+            {
+                new_effects.push(effect.negate_with_auxiliary_predicate(*negative_predicate_index));
+            }
+        }
+
+        self.effects.extend(new_effects);
+    }
 }
 
 impl PartialEq for ActionSchema {
     fn eq(&self, other: &Self) -> bool {
         self.index == other.index
+    }
+}
+
+impl Display for ActionSchema {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "((index {}) (parameters", self.index)?;
+        for param in &self.parameters {
+            write!(f, " ({} {})", param.index(), param.type_index())?;
+        }
+        write!(f, ") (preconditions")?;
+        for precondition in &self.preconditions {
+            write!(f, " {}", precondition)?;
+        }
+        write!(f, ") (effects")?;
+        for effect in &self.effects {
+            write!(f, " {}", effect)?;
+        }
+        write!(f, "))")
     }
 }
 

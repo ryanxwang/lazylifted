@@ -2,6 +2,7 @@ use crate::parsed_types::{Atom as ParsedAtom, Name, Term};
 use crate::search::{Atom, Negatable, SmallTuple};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::fmt::Display;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 /// If the argument is a constant, then the value is the index of the object in
@@ -158,6 +159,20 @@ impl AtomSchema {
     }
 }
 
+impl Display for AtomSchema {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({}", self.predicate_index)?;
+        for arg in &self.arguments {
+            write!(f, " ")?;
+            match arg {
+                SchemaArgument::Constant(index) => write!(f, "{}", index)?,
+                SchemaArgument::Free(index) => write!(f, "?{}", index)?,
+            }
+        }
+        write!(f, ")")
+    }
+}
+
 impl Negatable<AtomSchema> {
     pub fn new_atom_schema(
         atom: &ParsedAtom<Term>,
@@ -205,5 +220,19 @@ impl Negatable<AtomSchema> {
 
     pub fn includes(&self, atom: &Atom) -> bool {
         self.underlying().includes(atom)
+    }
+
+    /// Negate (positive to negative or negative to positive) the atom schema,
+    /// and update the predicate index to the given auxiliary predicate index.
+    /// The auxiliary predicate index should represent the negation of the
+    /// original predicate.
+    pub fn negate_with_auxiliary_predicate(&self, auxiliary_predicate_index: usize) -> Self {
+        Negatable::new(
+            !self.is_negative(),
+            AtomSchema {
+                predicate_index: auxiliary_predicate_index,
+                arguments: self.arguments().to_vec(),
+            },
+        )
     }
 }

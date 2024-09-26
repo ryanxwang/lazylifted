@@ -1,9 +1,11 @@
 use crate::parsed_types::{Domain, Name, Problem, Types};
 use crate::parsers::Parser;
-use crate::search::{ActionSchema, DBState, Goal, Object, Predicate};
+use crate::search::{
+    states::Relation, ActionSchema, DBState, Goal, Object, Predicate, RawSmallTuple, SmallTuple,
+};
 use itertools::Itertools;
 use std::cmp::{max, min};
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fs;
 use std::path::PathBuf;
 
@@ -36,8 +38,6 @@ pub struct Task {
 
 impl Task {
     pub fn from_path(domain_path: &PathBuf, problem_path: &PathBuf) -> Self {
-        // TODO-someday: I should just remove my own parser code and use the
-        // pddl crate
         let domain_text =
             fs::read_to_string(domain_path).expect("Failed to read domain file, does it exist?");
         let problem_text =
@@ -319,12 +319,99 @@ impl Task {
     pub fn object_pair_static_information(&self) -> &HashMap<(usize, usize), HashSet<usize>> {
         &self.object_pair_static_information
     }
+
+    /// Transform the task by removing negative preconditions from the action
+    /// schemas.
+    ///
+    /// We do this by adding auxiliary predicates that represent the
+    /// negation of the negative preconditions, and updating the action schemas
+    /// that add or remove the relevant predicate to also remove or add the
+    /// auxiliary predicate. We also update the initial state to include atoms
+    /// for the auxiliary predicates. Furthermore, we also recompute the static
+    /// information for objects and object pairs.
+    pub fn remove_negative_preconditions(&mut self) {
+        let mut negative_predicates: HashSet<usize> = HashSet::new();
+        for action_schema in &self.action_schemas {
+            for precondition in action_schema.preconditions() {
+                if !precondition.is_negative() {
+                    continue;
+                }
+
+                let predicate_index = precondition.predicate_index();
+                negative_predicates.insert(predicate_index);
+            }
+        }
+
+        let mut original_to_negative_predicate: HashMap<usize, usize> = HashMap::new();
+        for predicate_index in negative_predicates {
+            let negative_predicate_index = self.predicates.len();
+            self.predicates.push(
+                self.predicates[predicate_index]
+                    .negative_auxiliary_predicate(negative_predicate_index),
+            );
+            original_to_negative_predicate.insert(predicate_index, negative_predicate_index);
+
+            if self.nullary_predicates.contains(&predicate_index) {
+                self.nullary_predicates.insert(negative_predicate_index);
+                self.initial_state
+                    .nullary_atoms
+                    .push(!self.initial_state.nullary_atoms[predicate_index]);
+                // all predicates, even nullary, need to be in the relations
+                self.initial_state.relations.push(Relation {
+                    predicate_symbol: negative_predicate_index,
+                    tuples: BTreeSet::new(),
+                });
+            } else {
+                // This is pretty inefficient -- we need to add all the atoms
+                // that don't exist in the initial state for the new predicate
+                let existing_tuples: HashSet<SmallTuple> = self.initial_state.relations
+                    [predicate_index]
+                    .tuples
+                    .iter()
+                    .cloned()
+                    .collect();
+
+                let all_tuples: HashSet<SmallTuple> = self.predicates[predicate_index]
+                    .types
+                    .iter()
+                    .map(|type_index| self.objects_per_type[*type_index].iter())
+                    .multi_cartesian_product()
+                    .map(|indices| {
+                        let raw = indices.iter().copied().copied().collect::<RawSmallTuple>();
+                        SmallTuple::new(raw)
+                    })
+                    .collect();
+                let tuples_to_add: HashSet<SmallTuple> =
+                    all_tuples.difference(&existing_tuples).cloned().collect();
+                self.initial_state.relations.push(Relation {
+                    predicate_symbol: negative_predicate_index,
+                    tuples: BTreeSet::from_iter(tuples_to_add),
+                });
+            }
+        }
+
+        for action_schema in &mut self.action_schemas {
+            action_schema
+                .update_with_auxiliary_negative_predicates(&original_to_negative_predicate);
+        }
+
+        self.object_static_information = Self::compute_object_static_information(
+            &self.initial_state,
+            &self.predicates,
+            &self.objects,
+        );
+        self.object_pair_static_information =
+            Self::compute_object_pair_static_information(&self.initial_state, &self.predicates);
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utils::*;
+    use crate::{
+        search::{small_tuple, Atom},
+        test_utils::*,
+    };
 
     #[test]
     fn blocksworld() {
@@ -504,5 +591,48 @@ mod tests {
                 .collect::<Vec<usize>>(),
             vec![7]
         );
+    }
+
+    #[test]
+    fn negative_precondition_removal_ferry() {
+        let mut task = Task::from_text(FERRY_DOMAIN_TEXT, FERRY_PROBLEM10_TEXT);
+        task.remove_negative_preconditions();
+
+        // should add an auxiliary predicate for at-ferry
+        assert_eq!(task.predicates.len(), 5);
+        // should add (not@at-ferry loc2) and (not@at-ferry loc3) to the initial
+        // state
+        assert_eq!(
+            task.initial_state.atoms(),
+            vec![
+                Atom::new(0, small_tuple![2]),
+                Atom::new(1, small_tuple![0, 3]),
+                Atom::new(1, small_tuple![1, 4]),
+                Atom::new(4, small_tuple![3]),
+                Atom::new(4, small_tuple![4]),
+                Atom::new(2, small_tuple![])
+            ]
+        );
+
+        assert_eq!(
+            task.action_schemas
+                .iter()
+                .map(|a| a.to_string())
+                .collect_vec(),
+            vec![
+                "((index 0) \
+                (parameters (0 1) (1 1)) \
+                (preconditions (0 ?0) (4 ?1)) \
+                (effects (0 ?1) (not (0 ?0)) (not (4 ?1)) (4 ?0)))",
+                "((index 1) \
+                (parameters (0 0) (1 1)) \
+                (preconditions (1 ?0 ?1) (0 ?1) (2)) \
+                (effects (3 ?0) (not (1 ?0 ?1)) (not (2))))",
+                "((index 2) \
+                (parameters (0 0) (1 1)) \
+                (preconditions (3 ?0) (0 ?1)) \
+                (effects (1 ?0 ?1) (2) (not (3 ?0))))"
+            ]
+        )
     }
 }
