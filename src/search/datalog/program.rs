@@ -21,13 +21,14 @@ use crate::search::{
 pub struct Program {
     // Don't forget to update the PartialEq implementation when adding new
     // fields.
-    pub(super) facts: Vec<Fact>,
+    pub(super) static_facts: Vec<Fact>,
     pub(super) rules: Vec<Rule>,
     pub(super) task: Rc<Task>,
     // Predicate names for the atoms, including ones generated when building the
     // program.
     pub(super) predicate_names: Vec<String>,
     pub(super) predicate_name_to_index: HashMap<String, usize>,
+    pub(super) goal_predicate_index: Option<usize>,
 }
 
 impl Program {
@@ -90,11 +91,12 @@ impl Program {
         }
 
         Self {
-            facts: vec![],
+            static_facts: vec![],
             rules,
             task,
             predicate_names,
             predicate_name_to_index,
+            goal_predicate_index: None,
         }
     }
 

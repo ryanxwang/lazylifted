@@ -1,4 +1,4 @@
-use std::{collections::HashSet, fmt::Display};
+use std::{collections::HashSet, fmt::Display, hash::Hash};
 
 use global_counter::global_counter;
 
@@ -133,6 +133,13 @@ impl Eq for Atom {}
 impl Display for Atom {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{}{}", self.predicate_index, self.arguments)
+    }
+}
+
+impl Hash for Atom {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.predicate_index.hash(state);
+        self.arguments.hash(state);
     }
 }
 

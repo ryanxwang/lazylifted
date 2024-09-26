@@ -6,6 +6,7 @@ mod arguments;
 mod atom;
 mod fact;
 mod program;
+mod rule_matcher;
 mod rules;
 mod term;
 mod transformations;

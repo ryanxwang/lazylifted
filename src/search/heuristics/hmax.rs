@@ -39,7 +39,10 @@ impl HmaxHeuristic {
 }
 
 impl Heuristic<DBState> for HmaxHeuristic {
-    fn evaluate(&mut self, _state: &DBState, _task: &Task) -> HeuristicValue {
+    fn evaluate(&mut self, state: &DBState, task: &Task) -> HeuristicValue {
+        if task.goal.is_satisfied(state) {
+            return 0.0.into();
+        }
         todo!("Implement HmaxHeuristic::evaluate")
     }
 }

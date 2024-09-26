@@ -9,7 +9,7 @@ use crate::search::{
         term::Term,
         AnnotationGenerator, RuleCategory,
     },
-    Task,
+    goal, Task,
 };
 
 pub fn add_goal_rule(
@@ -18,6 +18,7 @@ pub fn add_goal_rule(
     annotation_generator: &AnnotationGenerator,
 ) -> Program {
     let goal_id = program.new_auxillary_predicate(Some("aux-goal".to_string()));
+    program.goal_predicate_index = Some(goal_id);
     let goal = Atom::new(Arguments::new(vec![]), goal_id, true);
 
     let annotation = annotation_generator(RuleCategory::Goal, task.clone());

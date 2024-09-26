@@ -6,7 +6,7 @@ use std::{
 
 use crate::search::datalog::term::Term;
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub struct Arguments {
     terms: Vec<Term>,
 }

@@ -16,7 +16,7 @@ pub fn generate_static_facts(mut program: Program) -> Program {
             .iter()
             .map(|object_index| Term::new_object(*object_index))
             .collect();
-        program.facts.push(Fact::new(
+        program.static_facts.push(Fact::new(
             Atom::new(Arguments::new(terms), atom.predicate_index(), false),
             0.0,
         ));
@@ -48,7 +48,7 @@ mod tests {
         program = generate_static_facts(program);
         assert_eq!(
             program
-                .facts
+                .static_facts
                 .iter()
                 .map(|fact| fact.to_string())
                 .collect_vec(),
