@@ -65,10 +65,6 @@ impl Atom {
         self.is_artificial_predicate
     }
 
-    pub fn is_ground(&self) -> bool {
-        self.arguments.iter().all(|term| term.is_object())
-    }
-
     pub fn shares_variable_with(&self, other: &Self) -> bool {
         self.arguments.iter().any(|term| {
             term.is_variable()
@@ -154,17 +150,6 @@ mod tests {
         assert!(!atom.is_artificial_predicate());
         assert_eq!(atom.arguments()[0], Term::new_variable(0));
         assert_eq!(atom.arguments()[1], Term::new_object(1));
-    }
-
-    #[test]
-    fn test_atom_is_ground() {
-        let arguments = Arguments::new(vec![Term::new_object(0), Term::new_object(1)]);
-        let atom = Atom::new(arguments, 0, false);
-        assert!(atom.is_ground());
-
-        let arguments = Arguments::new(vec![Term::new_variable(0), Term::new_object(1)]);
-        let atom = Atom::new(arguments, 0, false);
-        assert!(!atom.is_ground());
     }
 
     #[test]

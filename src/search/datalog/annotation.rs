@@ -20,6 +20,7 @@ pub enum Annotation {
 }
 
 impl Annotation {
+    #[allow(dead_code)]
     pub fn execute(&self, _head: usize, _program: &Program) {
         match self {
             Annotation::None => {}
