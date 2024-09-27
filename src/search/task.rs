@@ -635,4 +635,64 @@ mod tests {
             ]
         )
     }
+
+    #[test]
+    fn negative_precondition_removal_satellite() {
+        let mut task = Task::from_text(SATELLITE_DOMAIN_TEXT, SATELLITE_PROBLEM10_TEXT);
+        task.remove_negative_preconditions();
+
+        // should add an auxiliary predicate for pointing
+        assert_eq!(task.predicates.len(), 9);
+        // should add (not@pointing sat1 dir1), (not@pointing sat1 dir2),
+        // (not@pointing sat2 dir2), (not@pointing sat2 dir3) to the initial
+        // state
+        assert_eq!(
+            task.initial_state.atoms(),
+            vec![
+                Atom::new(0, small_tuple![2, 0]),
+                Atom::new(0, small_tuple![3, 1]),
+                Atom::new(1, small_tuple![2, 4]),
+                Atom::new(1, small_tuple![3, 4]),
+                Atom::new(2, small_tuple![0, 7]),
+                Atom::new(2, small_tuple![1, 5]),
+                Atom::new(3, small_tuple![0]),
+                Atom::new(3, small_tuple![1]),
+                Atom::new(7, small_tuple![2, 5]),
+                Atom::new(7, small_tuple![3, 7]),
+                Atom::new(8, small_tuple![0, 5]),
+                Atom::new(8, small_tuple![0, 6]),
+                Atom::new(8, small_tuple![1, 6]),
+                Atom::new(8, small_tuple![1, 7]),
+            ]
+        );
+
+        assert_eq!(
+            task.action_schemas
+                .iter()
+                .map(|a| a.to_string())
+                .collect_vec(),
+            vec![
+                "((index 0) \
+                (parameters (0 0) (1 1) (2 1)) \
+                (preconditions (2 ?0 ?2) (8 ?0 ?1)) \
+                (effects (2 ?0 ?1) (not (2 ?0 ?2)) (not (8 ?0 ?1)) (8 ?0 ?2)))",
+                "((index 1) \
+                (parameters (0 2) (1 0)) \
+                (preconditions (0 ?0 ?1) (3 ?1)) \
+                (effects (4 ?0) (not (5 ?0)) (not (3 ?1))))",
+                "((index 2) \
+                (parameters (0 2) (1 0)) \
+                (preconditions (0 ?0 ?1) (4 ?0)) \
+                (effects (not (4 ?0)) (3 ?1)))",
+                "((index 3) \
+                (parameters (0 0) (1 2) (2 1)) \
+                (preconditions (0 ?1 ?0) (7 ?1 ?2) (2 ?0 ?2) (4 ?1)) \
+                (effects (5 ?1)))",
+                "((index 4) \
+                (parameters (0 0) (1 1) (2 2) (3 3)) \
+                (preconditions (5 ?2) (0 ?2 ?0) (1 ?2 ?3) (4 ?2) (2 ?0 ?1)) \
+                (effects (6 ?1 ?3)))",
+            ]
+        )
+    }
 }
