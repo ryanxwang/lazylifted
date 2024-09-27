@@ -480,4 +480,68 @@ mod tests {
             "VariableSource {\n  ?0: Indirect { condition_index: 0, table_index: 0 }\n  ?1: Indirect { condition_index: 1, table_index: 2 }\n  ?2: Indirect { condition_index: 1, table_index: 1 }\n  ?3: Indirect { condition_index: 0, table_index: 1 }\n}"
         );
     }
+
+    #[test]
+    fn test_convert_satellite_to_normal_form() {
+        let mut task = Task::from_text(SATELLITE_DOMAIN_TEXT, SATELLITE_PROBLEM10_TEXT);
+        task.remove_negative_preconditions();
+        let task = Rc::new(task);
+        
+        let annotation_generator: AnnotationGenerator = Box::new(|_, _| Annotation::None);
+
+        let mut program = Program::new_raw_for_tests(task.clone(), &annotation_generator);
+        program = remove_action_predicates(program);
+        program = convert_rules_to_normal_form(program);
+
+        assert_eq!(
+            program.predicate_names,
+            vec![
+                "on_board",
+                "supports",
+                "pointing",
+                "power_avail",
+                "power_on",
+                "calibrated",
+                "have_image",
+                "calibration_target",
+                "not@pointing",
+                "applicable-turn_to",
+                "applicable-switch_on",
+                "applicable-switch_off",
+                "applicable-calibrate",
+                "applicable-take_image",
+                "p$14",
+                "p$15",
+                "p$16",
+                "p$17",
+                "p$18",
+            ]
+        );
+
+        assert_eq!(
+            program
+                .rules
+                .iter()
+                .map(|rule| format!("{}", rule))
+                .collect_vec(),
+            vec![
+                // turn_to adds (pointing ?s ?d_new) and (not@pointing ?s ?d_prev)
+                "(2(?0, ?1) <- 8(?0, ?1), 2(?0, ?2)  | weight: 1; annotation: None)",
+                "(8(?0, ?2) <- 8(?0, ?1), 2(?0, ?2)  | weight: 1; annotation: None)",
+                // switch_on adds (power_on ?i)
+                "(4(?0) <- 3(?1), 0(?0, ?1)  | weight: 1; annotation: None)",
+                // switch_off adds (power_avail ?s)
+                "(3(?1) <- 4(?0), 0(?0, ?1)  | weight: 1; annotation: None)",
+                // calibrate gets split
+                "(14(?1, ?2) <- 4(?1), 7(?1, ?2)  | weight: 0; annotation: None)",
+                "(15(?1, ?2) <- 2(?0, ?2), 0(?1, ?0)  | weight: 0; annotation: None)",
+                "(5(?1) <- 14(?1, ?2), 15(?1, ?2)  | weight: 1; annotation: None)",
+                // take_image gets split
+                "(16(?2) <- 4(?2), 5(?2)  | weight: 0; annotation: None)",
+                "(17(?2, ?3) <- 1(?2, ?3), 16(?2)  | weight: 0; annotation: None)",
+                "(18(?1, ?2) <- 2(?0, ?1), 0(?2, ?0)  | weight: 0; annotation: None)",
+                "(6(?1, ?3) <- 17(?2, ?3), 18(?1, ?2)  | weight: 1; annotation: None)"
+            ]
+        );
+    }
 }
