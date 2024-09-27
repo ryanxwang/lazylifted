@@ -104,6 +104,15 @@ impl FactRegistry {
         }
     }
 
+    pub fn get_id(&self, fact: &Fact) -> Option<FactId> {
+        let fact_hash = self.hasher.hash_one(fact);
+        self.reached_facts.get(&fact_hash).copied()
+    }
+
+    pub fn replace_at_id(&mut self, fact_id: FactId, fact: Fact) {
+        self.facts[fact_id.0] = fact;
+    }
+
     pub fn add_or_get_fact(&mut self, fact: Fact) -> FactId {
         let fact_hash = self.hasher.hash_one(&fact);
         match self.reached_facts.get(&fact_hash) {

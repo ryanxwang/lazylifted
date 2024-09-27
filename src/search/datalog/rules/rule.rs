@@ -13,6 +13,7 @@ use crate::search::datalog::{
 pub trait RuleTrait {
     fn core(&self) -> &RuleCore;
     fn core_mut(&mut self) -> &mut RuleCore;
+    fn cleanup_grounding_data(&mut self);
 
     fn index(&self) -> RuleIndex {
         self.core().index()
@@ -146,6 +147,15 @@ impl RuleTrait for Rule {
             Rule::Project(rule) => rule.core_mut(),
             Rule::Product(rule) => rule.core_mut(),
             Rule::Join(rule) => rule.core_mut(),
+        }
+    }
+
+    fn cleanup_grounding_data(&mut self) {
+        match self {
+            Rule::Generic(rule) => rule.cleanup_grounding_data(),
+            Rule::Project(rule) => rule.cleanup_grounding_data(),
+            Rule::Product(rule) => rule.cleanup_grounding_data(),
+            Rule::Join(rule) => rule.cleanup_grounding_data(),
         }
     }
 }

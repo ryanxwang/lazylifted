@@ -60,4 +60,6 @@ impl RuleTrait for GenericRule {
     fn core_mut(&mut self) -> &mut RuleCore {
         &mut self.core
     }
+
+    fn cleanup_grounding_data(&mut self) {}
 }

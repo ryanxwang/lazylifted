@@ -9,6 +9,7 @@ use crate::search::{
     },
     DBState,
 };
+use itertools::Itertools;
 use priority_queue::PriorityQueue;
 use std::collections::HashSet;
 
@@ -70,7 +71,7 @@ impl WeightedGrounder {
         }
 
         while let Some((current_fact_id, current_cost)) = priority_queue.pop() {
-            let current_fact = fact_registry.get_by_id(current_fact_id);
+            let current_fact = fact_registry.get_by_id(current_fact_id).clone();
 
             if current_fact.atom().predicate_index() == program.goal_predicate_index.unwrap() {
                 // TODO-soon: backchain to execute annotations
@@ -92,22 +93,44 @@ impl WeightedGrounder {
                 match rule {
                     Rule::Project(project_rule) => {
                         assert_eq!(rule_match.condition_index, 0);
-                        self.project(project_rule, current_fact, &mut new_facts);
+                        self.project(project_rule, &current_fact, &mut new_facts);
                     }
-                    #[allow(unused_variables)]
                     Rule::Product(product_rule) => {
-                        todo!()
+                        self.product(
+                            product_rule,
+                            &current_fact,
+                            rule_match.condition_index,
+                            &mut new_facts,
+                        );
                     }
                     Rule::Join(join_rule) => {
                         self.join(
                             join_rule,
-                            current_fact,
+                            &current_fact,
                             rule_match.condition_index,
                             &mut new_facts,
                         );
                     }
                     Rule::Generic(_) => {
                         panic!("All rules should be normalised to Project, Product, or Join rules")
+                    }
+                }
+
+                for new_fact in new_facts {
+                    match fact_registry.get_id(&new_fact) {
+                        Some(existing_fact_id) => {
+                            let existing_fact = fact_registry.get_by_id(existing_fact_id);
+                            if new_fact.cost() < existing_fact.cost() {
+                                let cost = new_fact.cost();
+                                fact_registry.replace_at_id(existing_fact_id, new_fact);
+                                priority_queue.push(existing_fact_id, cost);
+                            }
+                        }
+                        None => {
+                            let cost = new_fact.cost();
+                            let new_fact_id = fact_registry.add_or_get_fact(new_fact);
+                            priority_queue.push(new_fact_id, cost);
+                        }
                     }
                 }
             }
@@ -169,16 +192,20 @@ impl WeightedGrounder {
             // assigned values
             let mut new_arguments = common_new_arguments.clone();
 
-            for term in rule.condition(other_position).arguments() {
+            for (i, term) in rule
+                .condition(other_position)
+                .arguments()
+                .iter()
+                .enumerate()
+            {
                 if term.is_object() {
                     continue;
                 }
                 if let Some(position_in_effect) =
                     rule.variable_position_in_effect().get(term.index())
                 {
-                    assert!(reached_fact.atom().arguments()[term.index()].is_object());
-                    new_arguments[position_in_effect] =
-                        reached_fact.atom().arguments()[term.index()];
+                    assert!(reached_fact.atom().arguments()[i].is_object());
+                    new_arguments[position_in_effect] = reached_fact.atom().arguments()[i];
                 }
             }
 
@@ -223,5 +250,81 @@ impl WeightedGrounder {
             ),
             fact.cost() + rule.weight(),
         ));
+    }
+
+    fn product(
+        &self,
+        rule: &mut ProductRule,
+        fact: &Fact,
+        fact_index_in_condition: usize,
+        new_facts: &mut Vec<Fact>,
+    ) {
+        // In powerlifted, there are comments around this function that says
+        // that for product rules, there are only two scenarios:
+        // 1. The rule effect is ground
+        // 2. Every free variable in the body is also in the effect
+        //
+        // I (rywang) am not entirely convinced. More importantly, I don't think
+        // we should depend on this assumption, even if it were true. Instead,
+        // We compute the cartesian product of all the reached facts for each
+        // condition (where for condition at fact_index_in_condition, we only
+        // consider the given fact), and instantiate the effect with this.
+
+        // verify that ground objects in the condition match the fact
+        for (i, term) in rule.conditions()[fact_index_in_condition]
+            .arguments()
+            .iter()
+            .enumerate()
+        {
+            if term.is_object() && fact.atom().arguments()[i] != *term {
+                return;
+            }
+        }
+
+        rule.add_reached_fact(fact_index_in_condition, fact.clone());
+
+        for instantiation in (0..rule.conditions().len())
+            .map(|i| {
+                if i == fact_index_in_condition {
+                    vec![fact.clone()]
+                } else {
+                    rule.reached_facts(i).to_vec()
+                }
+            })
+            .multi_cartesian_product()
+        {
+            let mut effect_arguments = rule.effect().arguments().clone();
+            for (condition_index, fact) in instantiation.iter().enumerate() {
+                for (i, term) in rule.conditions()[condition_index]
+                    .arguments()
+                    .iter()
+                    .enumerate()
+                {
+                    if term.is_object() {
+                        continue;
+                    }
+                    if let Some(position_in_effect) =
+                        rule.variable_position_in_effect().get(term.index())
+                    {
+                        effect_arguments[position_in_effect] = fact.atom().arguments()[i];
+                    }
+                }
+            }
+
+            new_facts.push(Fact::new(
+                Atom::new(
+                    effect_arguments,
+                    rule.effect().predicate_index(),
+                    rule.effect().is_artificial_predicate(),
+                ),
+                self.aggregate(
+                    &instantiation
+                        .iter()
+                        .map(|fact| fact.cost())
+                        .collect::<Vec<_>>(),
+                    rule.weight(),
+                ),
+            ));
+        }
     }
 }

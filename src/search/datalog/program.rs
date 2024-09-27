@@ -220,6 +220,12 @@ impl Program {
             rule.set_index(RuleIndex::new(i));
         }
     }
+
+    pub fn cleanup_grounding_data(&mut self) {
+        for rule in &mut self.rules {
+            rule.cleanup_grounding_data();
+        }
+    }
 }
 
 impl PartialEq for Program {

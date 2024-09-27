@@ -3,31 +3,17 @@ use std::fmt::Display;
 use crate::search::datalog::{
     arguments::Arguments,
     atom::Atom,
+    fact::Fact,
     rules::{rule_core::RuleCore, RuleTrait},
     Annotation,
 };
-
-#[derive(Debug, Clone, Default)]
-struct ReachedFacts {
-    facts: Vec<Arguments>,
-    fact_indices: Vec<usize>,
-    costs: Vec<f64>,
-}
-
-impl PartialEq for ReachedFacts {
-    fn eq(&self, other: &Self) -> bool {
-        self.facts == other.facts
-            && self.fact_indices == other.fact_indices
-            && self.costs == other.costs
-    }
-}
 
 /// A [`ProductRule`] is a rule with multiple conditions, but none of them share
 /// any variables.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ProductRule {
     core: RuleCore,
-    reached_facts_per_condition: Vec<ReachedFacts>,
+    reached_facts_per_condition: Vec<Vec<Fact>>,
 }
 
 impl ProductRule {
@@ -51,15 +37,19 @@ impl ProductRule {
             }
         }
 
-        let reached_facts_per_condition = core
-            .conditions()
-            .iter()
-            .map(|_| ReachedFacts::default())
-            .collect();
+        let reached_facts_per_condition = core.conditions().iter().map(|_| vec![]).collect();
         Self {
             core,
             reached_facts_per_condition,
         }
+    }
+
+    pub fn add_reached_fact(&mut self, condition_index: usize, fact: Fact) {
+        self.reached_facts_per_condition[condition_index].push(fact);
+    }
+
+    pub fn reached_facts(&self, condition_index: usize) -> &[Fact] {
+        &self.reached_facts_per_condition[condition_index]
     }
 }
 
@@ -76,5 +66,11 @@ impl RuleTrait for ProductRule {
 
     fn core_mut(&mut self) -> &mut RuleCore {
         &mut self.core
+    }
+
+    fn cleanup_grounding_data(&mut self) {
+        for facts in &mut self.reached_facts_per_condition {
+            facts.clear();
+        }
     }
 }

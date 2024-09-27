@@ -144,4 +144,9 @@ impl RuleTrait for JoinRule {
     fn core_mut(&mut self) -> &mut RuleCore {
         &mut self.core
     }
+
+    fn cleanup_grounding_data(&mut self) {
+        self.reached_facts_for_joining_variables[0].clear();
+        self.reached_facts_for_joining_variables[1].clear();
+    }
 }
