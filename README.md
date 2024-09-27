@@ -7,12 +7,13 @@ representations of PDDL structures. It performs state space search (traditional)
 and *partial space search* (new).
 
 - The parser based on [pddl-rs](https://github.com/sunsided/pddl-rs)
-- The successor generation algorithm and planner is based on
-  [powerlifted](https://github.com/abcorrea/powerlifted)
 - The graph representations and learning component is based on
   [GOOSE](https://github.com/DillonZChen/goose)
+- The successor generator and delete relaxation heuristics are based on
+  [powerlifted](https://github.com/abcorrea/powerlifted)
 
-(See [references](#references) for more detail)
+(See [references](#references) for a list of all the papers Lazylifted is based
+on)
 
 ## Installation
 
@@ -83,5 +84,25 @@ OS.
 
 ## References
 
-- Corrêa, A. B.; Pommerening, F.; Helmert, M.; and Francès, G. 2020. Lifted Successor Generation using Query Optimization Techniques. In Proc. ICAPS 2020, pp. 80-89. [[pdf]](https://ai.dmi.unibas.ch/papers/correa-et-al-icaps2020.pdf)
-- Chen, D. Z.; Trevizan, F. W.; and Thiébaux, S. 2024. Return to Tradition: Learning Reliable Heuristics with Classical Machine Learning. In Proc. ICAPS 2024. [[pdf]](https://openreview.net/pdf?id=zVO8ZRIg7Q)
+Below is a list of works that LazyLifted is based on, sorted in chronological
+order.
+
+- Kovacs, D. L. 2011. Complete BNF Description of PDDL 3.1 (Completely
+  Corrected).
+  [[pdf]](https://helios.hud.ac.uk/scommv/IPC-14/repository/kovacs-pddl-3.1-2011.pdf)
+- Corrêa, A. B.; Pommerening, F.; Helmert, M.; and Francès, G. 2020. Lifted
+  Successor Generation using Query Optimization Techniques. In Proc. ICAPS 2020,
+  pp. 80-89. [[pdf]](https://ai.dmi.unibas.ch/papers/correa-et-al-icaps2020.pdf)
+- Corrêa, A. B.; Francès, G.; Pommerening, F.; and Helmert, M. 2021.
+  Delete-Relaxation Heuristics for Lifted Classical Planning. In Proc. ICAPS
+  2021, pp. 94-102.
+  [[pdf]](https://ai.dmi.unibas.ch/papers/correa-et-al-icaps2021.pdf)
+- Corrêa, A. B.; Pommerening, F.; Helmert, M.; and Francès, G. 2022. The FF
+  Heuristic for Lifted Classical Planning. In Proc. AAAI 2022.
+  [[pdf]](https://ai.dmi.unibas.ch/papers/correa-et-al-aaai2022.pdf)
+- Chen, D. Z.; Trevizan, F. W.; and Thiébaux, S. 2024. Return to Tradition:
+  Learning Reliable Heuristics with Classical Machine Learning. In Proc. ICAPS
+  2024. [[pdf]](https://openreview.net/pdf?id=zVO8ZRIg7Q)
+- Hao, M.; Trevizan, F.W.; Thiébaux, S.; Ferber, P.; and Hoffmann, J. 2024.
+  Guilding GBFS through Learned Pairwise Rankings. In Proc. IJCAI 2024.
+  [[pdf]](https://felipe.trevizan.org/papers/hao24:ranking.pdf)
