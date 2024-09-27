@@ -92,7 +92,10 @@ impl JoinRule {
         }
     }
 
-    pub fn joining_variable_positions(&self, position: JoinConditionPosition) -> HashSet<usize> {
+    /// Return the positions of the joining variables in one of the conditions,
+    /// will return in a deterministic order, where element i corresponds to the
+    /// same joining variable in both conditions.
+    pub fn joining_variable_positions(&self, position: JoinConditionPosition) -> Vec<usize> {
         self.joining_variable_positions
             .values()
             .map(|(i, j)| match position {

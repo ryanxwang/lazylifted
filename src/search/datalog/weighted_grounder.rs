@@ -11,7 +11,7 @@ use crate::search::{
 };
 use itertools::Itertools;
 use priority_queue::PriorityQueue;
-use std::collections::HashSet;
+use std::{cmp::Reverse, collections::HashSet};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum DatalogHeuristicType {
@@ -60,17 +60,18 @@ impl WeightedGrounder {
         for fact in &program.static_facts {
             let cost = fact.cost();
             let fact_id = fact_registry.add_or_get_fact(fact.clone());
-            priority_queue.push(fact_id, cost);
+            priority_queue.push(fact_id, Reverse(cost));
             initial_fact_ids.insert(fact_id);
         }
         for fact in facts_from_state(state, &program.task) {
             let cost = fact.cost();
             let fact_id = fact_registry.add_or_get_fact(fact);
-            priority_queue.push(fact_id, cost);
+            priority_queue.push(fact_id, Reverse(cost));
             initial_fact_ids.insert(fact_id);
         }
 
         while let Some((current_fact_id, current_cost)) = priority_queue.pop() {
+            let current_cost = current_cost.0;
             let current_fact = fact_registry.get_by_id(current_fact_id).clone();
 
             if current_fact.atom().predicate_index() == program.goal_predicate_index.unwrap() {
@@ -123,13 +124,13 @@ impl WeightedGrounder {
                             if new_fact.cost() < existing_fact.cost() {
                                 let cost = new_fact.cost();
                                 fact_registry.replace_at_id(existing_fact_id, new_fact);
-                                priority_queue.push(existing_fact_id, cost);
+                                priority_queue.push(existing_fact_id, Reverse(cost));
                             }
                         }
                         None => {
                             let cost = new_fact.cost();
                             let new_fact_id = fact_registry.add_or_get_fact(new_fact);
-                            priority_queue.push(new_fact_id, cost);
+                            priority_queue.push(new_fact_id, Reverse(cost));
                         }
                     }
                 }

@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use crate::search::{
     datalog::{
         Annotation, AnnotationGenerator, DatalogHeuristicType, DatalogProgram,
@@ -100,7 +98,7 @@ mod tests {
         // TODO-someday: this value is unnecessarily low (but correct, I think),
         // because we currently ignore type information, meaning that in
         // spanner, nuts and spanners can walk around. Pretty stupid
-        assert_eq!(h_value, HeuristicValue::from(4.0));
+        assert_eq!(h_value, HeuristicValue::from(2.0));
     }
 
     #[test]
