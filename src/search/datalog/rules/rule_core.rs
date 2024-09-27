@@ -33,8 +33,6 @@ pub struct RuleCore {
     weight: f64,
     /// The annotation of the rule.
     annotation: Annotation,
-    /// Whether the rule is ground, i.e. the effect contains no variables.
-    is_effect_ground: bool,
     /// The mapping of variables to their positions in the effect atom.
     variable_position_in_effect: VariablePositionInEffect,
     /// The lookup table for variables in the rule.
@@ -49,7 +47,6 @@ impl RuleCore {
             !conditions.is_empty(),
             "Datalog rules cannot have empty condition"
         );
-        let is_effect_ground = effect.is_ground();
         let variable_position_in_effect = VariablePositionInEffect::new(&effect);
         let variable_source = VariableSource::new(&effect, &conditions);
         Self {
@@ -60,7 +57,6 @@ impl RuleCore {
             conditions,
             weight,
             annotation,
-            is_effect_ground,
             variable_position_in_effect,
             variable_source,
         }
@@ -91,12 +87,6 @@ impl RuleCore {
     #[inline(always)]
     pub fn set_condition(&mut self, conditions: Vec<Atom>) {
         self.conditions = conditions;
-    }
-
-    /// Get whether the rule's effect (head) is ground.
-    #[inline(always)]
-    pub fn head_is_ground(&self) -> bool {
-        self.is_effect_ground
     }
 
     #[inline(always)]

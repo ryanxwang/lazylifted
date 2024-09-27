@@ -1,18 +1,12 @@
 use std::{collections::HashSet, fmt::Display, hash::Hash};
 
-use global_counter::global_counter;
-
 use crate::search::{
     datalog::{arguments::Arguments, term::Term},
     ActionSchema, AtomSchema, SchemaArgument,
 };
 
-type AtomId = usize;
-global_counter!(ATOM_COUNTER, AtomId, 0);
-
 #[derive(Debug, Clone)]
 pub struct Atom {
-    id: AtomId,
     arguments: Arguments,
     predicate_index: usize,
     // An artificial predicate is a predicate that is not present in the
@@ -26,10 +20,7 @@ impl Atom {
         predicate_index: usize,
         is_artificial_predicate: bool,
     ) -> Self {
-        let id = ATOM_COUNTER.get_cloned();
-        ATOM_COUNTER.inc();
         Self {
-            id,
             arguments,
             predicate_index,
             is_artificial_predicate,
@@ -66,24 +57,12 @@ impl Atom {
         &self.arguments
     }
 
-    pub fn with_arguments(&mut self, arguments: Arguments) {
-        self.arguments = arguments;
-    }
-
     pub fn predicate_index(&self) -> usize {
         self.predicate_index
     }
 
     pub fn is_artificial_predicate(&self) -> bool {
         self.is_artificial_predicate
-    }
-
-    pub fn id(&self) -> usize {
-        self.id
-    }
-
-    pub fn is_nullary(&self) -> bool {
-        self.arguments.len() == 0
     }
 
     pub fn is_ground(&self) -> bool {
@@ -160,7 +139,6 @@ mod tests {
         assert_eq!(atom.arguments().len(), 2);
         assert_eq!(atom.predicate_index(), 0);
         assert!(!atom.is_artificial_predicate());
-        assert_eq!(atom.id(), ATOM_COUNTER.get_cloned() - 1)
     }
 
     #[test]
@@ -174,20 +152,8 @@ mod tests {
         assert_eq!(atom.arguments().len(), 2);
         assert_eq!(atom.predicate_index(), 0);
         assert!(!atom.is_artificial_predicate());
-        assert_eq!(atom.id(), ATOM_COUNTER.get_cloned() - 1);
         assert_eq!(atom.arguments()[0], Term::new_variable(0));
         assert_eq!(atom.arguments()[1], Term::new_object(1));
-    }
-
-    #[test]
-    fn test_atom_is_nullary() {
-        let arguments = Arguments::new(vec![]);
-        let atom = Atom::new(arguments, 0, false);
-        assert!(atom.is_nullary());
-
-        let arguments = Arguments::new(vec![Term::new_object(0), Term::new_object(1)]);
-        let atom = Atom::new(arguments, 0, false);
-        assert!(!atom.is_nullary());
     }
 
     #[test]

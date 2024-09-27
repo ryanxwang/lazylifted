@@ -1,4 +1,4 @@
-use crate::search::datalog::{atom::Atom, term::Term};
+use crate::search::datalog::atom::Atom;
 use itertools::Itertools;
 use std::{
     collections::{HashMap, HashSet},
@@ -22,10 +22,6 @@ impl VariablePositionInEffect {
             }
         }
         Self { mapping }
-    }
-
-    pub fn has_variable(&self, variable_index: usize) -> bool {
-        self.mapping.contains_key(&variable_index)
     }
 
     pub fn get(&self, variable_index: usize) -> Option<usize> {
@@ -191,11 +187,6 @@ impl VariableSource {
             .unwrap()
     }
 
-    pub fn is_variable_in_body(&self, term: &Term) -> bool {
-        assert!(term.is_variable());
-        !self.table[self.variable_index_to_table_index[&term.index()]].is_direct()
-    }
-
     /// Update the condition indices of the entries in the table.
     pub fn update_condition_indices(&mut self, condition_indices: &HashMap<usize, usize>) {
         for position in self.table.iter_mut() {
@@ -275,7 +266,7 @@ impl Display for VariableSource {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::search::datalog::arguments::Arguments;
+    use crate::search::datalog::{arguments::Arguments, term::Term};
 
     #[test]
     fn test_variable_position_map() {
@@ -286,8 +277,6 @@ mod tests {
         );
 
         let variable_position_map = VariablePositionInEffect::new(&effect);
-        assert!(!variable_position_map.has_variable(0),);
-        assert!(variable_position_map.has_variable(3),);
         assert_eq!(variable_position_map.get(0), None);
         assert_eq!(variable_position_map.get(3), Some(1));
     }

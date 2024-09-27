@@ -35,10 +35,6 @@ impl Fact {
     pub fn cost(&self) -> FactCost {
         self.cost
     }
-
-    pub fn set_cost(&mut self, cost: f64) {
-        self.cost = FactCost::from(cost);
-    }
 }
 
 impl PartialEq for Fact {

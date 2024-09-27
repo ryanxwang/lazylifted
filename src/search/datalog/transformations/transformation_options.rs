@@ -8,6 +8,7 @@ pub struct TransformationOptions {
 }
 
 impl TransformationOptions {
+    #[allow(dead_code)]
     pub fn new(
         rename_variables: bool,
         collapse_predicates: bool,
