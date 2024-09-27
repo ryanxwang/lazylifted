@@ -36,7 +36,7 @@ mod tests {
     use super::*;
     use crate::{
         search::{
-            datalog::{transformations::remove_action_predicates, Annotation, AnnotationGenerator},
+            datalog::{Annotation, AnnotationGenerator},
             Task,
         },
         test_utils::*,

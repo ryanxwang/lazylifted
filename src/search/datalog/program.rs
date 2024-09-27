@@ -1,7 +1,6 @@
 use std::{collections::HashMap, rc::Rc};
 
 use itertools::Itertools;
-use tracing_subscriber::fmt::format;
 
 use crate::search::{
     datalog::{

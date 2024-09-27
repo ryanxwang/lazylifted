@@ -8,7 +8,6 @@ use crate::search::{
     datalog::{arguments::Arguments, atom::Atom, term::Term},
     DBState, Task,
 };
-use global_counter::global_counter;
 use ordered_float::OrderedFloat;
 use segvec::{Linear, SegVec};
 

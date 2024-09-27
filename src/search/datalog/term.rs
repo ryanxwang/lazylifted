@@ -2,12 +2,6 @@ use std::fmt::{Display, Formatter};
 
 use strum_macros::EnumIs;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum TermType {
-    Object,
-    Variable,
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, EnumIs, PartialOrd, Ord)]
 pub enum Term {
     Object(usize),

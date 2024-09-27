@@ -57,13 +57,6 @@ pub trait RuleTrait {
         self.core_mut().variable_source_mut()
     }
 
-    fn condition_variables(&self) -> Vec<usize> {
-        self.conditions()
-            .iter()
-            .flat_map(|atom| atom.variables())
-            .collect()
-    }
-
     /// Update the condition at the given index, will update the variable source
     /// as well. Only supports dropping constant arguments of the condition.
     fn update_single_condition(&mut self, condition: Atom, index: usize) {

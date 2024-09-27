@@ -1,21 +1,16 @@
-use std::{collections::HashSet, hash::Hash};
+use std::collections::HashSet;
 
 use itertools::Itertools;
 
-use crate::search::{
-    datalog::{
-        arguments::Arguments,
-        atom::Atom,
+use crate::search::datalog::{arguments::Arguments, atom::Atom,
         program::Program,
-        rules::{GenericRule, JoinRule, ProjectRule, Rule, RuleTrait},
+        rules::{ JoinRule, ProjectRule, Rule, RuleTrait},
         term::Term,
         transformations::{
             connected_components::split_into_connected_components, join_cost::JoinCostType,
         },
         Annotation,
-    },
-    Task,
-};
+    };
 
 /// Use projection rules to remove constant arguments from the rules.
 /// Specifically, given a rule with more than one condition, for each condition
@@ -306,7 +301,7 @@ pub fn convert_rules_to_normal_form(mut program: Program) -> Program {
 mod tests {
     use super::*;
     use crate::{
-        search::datalog::{transformations::remove_action_predicates, AnnotationGenerator},
+        search::{Task, datalog::{transformations::remove_action_predicates, AnnotationGenerator}},
         test_utils::*,
     };
     use std::rc::Rc;

@@ -1,11 +1,11 @@
 use crate::search::{
     datalog::{
         atom::Atom,
-        fact::{self, facts_from_state, Fact, FactCost, FactRegistry},
+        fact::{facts_from_state, Fact, FactCost, FactRegistry},
         program::Program,
-        rule_matcher::{self, RuleMatcher},
+        rule_matcher::RuleMatcher,
         rules::{JoinConditionPosition, JoinRule, ProductRule, ProjectRule, Rule, RuleTrait},
-        term::{self, Term},
+        term::Term,
     },
     DBState,
 };
@@ -17,6 +17,7 @@ use std::{cmp::Reverse, collections::HashSet};
 pub enum DatalogHeuristicType {
     Hadd,
     Hmax,
+    #[allow(dead_code)]
     Hff,
 }
 

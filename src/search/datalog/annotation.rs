@@ -6,7 +6,10 @@ use crate::search::{datalog::program::Program, Task};
 /// it should generate
 #[derive(Debug, Clone, Copy)]
 pub enum RuleCategory {
-    ActionApplicability { schema_index: usize },
+    #[allow(dead_code)]
+    ActionApplicability {
+        schema_index: usize,
+    },
     ActionEffect,
     Goal,
 }

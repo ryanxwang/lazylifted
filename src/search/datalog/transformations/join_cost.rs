@@ -1,18 +1,14 @@
-use std::{collections::HashSet, hash::Hash};
+use std::collections::HashSet;
 
-use crate::search::{
-    atom,
-    datalog::{
-        arguments::Arguments,
-        atom::Atom,
-        rules::{Rule, RuleTrait},
-        term::Term,
-    },
+use crate::search::datalog::{
+    atom::Atom,
+    rules::{Rule, RuleTrait},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum JoinCostType {
     FastDownward,
+    #[allow(dead_code)]
     Helmert09,
 }
 

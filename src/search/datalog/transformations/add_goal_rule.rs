@@ -9,7 +9,7 @@ use crate::search::{
         term::Term,
         AnnotationGenerator, RuleCategory,
     },
-    goal, Task,
+    Task,
 };
 
 pub fn add_goal_rule(

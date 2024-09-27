@@ -1,10 +1,6 @@
-use std::{
-    collections::{HashMap, HashSet},
-    fmt::Display,
-};
+use std::{collections::HashMap, fmt::Display};
 
 use crate::search::datalog::{
-    annotation,
     atom::Atom,
     fact::Fact,
     rules::{rule_core::RuleCore, RuleTrait},

@@ -1,7 +1,6 @@
 use std::fmt::Display;
 
 use crate::search::datalog::{
-    arguments::Arguments,
     atom::Atom,
     fact::Fact,
     rules::{rule_core::RuleCore, RuleTrait},
