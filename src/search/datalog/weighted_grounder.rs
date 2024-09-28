@@ -265,7 +265,7 @@ impl WeightedGrounder {
                     rule.effect().is_artificial_predicate(),
                 ),
                 cost,
-                Some(Achiever::new(rule.index(), rule.weight(), achiever_body)),
+                Some(Achiever::new(rule.index(), achiever_body)),
             ));
         }
     }
@@ -298,7 +298,7 @@ impl WeightedGrounder {
                 rule.effect().is_artificial_predicate(),
             ),
             fact.cost() + rule.weight(),
-            Some(Achiever::new(rule.index(), rule.weight(), vec![fact.id()])),
+            Some(Achiever::new(rule.index(), vec![fact.id()])),
         ));
     }
 
@@ -376,7 +376,6 @@ impl WeightedGrounder {
                 ),
                 Some(Achiever::new(
                     rule.index(),
-                    rule.weight(),
                     instantiation.iter().map(|fact| fact.id()).collect(),
                 )),
             ));
