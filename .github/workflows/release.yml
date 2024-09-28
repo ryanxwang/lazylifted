@@ -31,9 +31,8 @@ jobs:
       run: cargo build --bins --verbose --release
     - name: Rename binaries
       run: |
-        mv target/release/planner planner-linux
-        mv target/release/trainer trainer-linux
-        mv target/release/validator validator-linux
+        mv target/release/plan plan-linux
+        mv target/release/train train-linux
     - name: Release
       uses: softprops/action-gh-release@v2
       if: startswith(github.ref, 'refs/tags/')
@@ -41,8 +40,7 @@ jobs:
         fail_on_unmatched_files: true
         prerelease: true
         files: |
-          planner-linux
-          trainer-linux
-          validator-linux
+          plan-linux
+          train-linux
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
