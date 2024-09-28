@@ -106,10 +106,10 @@ enum Commands {
         )]
         heuristic_name: StateHeuristicNames,
     },
-    /// Run a partial action search. This means the search engine explores a
+    /// Run a partial space search. This means the search engine explores a
     /// graph of (state, partial action) pairs, transitioning between nodes
     /// via gradually building up the partial action to a full action.
-    PartialActionSearch {
+    PartialSpaceSearch {
         #[arg(
             value_enum,
             help = "The heuristic evaluator to use",
@@ -157,7 +157,7 @@ fn plan(cli: Cli, task: Task) {
             cli.search_engine_name
                 .search(Box::new(problem), termination_condition)
         }
-        Commands::PartialActionSearch { heuristic_name } => {
+        Commands::PartialSpaceSearch { heuristic_name } => {
             let heuristic = heuristic_name.create(
                 task.clone(),
                 cli.successor_generator_name,
