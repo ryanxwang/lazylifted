@@ -1,7 +1,8 @@
 use crate::search::{
     datalog::{
+        achiever::Achiever,
         atom::Atom,
-        fact::{facts_from_state, Fact, FactCost, FactRegistry},
+        fact::{facts_from_state, Fact, FactCost, FactId},
         program::Program,
         rule_matcher::RuleMatcher,
         rules::{JoinConditionPosition, JoinRule, ProductRule, ProjectRule, Rule, RuleTrait},
@@ -11,13 +12,15 @@ use crate::search::{
 };
 use itertools::Itertools;
 use priority_queue::PriorityQueue;
-use std::{cmp::Reverse, collections::HashSet};
+use std::{
+    cmp::Reverse,
+    collections::{HashSet, VecDeque},
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum DatalogHeuristicType {
     Hadd,
     Hmax,
-    #[allow(dead_code)]
     Hff,
 }
 
@@ -54,30 +57,30 @@ impl WeightedGrounder {
     }
 
     pub fn ground(&self, program: &mut Program, state: &DBState) -> f64 {
-        let mut fact_registry = FactRegistry::new();
+        // IMPORTANT: If/when we incorporate action costs, it's important to pay
+        // attention to zero cost actions, see Augusto's AAAI 2022 paper.
         let mut initial_fact_ids = HashSet::new();
         let mut priority_queue = PriorityQueue::new();
 
         for fact in &program.static_facts {
             let cost = fact.cost();
-            let fact_id = fact_registry.add_or_get_fact(fact.clone());
+            let fact_id = program.fact_registry.add_or_get_fact(fact.clone());
             priority_queue.push(fact_id, Reverse(cost));
             initial_fact_ids.insert(fact_id);
         }
         for fact in facts_from_state(state, &program.task) {
             let cost = fact.cost();
-            let fact_id = fact_registry.add_or_get_fact(fact);
+            let fact_id = program.fact_registry.add_or_get_fact(fact);
             priority_queue.push(fact_id, Reverse(cost));
             initial_fact_ids.insert(fact_id);
         }
 
         while let Some((current_fact_id, current_cost)) = priority_queue.pop() {
             let current_cost = current_cost.0;
-            let current_fact = fact_registry.get_by_id(current_fact_id).clone();
+            let current_fact = program.fact_registry.get_by_id(current_fact_id).clone();
 
             if current_fact.atom().predicate_index() == program.goal_predicate_index.unwrap() {
-                // TODO-soon: backchain to execute annotations
-
+                Self::backchain_from_goal(&current_fact, &initial_fact_ids, program);
                 return current_cost.into();
             }
             if current_fact.cost() < current_cost {
@@ -119,18 +122,20 @@ impl WeightedGrounder {
                 }
 
                 for new_fact in new_facts {
-                    match fact_registry.get_id(&new_fact) {
+                    match program.fact_registry.get_id(&new_fact) {
                         Some(existing_fact_id) => {
-                            let existing_fact = fact_registry.get_by_id(existing_fact_id);
+                            let existing_fact = program.fact_registry.get_by_id(existing_fact_id);
                             if new_fact.cost() < existing_fact.cost() {
                                 let cost = new_fact.cost();
-                                fact_registry.replace_at_id(existing_fact_id, new_fact);
+                                program
+                                    .fact_registry
+                                    .replace_at_id(existing_fact_id, new_fact);
                                 priority_queue.push(existing_fact_id, Reverse(cost));
                             }
                         }
                         None => {
                             let cost = new_fact.cost();
-                            let new_fact_id = fact_registry.add_or_get_fact(new_fact);
+                            let new_fact_id = program.fact_registry.add_or_get_fact(new_fact);
                             priority_queue.push(new_fact_id, Reverse(cost));
                         }
                     }
@@ -139,6 +144,38 @@ impl WeightedGrounder {
         }
 
         f64::INFINITY
+    }
+
+    fn backchain_from_goal(
+        goal_fact: &Fact,
+        initial_fact_ids: &HashSet<FactId>,
+        program: &Program,
+    ) {
+        let mut seen_fact_ids = HashSet::new();
+        let mut queue = VecDeque::new();
+
+        queue.push_back(goal_fact.id());
+
+        while let Some(fact_id) = queue.pop_front() {
+            if seen_fact_ids.contains(&fact_id) {
+                continue;
+            }
+            seen_fact_ids.insert(fact_id);
+            if initial_fact_ids.contains(&fact_id) {
+                continue;
+            }
+
+            let fact = program.fact_registry.get_by_id(fact_id);
+            let achiever = fact
+                .achiever()
+                .expect("All achieved, non-initial facts should have an achiever");
+            program.rules[achiever.rule_index().value()]
+                .annotation()
+                .execute(fact_id, program);
+            for achieving_fact_id in achiever.rule_body() {
+                queue.push_back(*achieving_fact_id);
+            }
+        }
     }
 
     fn join(
@@ -211,6 +248,15 @@ impl WeightedGrounder {
                 }
             }
 
+            let achiever_body = match join_condition_position {
+                JoinConditionPosition::First => {
+                    vec![fact.id(), reached_fact.id()]
+                }
+                JoinConditionPosition::Second => {
+                    vec![reached_fact.id(), fact.id()]
+                }
+            };
+
             let cost = self.aggregate(&[fact.cost(), reached_fact.cost()], rule.weight());
             new_facts.push(Fact::new(
                 Atom::new(
@@ -219,6 +265,7 @@ impl WeightedGrounder {
                     rule.effect().is_artificial_predicate(),
                 ),
                 cost,
+                Some(Achiever::new(rule.index(), rule.weight(), achiever_body)),
             ));
         }
     }
@@ -251,6 +298,7 @@ impl WeightedGrounder {
                 rule.effect().is_artificial_predicate(),
             ),
             fact.cost() + rule.weight(),
+            Some(Achiever::new(rule.index(), rule.weight(), vec![fact.id()])),
         ));
     }
 
@@ -326,6 +374,11 @@ impl WeightedGrounder {
                         .collect::<Vec<_>>(),
                     rule.weight(),
                 ),
+                Some(Achiever::new(
+                    rule.index(),
+                    rule.weight(),
+                    instantiation.iter().map(|fact| fact.id()).collect(),
+                )),
             ));
         }
     }

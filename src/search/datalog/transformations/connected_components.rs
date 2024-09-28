@@ -204,7 +204,7 @@ mod tests {
             BLOCKSWORLD_DOMAIN_TEXT,
             BLOCKSWORLD_PROBLEM13_TEXT,
         ));
-        let annotation_generator: AnnotationGenerator = Box::new(|_, _| Annotation::None);
+        let annotation_generator: AnnotationGenerator = Box::new(|_| Annotation::None);
 
         let mut program = Program::new_raw_for_tests(task.clone(), &annotation_generator);
         // we normally remove action predicates before splitting into connected
@@ -294,7 +294,7 @@ mod tests {
     #[test]
     fn test_connected_components_splitting_spanner() {
         let task = Rc::new(Task::from_text(SPANNER_DOMAIN_TEXT, SPANNER_PROBLEM10_TEXT));
-        let annotation_generator: AnnotationGenerator = Box::new(|_, _| Annotation::None);
+        let annotation_generator: AnnotationGenerator = Box::new(|_| Annotation::None);
 
         let mut program = Program::new_raw_for_tests(task.clone(), &annotation_generator);
         // we normally remove action predicates before splitting into connected

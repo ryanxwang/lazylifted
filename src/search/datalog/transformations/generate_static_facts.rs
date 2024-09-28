@@ -23,6 +23,7 @@ pub fn generate_static_facts(mut program: Program) -> Program {
         program.static_facts.push(Fact::new(
             Atom::new(Arguments::new(terms), atom.predicate_index(), false),
             FactCost::from(0.0),
+            None,
         ));
     }
 
@@ -46,7 +47,7 @@ mod tests {
     #[test]
     fn test_generate_static_facts_spanner() {
         let task = Rc::new(Task::from_text(SPANNER_DOMAIN_TEXT, SPANNER_PROBLEM10_TEXT));
-        let annotation_generator: AnnotationGenerator = Box::new(|_, _| Annotation::None);
+        let annotation_generator: AnnotationGenerator = Box::new(|_| Annotation::None);
 
         let mut program = Program::new_raw_for_tests(task.clone(), &annotation_generator);
         program = generate_static_facts(program);

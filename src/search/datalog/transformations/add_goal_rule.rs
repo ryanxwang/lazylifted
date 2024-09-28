@@ -21,7 +21,7 @@ pub fn add_goal_rule(
     program.goal_predicate_index = Some(goal_id);
     let goal = Atom::new(Arguments::new(vec![]), goal_id, true);
 
-    let annotation = annotation_generator(RuleCategory::Goal, task.clone());
+    let annotation = annotation_generator(RuleCategory::Goal);
 
     let conditions: Vec<Atom> = task
         .goal
@@ -63,7 +63,7 @@ mod tests {
             BLOCKSWORLD_DOMAIN_TEXT,
             BLOCKSWORLD_PROBLEM13_TEXT,
         ));
-        let annotation_generator: AnnotationGenerator = Box::new(|_, _| Annotation::None);
+        let annotation_generator: AnnotationGenerator = Box::new(|_| Annotation::None);
 
         let mut program = Program::new_raw_for_tests(task.clone(), &annotation_generator);
         program = remove_action_predicates(program);
@@ -81,7 +81,7 @@ mod tests {
     #[test]
     fn test_spanner_goal_rule() {
         let task = Rc::new(Task::from_text(SPANNER_DOMAIN_TEXT, SPANNER_PROBLEM10_TEXT));
-        let annotation_generator: AnnotationGenerator = Box::new(|_, _| Annotation::None);
+        let annotation_generator: AnnotationGenerator = Box::new(|_| Annotation::None);
 
         let mut program = Program::new_raw_for_tests(task.clone(), &annotation_generator);
         program = remove_action_predicates(program);

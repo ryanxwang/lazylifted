@@ -1,7 +1,7 @@
 use crate::search::{PartialAction, Task, Transition};
 
 /// Action struct that represents an instantiated action schema.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Action {
     /// The action schema index.
     pub index: usize,

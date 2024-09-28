@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::search::{
-    datalog::{arguments::Arguments, atom::Atom, term::Term},
+    datalog::{achiever::Achiever, arguments::Arguments, atom::Atom, term::Term},
     DBState, Task,
 };
 use ordered_float::OrderedFloat;
@@ -16,15 +16,20 @@ pub type FactCost = OrderedFloat<f64>;
 #[derive(Debug, Clone)]
 pub struct Fact {
     atom: Atom,
+    /// Fact IDs are assigned when added to the registry
+    id: Option<FactId>,
     cost: FactCost,
+    achiever: Option<Achiever>,
 }
 
 impl Fact {
-    pub fn new(atom: Atom, cost: FactCost) -> Self {
+    pub fn new(atom: Atom, cost: FactCost, achiever: Option<Achiever>) -> Self {
         assert!(atom.arguments().iter().all(|term| term.is_object()));
         Self {
             atom,
             cost: FactCost::from(cost),
+            achiever,
+            id: None,
         }
     }
 
@@ -34,6 +39,18 @@ impl Fact {
 
     pub fn cost(&self) -> FactCost {
         self.cost
+    }
+
+    pub fn id(&self) -> FactId {
+        self.id.unwrap()
+    }
+
+    pub fn set_id(&mut self, id: FactId) {
+        self.id = Some(id);
+    }
+
+    pub fn achiever(&self) -> Option<&Achiever> {
+        self.achiever.as_ref()
     }
 }
 
@@ -47,7 +64,11 @@ impl Eq for Fact {}
 
 impl Display for Fact {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "(fact {}, cost {})", self.atom, self.cost)
+        write!(f, "(fact {}, cost {}", self.atom, self.cost)?;
+        match &self.achiever {
+            Some(achiever) => write!(f, ", achiever {})", achiever),
+            None => write!(f, ")"),
+        }
     }
 }
 
@@ -74,6 +95,7 @@ pub fn facts_from_state(state: &DBState, task: &Task) -> Vec<Fact> {
         facts.push(Fact::new(
             Atom::new(Arguments::new(terms), atom.predicate_index(), false),
             FactCost::from(0.0),
+            None,
         ));
     }
 
@@ -83,7 +105,7 @@ pub fn facts_from_state(state: &DBState, task: &Task) -> Vec<Fact> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct FactId(usize);
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FactRegistry {
     facts: SegVec<Fact, Linear>,
     reached_facts: HashMap<u64, FactId>,
@@ -104,16 +126,18 @@ impl FactRegistry {
         self.reached_facts.get(&fact_hash).copied()
     }
 
-    pub fn replace_at_id(&mut self, fact_id: FactId, fact: Fact) {
+    pub fn replace_at_id(&mut self, fact_id: FactId, mut fact: Fact) {
+        fact.set_id(fact_id);
         self.facts[fact_id.0] = fact;
     }
 
-    pub fn add_or_get_fact(&mut self, fact: Fact) -> FactId {
+    pub fn add_or_get_fact(&mut self, mut fact: Fact) -> FactId {
         let fact_hash = self.hasher.hash_one(&fact);
         match self.reached_facts.get(&fact_hash) {
             Some(&fact_id) => fact_id,
             None => {
                 let fact_id = FactId(self.facts.len());
+                fact.set_id(fact_id);
                 self.facts.push(fact);
                 self.reached_facts.insert(fact_hash, fact_id);
                 fact_id

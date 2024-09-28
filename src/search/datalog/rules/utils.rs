@@ -173,6 +173,12 @@ impl VariableSource {
         &mut self.table
     }
 
+    pub fn get_entry_for_variable(&self, variable_index: usize) -> Option<&VariablePositionInBody> {
+        self.variable_index_to_table_index
+            .get(&variable_index)
+            .map(|&table_index| &self.table[table_index])
+    }
+
     pub fn get_variable_index_from_table_index(&self, table_index: usize) -> usize {
         *self
             .table_index_to_variable_index

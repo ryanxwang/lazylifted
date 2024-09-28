@@ -52,7 +52,7 @@ mod tests {
             BLOCKSWORLD_DOMAIN_TEXT,
             BLOCKSWORLD_PROBLEM13_TEXT,
         ));
-        let annotation_generator: AnnotationGenerator = Box::new(|_, _| Annotation::None);
+        let annotation_generator: AnnotationGenerator = Box::new(|_| Annotation::None);
 
         let mut program = Program::new_raw_for_tests(task.clone(), &annotation_generator);
         program = remove_action_predicates(program);

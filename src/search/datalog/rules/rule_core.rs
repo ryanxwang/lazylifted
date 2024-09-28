@@ -19,6 +19,12 @@ impl RuleIndex {
     }
 }
 
+impl Display for RuleIndex {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 /// A [`RuleCore`] represents the core of a Datalog rule. This should be used as
 /// a component of a [`Rule`](crate::search::datalog::rules::Rule).
 #[derive(Debug, Clone)]
@@ -35,7 +41,8 @@ pub struct RuleCore {
     annotation: Annotation,
     /// The mapping of variables to their positions in the effect atom.
     variable_position_in_effect: VariablePositionInEffect,
-    /// The lookup table for variables in the rule.
+    /// The lookup table for variables in the original action schema rule, this
+    /// could contain variables not present in the rule due to normalisation.
     variable_source: VariableSource,
 }
 

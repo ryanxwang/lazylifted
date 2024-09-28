@@ -5,8 +5,8 @@ use itertools::Itertools;
 use crate::search::{
     datalog::{
         atom::Atom,
-        fact::Fact,
-        rules::{GenericRule, Rule, RuleIndex, RuleTrait},
+        fact::{Fact, FactId, FactRegistry},
+        rules::{GenericRule, Rule, RuleIndex, RuleTrait, VariablePositionInBody},
         transformations::{
             add_goal_rule, convert_rules_to_normal_form, generate_static_facts,
             remove_action_predicates, TransformationOptions,
@@ -28,6 +28,7 @@ pub struct Program {
     pub(super) predicate_names: Vec<String>,
     pub(super) predicate_name_to_index: HashMap<String, usize>,
     pub(super) goal_predicate_index: Option<usize>,
+    pub(super) fact_registry: FactRegistry,
 }
 
 impl Program {
@@ -78,14 +79,12 @@ impl Program {
                 &mut predicate_names,
                 &mut predicate_name_to_index,
                 annotation_generator,
-                task.clone(),
             ));
 
             rules.append(&mut Self::generate_action_effect_rules(
                 action_schema,
                 &mut predicate_name_to_index,
                 annotation_generator,
-                task.clone(),
             ));
         }
 
@@ -96,6 +95,7 @@ impl Program {
             predicate_names,
             predicate_name_to_index,
             goal_predicate_index: None,
+            fact_registry: FactRegistry::new(),
         }
     }
 
@@ -107,7 +107,6 @@ impl Program {
         predicate_names: &mut Vec<String>,
         predicate_name_to_index: &mut HashMap<String, usize>,
         annotation_generator: &AnnotationGenerator,
-        task: Rc<Task>,
     ) -> Rule {
         let predicate_index = predicate_names.len();
         assert!(
@@ -137,12 +136,9 @@ impl Program {
             // the performance for some domains
             .rev()
             .collect_vec();
-        let annotation = annotation_generator(
-            RuleCategory::ActionApplicability {
-                schema_index: action_schema.index(),
-            },
-            task.clone(),
-        );
+        let annotation = annotation_generator(RuleCategory::ActionApplicability {
+            schema_index: action_schema.index(),
+        });
 
         Rule::new_generic(GenericRule::new(
             effect,
@@ -159,7 +155,6 @@ impl Program {
         action_schema: &ActionSchema,
         predicate_name_to_index: &mut HashMap<String, usize>,
         annotation_generator: &AnnotationGenerator,
-        task: Rc<Task>,
     ) -> Vec<Rule> {
         let conditions = vec![Atom::new_from_action_schema(
             action_schema,
@@ -175,7 +170,7 @@ impl Program {
                 }
 
                 let effect = Atom::new_from_atom_schema(e.underlying());
-                let annotation = annotation_generator(RuleCategory::ActionEffect, task.clone());
+                let annotation = annotation_generator(RuleCategory::ActionEffect);
 
                 Some(Rule::new_generic(GenericRule::new(
                     effect,
@@ -224,6 +219,52 @@ impl Program {
         for rule in &mut self.rules {
             rule.cleanup_grounding_data();
         }
+        self.fact_registry = FactRegistry::new();
+    }
+
+    fn get_variable_instantiation(&self, effect_fact: &Fact, variable_index: usize) -> usize {
+        let achiever = effect_fact.achiever().expect(
+            "Only makes sense to extract action instantiation from facts that have an achiever",
+        );
+        let variable_source = self.rules[achiever.rule_index().value()].variable_source();
+
+        match variable_source
+            .get_entry_for_variable(variable_index)
+            .unwrap()
+        {
+            VariablePositionInBody::Direct {
+                condition_index,
+                argument_index,
+            } => {
+                let condition = self
+                    .fact_registry
+                    .get_by_id(achiever.rule_body()[*condition_index]);
+                condition.atom().arguments()[*argument_index].index()
+            }
+            VariablePositionInBody::Indirect {
+                condition_index,
+                table_index: _,
+            } => {
+                let condition = self
+                    .fact_registry
+                    .get_by_id(achiever.rule_body()[*condition_index]);
+                self.get_variable_instantiation(condition, variable_index)
+            }
+        }
+    }
+
+    pub(super) fn extract_action_instantiation_from_fact(&self, fact_id: FactId) -> Vec<usize> {
+        let fact = self.fact_registry.get_by_id(fact_id);
+        let achiever = fact.achiever().expect(
+            "only makes sense to extract action instantiation from facts that have an achiever",
+        );
+        let rule = &self.rules[achiever.rule_index().value()];
+
+        let instantiation = (0..rule.variable_source().table().len())
+            .map(|i| self.get_variable_instantiation(fact, i))
+            .collect();
+
+        instantiation
     }
 }
 
@@ -248,7 +289,7 @@ mod tests {
             BLOCKSWORLD_DOMAIN_TEXT,
             BLOCKSWORLD_PROBLEM13_TEXT,
         ));
-        let annotation_generator: AnnotationGenerator = Box::new(|_, _| Annotation::None);
+        let annotation_generator: AnnotationGenerator = Box::new(|_| Annotation::None);
 
         let program = Program::new_raw_for_tests(task.clone(), &annotation_generator);
 

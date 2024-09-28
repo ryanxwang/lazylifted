@@ -312,7 +312,7 @@ mod tests {
             BLOCKSWORLD_DOMAIN_TEXT,
             BLOCKSWORLD_PROBLEM13_TEXT,
         ));
-        let annotation_generator: AnnotationGenerator = Box::new(|_, _| Annotation::None);
+        let annotation_generator: AnnotationGenerator = Box::new(|_| Annotation::None);
 
         let mut program = Program::new_raw_for_tests(task, &annotation_generator);
         let original_program = program.clone();
@@ -327,7 +327,7 @@ mod tests {
             BLOCKSWORLD_DOMAIN_TEXT,
             BLOCKSWORLD_PROBLEM13_TEXT,
         ));
-        let annotation_generator: AnnotationGenerator = Box::new(|_, _| Annotation::None);
+        let annotation_generator: AnnotationGenerator = Box::new(|_| Annotation::None);
 
         let mut program = Program::new_raw_for_tests(task, &annotation_generator);
         program = remove_action_predicates(program);
@@ -414,7 +414,7 @@ mod tests {
     #[test]
     fn test_convert_spanner_to_normal_form() {
         let task = Rc::new(Task::from_text(SPANNER_DOMAIN_TEXT, SPANNER_PROBLEM10_TEXT));
-        let annotation_generator: AnnotationGenerator = Box::new(|_, _| Annotation::None);
+        let annotation_generator: AnnotationGenerator = Box::new(|_| Annotation::None);
 
         let mut program = Program::new_raw_for_tests(task.clone(), &annotation_generator);
         program = remove_action_predicates(program);
@@ -482,7 +482,7 @@ mod tests {
         task.remove_negative_preconditions();
         let task = Rc::new(task);
         
-        let annotation_generator: AnnotationGenerator = Box::new(|_, _| Annotation::None);
+        let annotation_generator: AnnotationGenerator = Box::new(|_| Annotation::None);
 
         let mut program = Program::new_raw_for_tests(task.clone(), &annotation_generator);
         program = remove_action_predicates(program);

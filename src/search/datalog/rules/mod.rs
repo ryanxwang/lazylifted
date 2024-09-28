@@ -12,3 +12,4 @@ pub(super) use product_rule::ProductRule;
 pub(super) use project_rule::ProjectRule;
 pub(super) use rule::{Rule, RuleTrait};
 pub(super) use rule_core::RuleIndex;
+pub(super) use utils::VariablePositionInBody;

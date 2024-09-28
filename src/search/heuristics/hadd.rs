@@ -28,7 +28,7 @@ impl HaddHeuristic {
     }
 
     fn get_annotation_generator() -> AnnotationGenerator {
-        Box::new(|_head, _task| Annotation::None)
+        Box::new(|_| Annotation::None)
     }
 
     fn get_transformation_options() -> DatalogTransformationOptions {
