@@ -36,29 +36,29 @@ on)
 See usage with:
 
 ```bash
-./target/release/trainer --help
+./target/release/train --help
 ```
 
 and
 
 ```bash
-./target/release/planner --help
+./target/release/plan --help
 ```
 
-For convenience, you can also use `scripts/plan.sh` and `scripts/train.sh`.
+For convenience, you can also use `scripts/plan.py` and `scripts/train.py`.
 
 ## Example
 
 To train WL-ILG-GPR, run
 
 ```bash
-./scripts/train.sh state-space wl-ilg-gpr ferry
+./scripts/train.py state-space/wl-ilg-gpr ferry
 ```
 
 Then run
 
 ```bash
-./scripts/plan.sh state-space wl-ilg-gpr ferry testing/easy/p30
+./scripts/plan.py state-space wl-ilg-gpr ferry testing/easy/p30
 ```
 
 ## Development
