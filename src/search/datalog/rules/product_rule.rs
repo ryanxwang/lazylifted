@@ -22,9 +22,6 @@ impl ProductRule {
     }
 
     pub(super) fn new_from_core(core: RuleCore) -> Self {
-        // We keep these asserts for safety because this should only ever run
-        // during preprocessing.
-        assert!(core.conditions().len() > 1);
         for i in 0..core.conditions().len() {
             for j in (i + 1)..core.conditions().len() {
                 assert!(

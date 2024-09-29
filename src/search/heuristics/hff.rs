@@ -157,14 +157,36 @@ mod tests {
     }
 
     #[test]
-    fn test_hadd_spanner() {
+    fn test_hadd_spanner_p01() {
+        let task = Rc::new(Task::from_text(SPANNER_DOMAIN_TEXT, SPANNER_PROBLEM01_TEXT));
+
+        let mut hff = FfHeuristic::new(task.clone());
+        let h_value = hff.evaluate(&task.initial_state, &task);
+        assert_eq!(h_value, HeuristicValue::from(6.0));
+        assert_eq!(
+            hff.relaxed_plan
+                .borrow()
+                .iter()
+                .map(|action| { format!("{:?}", action) })
+                .sorted()
+                .collect_vec(),
+            vec![
+                "Action { index: 0, instantiation: [4, 5, 1] }", // walk location1 location2 spanner1
+                "Action { index: 0, instantiation: [5, 6, 1] }", // walk location2 location3 spanner1
+                "Action { index: 0, instantiation: [6, 7, 1] }", // walk location3 location4 spanner1
+                "Action { index: 0, instantiation: [7, 8, 1] }", // walk location4 gate spanner1
+                "Action { index: 1, instantiation: [4, 1, 1] }", // pickup_spanner location1 spanner1 spanner1
+                "Action { index: 2, instantiation: [8, 1, 1, 2] }", // tighten_nut gate spanner1 spanner1 nut1
+            ]
+        );
+    }
+
+    #[test]
+    fn test_hadd_spanner_p10() {
         let task = Rc::new(Task::from_text(SPANNER_DOMAIN_TEXT, SPANNER_PROBLEM10_TEXT));
 
         let mut hff = FfHeuristic::new(task.clone());
         let h_value = hff.evaluate(&task.initial_state, &task);
-        // TODO-someday: this value is unnecessarily low (but correct, I think),
-        // because we currently ignore type information, meaning that in
-        // spanner, nuts and spanners can walk around. Pretty stupid
         assert_eq!(h_value, HeuristicValue::from(4.0));
         assert_eq!(
             hff.relaxed_plan

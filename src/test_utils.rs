@@ -33,6 +33,11 @@ pub const SPANNER_DOMAIN_TEXT: &str = include_str!(concat!(
     "/benchmarks/ipc23-learning/spanner/domain.pddl"
 ));
 
+pub const SPANNER_PROBLEM01_TEXT: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/benchmarks/ipc23-learning/spanner/testing/easy/p01.pddl"
+));
+
 pub const SPANNER_PROBLEM10_TEXT: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/benchmarks/ipc23-learning/spanner/testing/easy/p10.pddl"
