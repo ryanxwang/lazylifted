@@ -1,13 +1,11 @@
-use crate::search::heuristics::goal_counting::GoalCounting;
-use crate::search::heuristics::hadd::HaddHeuristic;
-use crate::search::heuristics::hff::FfHeuristic;
-use crate::search::heuristics::hmax::HmaxHeuristic;
-use crate::search::heuristics::wl_partial::WlPartialHeuristic;
-use crate::search::heuristics::wl_state::WlStateHeuristic;
-use crate::search::heuristics::zero_heuristic::ZeroHeuristic;
+use crate::search::heuristics::{
+    FfHeuristic, GoalCounting, HaddHeuristic, HmaxHeuristic, Requirement, WlPartialHeuristic,
+    WlStateHeuristic, ZeroHeuristic,
+};
 use crate::search::successor_generators::SuccessorGeneratorName;
 use crate::search::{DBState, PartialAction, Task};
 use ordered_float::OrderedFloat;
+use std::collections::HashSet;
 use std::fmt::Debug;
 use std::path::Path;
 use std::rc::Rc;
@@ -85,6 +83,17 @@ impl StateHeuristicNames {
             StateHeuristicNames::ZeroHeuristic => Box::new(ZeroHeuristic::new()),
         }
     }
+
+    pub fn requirements(&self) -> HashSet<Requirement> {
+        match self {
+            StateHeuristicNames::GoalCounting
+            | StateHeuristicNames::ZeroHeuristic
+            | StateHeuristicNames::Wl => HashSet::new(),
+            StateHeuristicNames::Ff | StateHeuristicNames::Hmax | StateHeuristicNames::Hadd => {
+                HashSet::from([Requirement::NoNegativePreconditions])
+            }
+        }
+    }
 }
 
 #[derive(clap::ValueEnum, Debug, Clone, Copy)]
@@ -120,5 +129,9 @@ impl PartialActionHeuristicNames {
                 Box::new(GoalCounting::new(task.clone(), successor_generator_name))
             }
         }
+    }
+
+    pub fn requirements(&self) -> HashSet<Requirement> {
+        HashSet::new()
     }
 }

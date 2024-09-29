@@ -47,14 +47,6 @@ struct Cli {
     )]
     successor_generator_name: SuccessorGeneratorName,
     #[arg(
-        help = "Whether to remove negative preconditions from the problem. \
-        This is not generally necessary, but may be important for some \
-        heuristics. Don't use this unless you know you need it.",
-        long = "remove-negative-preconditions",
-        id = "REMOVE_NEGATIVE_PRECONDITIONS"
-    )]
-    remove_negative_preconditions: bool,
-    #[arg(
         help = "The saved model (as a path) to use for the heuristic \
         evaluator, only needed for heuristics that require training.",
         short = 'm',
@@ -132,19 +124,25 @@ fn main() {
         .compact()
         .init();
 
-    let mut task = Task::from_path(&cli.domain, &cli.problem);
-    if cli.remove_negative_preconditions {
-        task.remove_negative_preconditions();
-    }
+    let task = Task::from_path(&cli.domain, &cli.problem);
 
     // Assume GIL is required
     Python::with_gil(|_| plan(cli, task));
 }
 
-fn plan(cli: Cli, task: Task) {
-    let task = Rc::new(task);
+fn plan(cli: Cli, mut task: Task) {
     let successor_generator = cli.successor_generator_name.create(&task);
     let termination_condition = TerminationCondition::new(cli.time_limit, cli.memory_limit_mb);
+
+    match cli.command {
+        Commands::StateSpaceSearch { heuristic_name } => {
+            task.satisfy_requirements(&heuristic_name.requirements());
+        }
+        Commands::PartialSpaceSearch { heuristic_name } => {
+            task.satisfy_requirements(&heuristic_name.requirements());
+        }
+    }
+    let task = Rc::new(task);
 
     let result = match cli.command {
         Commands::StateSpaceSearch { heuristic_name } => {

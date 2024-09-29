@@ -1,13 +1,15 @@
 use crate::parsed_types::{Domain, Name, Problem, Types};
 use crate::parsers::Parser;
 use crate::search::{
-    states::Relation, ActionSchema, DBState, Goal, Object, Predicate, RawSmallTuple, SmallTuple,
+    heuristics::Requirement, states::Relation, ActionSchema, DBState, Goal, Object, Predicate,
+    RawSmallTuple, SmallTuple,
 };
 use itertools::Itertools;
 use std::cmp::{max, min};
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fs;
 use std::path::PathBuf;
+use tracing::info;
 
 #[derive(Debug, Clone)]
 pub struct Task {
@@ -320,6 +322,13 @@ impl Task {
         &self.object_pair_static_information
     }
 
+    pub fn satisfy_requirements(&mut self, requirements: &HashSet<Requirement>) {
+        if requirements.contains(&Requirement::NoNegativePreconditions) {
+            info!("Removing negative preconditions (if any) to satisfy heuristic requirements");
+            self.remove_negative_preconditions();
+        }
+    }
+
     /// Transform the task by removing negative preconditions from the action
     /// schemas.
     ///
@@ -344,6 +353,10 @@ impl Task {
 
         let mut original_to_negative_predicate: HashMap<usize, usize> = HashMap::new();
         for predicate_index in negative_predicates {
+            info!(
+                "Adding auxiliary negative predicate for {} because it appears as a negative precondition",
+                self.predicates[predicate_index].name
+            );
             let negative_predicate_index = self.predicates.len();
             self.predicates.push(
                 self.predicates[predicate_index]
