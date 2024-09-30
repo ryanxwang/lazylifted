@@ -124,6 +124,8 @@ impl Heuristic<(DBState, PartialAction)> for FfHeuristic {
                     partial,
                 )
         };
+        let discounted_costs = actions.len() as f64 / num_applicable_actions as f64;
+
         let ground_rules = actions
             .iter()
             .flat_map(|action| {
@@ -134,7 +136,7 @@ impl Heuristic<(DBState, PartialAction)> for FfHeuristic {
                         plan: self.relaxed_plan.clone(),
                         action: action.clone(),
                     },
-                    actions.len() as f64 / num_applicable_actions as f64,
+                    discounted_costs,
                 )
             })
             .collect_vec();
@@ -149,7 +151,18 @@ impl Heuristic<(DBState, PartialAction)> for FfHeuristic {
             return HeuristicValue::infinity();
         }
 
-        let hff_value = self.relaxed_plan.borrow().len() as f64;
+        let hff_value: f64 = self
+            .relaxed_plan
+            .borrow()
+            .iter()
+            .map(|action| {
+                if actions.contains(action) {
+                    discounted_costs
+                } else {
+                    1.0
+                }
+            })
+            .sum();
         hff_value.into()
     }
 }
