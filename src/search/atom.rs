@@ -100,7 +100,10 @@ impl TryFrom<AtomSchema> for Atom {
         for argument in value.arguments() {
             match argument {
                 SchemaArgument::Constant(index) => arguments.push(*index),
-                SchemaArgument::Free(_) => {
+                SchemaArgument::Free {
+                    variable_index: _,
+                    type_index: _,
+                } => {
                     return Err(());
                 }
             }

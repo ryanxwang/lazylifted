@@ -102,9 +102,12 @@ fn get_indices_and_constants_in_precondition(
                 indices.push(-(*index as i32 + 1));
                 constants.push(i);
             }
-            SchemaArgument::Free(index) => {
-                free_and_param_index.push((i, *index));
-                indices.push(*index as i32);
+            SchemaArgument::Free {
+                variable_index,
+                type_index: _,
+            } => {
+                free_and_param_index.push((i, *variable_index));
+                indices.push(*variable_index as i32);
             }
         }
     }

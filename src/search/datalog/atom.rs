@@ -33,7 +33,10 @@ impl Atom {
                 .iter()
                 .map(|schema_argument| match schema_argument {
                     SchemaArgument::Constant(index) => Term::new_object(*index),
-                    SchemaArgument::Free(index) => Term::new_variable(*index),
+                    SchemaArgument::Free {
+                        variable_index,
+                        type_index,
+                    } => Term::new_variable(*variable_index, *type_index),
                 })
                 .collect(),
         );
@@ -46,7 +49,9 @@ impl Atom {
             action_schema
                 .parameters()
                 .iter()
-                .map(|schema_parameter| Term::new_variable(schema_parameter.index()))
+                .map(|schema_parameter| {
+                    Term::new_variable(schema_parameter.index(), schema_parameter.type_index())
+                })
                 .collect(),
         );
 
@@ -65,13 +70,14 @@ impl Atom {
         self.is_artificial_predicate
     }
 
+    /// Returns true if the atom shares a variable with another atom. This
+    /// method ignores type information.
     pub fn shares_variable_with(&self, other: &Self) -> bool {
         self.arguments.iter().any(|term| {
             term.is_variable()
-                && other
-                    .arguments
-                    .iter()
-                    .any(|other_term| other_term.is_variable() && term == other_term)
+                && other.arguments.iter().any(|other_term| {
+                    other_term.is_variable() && term.index() == other_term.index()
+                })
         })
     }
 
@@ -130,7 +136,7 @@ mod tests {
     #[test]
     #[serial]
     fn test_atom_new() {
-        let arguments = Arguments::new(vec![Term::new_variable(0), Term::new_object(1)]);
+        let arguments = Arguments::new(vec![Term::new_variable(0, 0), Term::new_object(1)]);
         let atom = Atom::new(arguments, 0, false);
         assert_eq!(atom.arguments().len(), 2);
         assert_eq!(atom.predicate_index(), 0);
@@ -142,28 +148,34 @@ mod tests {
     fn test_atom_new_from_atom_schema() {
         let atom_schema = AtomSchema::new(
             0,
-            vec![SchemaArgument::Free(0), SchemaArgument::Constant(1)],
+            vec![
+                SchemaArgument::Free {
+                    variable_index: 0,
+                    type_index: 0,
+                },
+                SchemaArgument::Constant(1),
+            ],
         );
         let atom = Atom::new_from_atom_schema(&atom_schema);
         assert_eq!(atom.arguments().len(), 2);
         assert_eq!(atom.predicate_index(), 0);
         assert!(!atom.is_artificial_predicate());
-        assert_eq!(atom.arguments()[0], Term::new_variable(0));
+        assert_eq!(atom.arguments()[0], Term::new_variable(0, 0));
         assert_eq!(atom.arguments()[1], Term::new_object(1));
     }
 
     #[test]
     fn test_atom_shares_variable_with() {
-        let arguments1 = Arguments::new(vec![Term::new_variable(0), Term::new_object(1)]);
+        let arguments1 = Arguments::new(vec![Term::new_variable(0, 0), Term::new_object(1)]);
         let atom1 = Atom::new(arguments1, 0, false);
 
-        let arguments2 = Arguments::new(vec![Term::new_variable(0), Term::new_object(1)]);
+        let arguments2 = Arguments::new(vec![Term::new_variable(0, 1), Term::new_object(1)]);
         let atom2 = Atom::new(arguments2, 0, false);
 
         assert!(atom1.shares_variable_with(&atom2));
 
         // Different variables should lead to false
-        let arguments3 = Arguments::new(vec![Term::new_variable(1), Term::new_object(1)]);
+        let arguments3 = Arguments::new(vec![Term::new_variable(1, 0), Term::new_object(1)]);
         let atom3 = Atom::new(arguments3, 0, false);
         assert!(!atom1.shares_variable_with(&atom3));
 

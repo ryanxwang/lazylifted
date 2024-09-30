@@ -55,7 +55,7 @@ impl ActionSchema {
         type_table: &HashMap<Name, usize>,
         object_table: &HashMap<Name, usize>,
     ) -> Self {
-        let parameters = action_definition
+        let parameters: Vec<SchemaParameter> = action_definition
             .parameters()
             .iter()
             .enumerate()
@@ -67,6 +67,11 @@ impl ActionSchema {
             .iter()
             .enumerate()
             .map(|(index, param)| (param.value().name().clone(), index))
+            .collect();
+
+        let parameter_types: HashMap<usize, usize> = parameters
+            .iter()
+            .map(|param| (param.index(), param.type_index()))
             .collect();
 
         let mut preconditions = Vec::new();
@@ -87,6 +92,7 @@ impl ActionSchema {
                 negated,
                 predicate_table,
                 &parameter_table,
+                &parameter_types,
                 object_table,
             );
             preconditions.push(atom_schema);
@@ -103,6 +109,7 @@ impl ActionSchema {
                 negated,
                 predicate_table,
                 &parameter_table,
+                &parameter_types,
                 object_table,
             );
             effects.push(atom_schema);

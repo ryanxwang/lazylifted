@@ -281,7 +281,10 @@ impl WeightedGrounder {
                         return;
                     }
                 }
-                Term::Variable(variable_index) => {
+                Term::Variable {
+                    variable_index,
+                    type_index: _,
+                } => {
                     let position_in_effect =
                         rule.variable_position_in_effect().get(*variable_index);
                     if let Some(position_in_effect) = position_in_effect {

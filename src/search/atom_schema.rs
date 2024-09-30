@@ -3,20 +3,25 @@ use crate::search::{Atom, Negatable, SmallTuple};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::Display;
+use strum_macros::EnumIs;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, EnumIs)]
 /// If the argument is a constant, then the value is the index of the object in
 /// the task, otherwise the index is the index of the parameter in the action
 /// schema.
 pub enum SchemaArgument {
     Constant(usize),
-    Free(usize),
+    Free {
+        variable_index: usize,
+        type_index: usize,
+    },
 }
 
 impl SchemaArgument {
     pub fn new(
         argument: &Term,
         parameter_table: &HashMap<Name, usize>,
+        parameter_types: &HashMap<usize, usize>,
         object_table: &HashMap<Name, usize>,
     ) -> Self {
         match argument {
@@ -27,10 +32,16 @@ impl SchemaArgument {
                 Self::Constant(*index)
             }
             Term::Variable(var) => {
-                let index = parameter_table
+                let variable_index = parameter_table
                     .get(var.name())
                     .expect("Schema variable argument not found in parameter table.");
-                Self::Free(*index)
+                let type_index = parameter_types
+                    .get(variable_index)
+                    .expect("Schema variable argument not found in type table.");
+                Self::Free {
+                    variable_index: *variable_index,
+                    type_index: *type_index,
+                }
             }
         }
     }
@@ -38,14 +49,10 @@ impl SchemaArgument {
     pub fn get_index(&self) -> usize {
         match self {
             Self::Constant(index) => *index,
-            Self::Free(index) => *index,
-        }
-    }
-
-    pub fn is_constant(&self) -> bool {
-        match self {
-            Self::Constant(_) => true,
-            Self::Free(_) => false,
+            Self::Free {
+                variable_index,
+                type_index: _,
+            } => *variable_index,
         }
     }
 }
@@ -71,6 +78,7 @@ impl AtomSchema {
         atom: &ParsedAtom<Term>,
         predicate_table: &HashMap<Name, usize>,
         parameter_table: &HashMap<Name, usize>,
+        parameter_types: &HashMap<usize, usize>,
         object_table: &HashMap<Name, usize>,
     ) -> Self {
         let predicate_index = *predicate_table
@@ -79,7 +87,7 @@ impl AtomSchema {
         let arguments = atom
             .values()
             .iter()
-            .map(|arg| SchemaArgument::new(arg, parameter_table, object_table))
+            .map(|arg| SchemaArgument::new(arg, parameter_table, parameter_types, object_table))
             .collect();
 
         Self {
@@ -119,9 +127,12 @@ impl AtomSchema {
                 .iter()
                 .map(|arg| match arg {
                     SchemaArgument::Constant(index) => SchemaArgument::Constant(*index),
-                    SchemaArgument::Free(index) => match object_indices.get(*index) {
+                    SchemaArgument::Free {
+                        variable_index,
+                        type_index: _,
+                    } => match object_indices.get(*variable_index) {
                         Some(object_index) => SchemaArgument::Constant(*object_index),
-                        None => SchemaArgument::Free(*index),
+                        None => arg.to_owned(),
                     },
                 })
                 .collect(),
@@ -136,7 +147,10 @@ impl AtomSchema {
                     .iter()
                     .map(|arg| match arg {
                         SchemaArgument::Constant(index) => *index,
-                        SchemaArgument::Free(index) => *object_indices.get(*index).unwrap(),
+                        SchemaArgument::Free {
+                            variable_index,
+                            type_index: _,
+                        } => *object_indices.get(*variable_index).unwrap(),
                     })
                     .collect(),
             ),
@@ -154,7 +168,10 @@ impl AtomSchema {
                     SchemaArgument::Constant(object_index) => {
                         *object_index == atom.arguments()[index]
                     }
-                    SchemaArgument::Free(_) => true,
+                    SchemaArgument::Free {
+                        variable_index: _,
+                        type_index: _,
+                    } => true,
                 })
     }
 }
@@ -166,7 +183,10 @@ impl Display for AtomSchema {
             write!(f, " ")?;
             match arg {
                 SchemaArgument::Constant(index) => write!(f, "{}", index)?,
-                SchemaArgument::Free(index) => write!(f, "?{}", index)?,
+                SchemaArgument::Free {
+                    variable_index,
+                    type_index: _,
+                } => write!(f, "?{}", variable_index)?,
             }
         }
         write!(f, ")")
@@ -179,11 +199,18 @@ impl Negatable<AtomSchema> {
         negated: bool,
         predicate_table: &HashMap<Name, usize>,
         parameter_table: &HashMap<Name, usize>,
+        parameter_types: &HashMap<usize, usize>,
         object_table: &HashMap<Name, usize>,
     ) -> Self {
         Negatable::new(
             negated,
-            AtomSchema::from_parsed(atom, predicate_table, parameter_table, object_table),
+            AtomSchema::from_parsed(
+                atom,
+                predicate_table,
+                parameter_table,
+                parameter_types,
+                object_table,
+            ),
         )
     }
 

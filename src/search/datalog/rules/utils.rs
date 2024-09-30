@@ -277,7 +277,7 @@ mod tests {
     #[test]
     fn test_variable_position_map() {
         let effect = Atom::new(
-            Arguments::new(vec![Term::new_object(0), Term::new_variable(3)]),
+            Arguments::new(vec![Term::new_object(0), Term::new_variable(3, 0)]),
             0,
             false,
         );
