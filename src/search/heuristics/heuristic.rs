@@ -73,7 +73,7 @@ impl StateHeuristicNames {
             }
             StateHeuristicNames::Hmax => Box::new(HmaxHeuristic::new(task.clone())),
             StateHeuristicNames::Hadd => Box::new(HaddHeuristic::new(task.clone())),
-            StateHeuristicNames::Ff => Box::new(FfHeuristic::new(task.clone())),
+            StateHeuristicNames::Ff => Box::new(FfHeuristic::new(task.clone(), false)),
             StateHeuristicNames::Wl => {
                 let saved_model = saved_model
                     .as_ref()

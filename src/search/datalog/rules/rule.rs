@@ -31,6 +31,10 @@ pub trait RuleTrait {
         self.core().conditions()
     }
 
+    fn conditions_mut(&mut self) -> &mut Vec<Atom> {
+        self.core_mut().conditions_mut()
+    }
+
     /// Update the conditions of the rule. Please make sure that the variable
     /// source is also updated.
     fn set_condition(&mut self, conditions: Vec<Atom>) {

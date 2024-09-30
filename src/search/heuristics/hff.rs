@@ -3,7 +3,7 @@ use crate::search::{
         Annotation, AnnotationGenerator, DatalogHeuristicType, DatalogProgram,
         DatalogTransformationOptions, RuleCategory, WeightedGrounder, WeightedGrounderConfig,
     },
-    Action, DBState, Heuristic, HeuristicValue, Task,
+    Action, DBState, Heuristic, HeuristicValue, PartialAction, Task,
 };
 use ordered_float::Float;
 use std::{cell::RefCell, collections::HashSet, rc::Rc};
@@ -16,12 +16,12 @@ pub struct FfHeuristic {
 }
 
 impl FfHeuristic {
-    pub fn new(task: Rc<Task>) -> Self {
+    pub fn new(task: Rc<Task>, action_set_mode: bool) -> Self {
         let relaxed_plan = Rc::new(RefCell::new(HashSet::new()));
         let program = DatalogProgram::new_with_transformations(
             task,
             &Self::get_annotation_generator(relaxed_plan.clone()),
-            &Self::get_transformation_options(),
+            &Self::get_transformation_options(action_set_mode),
         );
         let config = WeightedGrounderConfig {
             heuristic_type: DatalogHeuristicType::Hff,
@@ -45,8 +45,12 @@ impl FfHeuristic {
         })
     }
 
-    fn get_transformation_options() -> DatalogTransformationOptions {
-        DatalogTransformationOptions::default()
+    fn get_transformation_options(action_set_mode: bool) -> DatalogTransformationOptions {
+        if action_set_mode {
+            DatalogTransformationOptions::default().with_restrict_immediate_applicability()
+        } else {
+            DatalogTransformationOptions::default()
+        }
     }
 }
 
@@ -70,6 +74,21 @@ impl Heuristic<DBState> for FfHeuristic {
     }
 }
 
+impl Heuristic<(DBState, PartialAction)> for FfHeuristic {
+    fn evaluate(
+        &mut self,
+        (state, _partial): &(DBState, PartialAction),
+        task: &Task,
+    ) -> HeuristicValue {
+        if task.goal.is_satisfied(state) {
+            return 0.0.into();
+        }
+        self.relaxed_plan.borrow_mut().clear();
+
+        todo!()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use itertools::Itertools;
@@ -86,7 +105,7 @@ mod tests {
             BLOCKSWORLD_PROBLEM13_TEXT,
         ));
 
-        let mut hff = FfHeuristic::new(task.clone());
+        let mut hff = FfHeuristic::new(task.clone(), false);
         let h_value = hff.evaluate(&task.initial_state, &task);
         assert_eq!(h_value, HeuristicValue::from(7.0));
         assert_eq!(
@@ -114,7 +133,7 @@ mod tests {
         task.remove_negative_preconditions();
         let task = Rc::new(task);
 
-        let mut hff = FfHeuristic::new(task.clone());
+        let mut hff = FfHeuristic::new(task.clone(), false);
         let h_value = hff.evaluate(&task.initial_state, &task);
         assert_eq!(h_value, HeuristicValue::from(6.0));
         assert_eq!(
@@ -144,7 +163,7 @@ mod tests {
         let successor_generator = SuccessorGeneratorName::FullReducer.create(&task);
         let mut state = task.initial_state.clone();
 
-        let mut hff = FfHeuristic::new(task.clone());
+        let mut hff = FfHeuristic::new(task.clone(), false);
         let h_value = hff.evaluate(&state, &task);
         assert_eq!(h_value, HeuristicValue::from(12.0));
         assert_eq!(
@@ -207,7 +226,7 @@ mod tests {
         task.remove_negative_preconditions();
         let task = Rc::new(task);
 
-        let mut hff = FfHeuristic::new(task.clone());
+        let mut hff = FfHeuristic::new(task.clone(), false);
         let h_value = hff.evaluate(&task.initial_state, &task);
         assert_eq!(h_value, HeuristicValue::from(6.0));
         assert_eq!(
@@ -232,7 +251,7 @@ mod tests {
     fn test_hff_spanner_p01() {
         let task = Rc::new(Task::from_text(SPANNER_DOMAIN_TEXT, SPANNER_PROBLEM01_TEXT));
 
-        let mut hff = FfHeuristic::new(task.clone());
+        let mut hff = FfHeuristic::new(task.clone(), false);
         let h_value = hff.evaluate(&task.initial_state, &task);
         assert_eq!(h_value, HeuristicValue::from(7.0));
         assert_eq!(
@@ -258,7 +277,7 @@ mod tests {
     fn test_hff_spanner_p10() {
         let task = Rc::new(Task::from_text(SPANNER_DOMAIN_TEXT, SPANNER_PROBLEM10_TEXT));
 
-        let mut hff = FfHeuristic::new(task.clone());
+        let mut hff = FfHeuristic::new(task.clone(), false);
         let h_value = hff.evaluate(&task.initial_state, &task);
         assert_eq!(h_value, HeuristicValue::from(10.0));
         assert_eq!(
@@ -289,7 +308,7 @@ mod tests {
         task.remove_negative_preconditions();
         let task = Rc::new(task);
 
-        let mut hff = FfHeuristic::new(task.clone());
+        let mut hff = FfHeuristic::new(task.clone(), false);
         let h_value = hff.evaluate(&task.initial_state, &task);
         assert_eq!(h_value, HeuristicValue::from(10.0));
         assert_eq!(
@@ -320,7 +339,7 @@ mod tests {
         task.remove_negative_preconditions();
         let task = Rc::new(task);
 
-        let mut hff = FfHeuristic::new(task.clone());
+        let mut hff = FfHeuristic::new(task.clone(), false);
         let h_value = hff.evaluate(&task.initial_state, &task);
         assert_eq!(h_value, HeuristicValue::from(28.0));
         assert_eq!(

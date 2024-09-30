@@ -91,6 +91,14 @@ impl RuleCore {
         &self.conditions
     }
 
+    /// Get a mutable reference to the conditions of the rule.
+    /// This should be used with caution, as the variable source should also be
+    /// updated when the conditions are updated.
+    #[inline(always)]
+    pub fn conditions_mut(&mut self) -> &mut Vec<Atom> {
+        &mut self.conditions
+    }
+
     #[inline(always)]
     pub fn set_condition(&mut self, conditions: Vec<Atom>) {
         self.conditions = conditions;

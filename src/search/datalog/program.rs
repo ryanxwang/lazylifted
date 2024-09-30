@@ -9,7 +9,7 @@ use crate::search::{
         rules::{GenericRule, Rule, RuleIndex, RuleTrait, VariablePositionInBody},
         transformations::{
             add_goal_rule, convert_rules_to_normal_form, generate_static_facts,
-            remove_action_predicates, TransformationOptions,
+            remove_action_predicates, restrict_immediate_applicability, TransformationOptions,
         },
         AnnotationGenerator, RuleCategory,
     },
@@ -39,9 +39,14 @@ impl Program {
     ) -> Self {
         let mut program = Self::new(task.clone(), annotation_generator);
 
+        if transformation_options.restrict_immediate_applicability {
+            program = restrict_immediate_applicability(program);
+        }
+
         if transformation_options.remove_action_predicates {
             program = remove_action_predicates(program);
         }
+
         program = convert_rules_to_normal_form(program);
         program = add_goal_rule(program, task, annotation_generator);
 
