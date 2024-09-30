@@ -3,8 +3,11 @@ use crate::search::{
         Annotation, AnnotationGenerator, DatalogHeuristicType, DatalogProgram,
         DatalogTransformationOptions, RuleCategory, WeightedGrounder, WeightedGrounderConfig,
     },
-    Action, DBState, Heuristic, HeuristicValue, PartialAction, Task,
+    successor_generators::SuccessorGeneratorName,
+    Action, DBState, Heuristic, HeuristicValue, PartialAction, SuccessorGenerator, Task,
+    NO_PARTIAL,
 };
+use itertools::Itertools;
 use ordered_float::Float;
 use std::{cell::RefCell, collections::HashSet, rc::Rc};
 
@@ -13,33 +16,41 @@ pub struct FfHeuristic {
     program: DatalogProgram,
     grounder: WeightedGrounder,
     relaxed_plan: Rc<RefCell<HashSet<Action>>>,
+    successor_generator: Box<dyn SuccessorGenerator>,
 }
 
 impl FfHeuristic {
-    pub fn new(task: Rc<Task>, action_set_mode: bool) -> Self {
+    pub fn new(
+        task: Rc<Task>,
+        action_set_mode: bool,
+        successor_generator_name: SuccessorGeneratorName,
+    ) -> Self {
         let relaxed_plan = Rc::new(RefCell::new(HashSet::new()));
         let program = DatalogProgram::new_with_transformations(
-            task,
+            task.clone(),
             &Self::get_annotation_generator(relaxed_plan.clone()),
             &Self::get_transformation_options(action_set_mode),
         );
         let config = WeightedGrounderConfig {
             heuristic_type: DatalogHeuristicType::Hff,
         };
-        let grounder = WeightedGrounder::new(&program, config);
+        let grounder = WeightedGrounder::new(config);
         Self {
             program,
             grounder,
             relaxed_plan,
+            successor_generator: successor_generator_name.create(&task),
         }
     }
 
     fn get_annotation_generator(relaxed_plan: Rc<RefCell<HashSet<Action>>>) -> AnnotationGenerator {
         Box::new(move |rule_category| match rule_category {
-            RuleCategory::ActionApplicability { schema_index } => Annotation::AddToRelaxedPlan {
-                plan: relaxed_plan.clone(),
-                schema_index,
-            },
+            RuleCategory::ActionApplicability { schema_index } => {
+                Annotation::ExtractGroundActionAndAddToPlan {
+                    plan: relaxed_plan.clone(),
+                    schema_index,
+                }
+            }
             RuleCategory::ActionEffect => Annotation::None,
             RuleCategory::Goal => Annotation::None,
         })
@@ -61,7 +72,7 @@ impl Heuristic<DBState> for FfHeuristic {
         }
         self.relaxed_plan.borrow_mut().clear();
 
-        let hadd_value = self.grounder.ground(&mut self.program, state);
+        let hadd_value = self.grounder.ground(&mut self.program, state, None);
         self.program.cleanup_grounding_data();
 
         // For deadends, the relaxed plan is going to be empty
@@ -77,7 +88,7 @@ impl Heuristic<DBState> for FfHeuristic {
 impl Heuristic<(DBState, PartialAction)> for FfHeuristic {
     fn evaluate(
         &mut self,
-        (state, _partial): &(DBState, PartialAction),
+        (state, partial): &(DBState, PartialAction),
         task: &Task,
     ) -> HeuristicValue {
         if task.goal.is_satisfied(state) {
@@ -85,7 +96,48 @@ impl Heuristic<(DBState, PartialAction)> for FfHeuristic {
         }
         self.relaxed_plan.borrow_mut().clear();
 
-        todo!()
+        let actions = if partial == &NO_PARTIAL {
+            task.action_schemas()
+                .iter()
+                .flat_map(|schema| {
+                    self.successor_generator
+                        .get_applicable_actions(state, schema)
+                })
+                .collect_vec()
+        } else {
+            self.successor_generator
+                .get_applicable_actions_from_partial(
+                    state,
+                    &task.action_schemas()[partial.schema_index()],
+                    partial,
+                )
+        };
+        let ground_rules = actions
+            .iter()
+            .flat_map(|action| {
+                self.grounder.converted_ground_action_to_temporary_rules(
+                    &self.program,
+                    action,
+                    Annotation::AddGroundActionToPlan {
+                        plan: self.relaxed_plan.clone(),
+                        action: action.clone(),
+                    },
+                )
+            })
+            .collect_vec();
+
+        let hadd_value = self
+            .grounder
+            .ground(&mut self.program, state, Some(ground_rules));
+        self.program.cleanup_grounding_data();
+
+        // For deadends, the relaxed plan is going to be empty
+        if hadd_value.is_infinite() {
+            return HeuristicValue::infinity();
+        }
+
+        let hff_value = self.relaxed_plan.borrow().len() as f64;
+        hff_value.into()
     }
 }
 
@@ -105,7 +157,7 @@ mod tests {
             BLOCKSWORLD_PROBLEM13_TEXT,
         ));
 
-        let mut hff = FfHeuristic::new(task.clone(), false);
+        let mut hff = FfHeuristic::new(task.clone(), false, SuccessorGeneratorName::FullReducer);
         let h_value = hff.evaluate(&task.initial_state, &task);
         assert_eq!(h_value, HeuristicValue::from(7.0));
         assert_eq!(
@@ -133,7 +185,7 @@ mod tests {
         task.remove_negative_preconditions();
         let task = Rc::new(task);
 
-        let mut hff = FfHeuristic::new(task.clone(), false);
+        let mut hff = FfHeuristic::new(task.clone(), false, SuccessorGeneratorName::FullReducer);
         let h_value = hff.evaluate(&task.initial_state, &task);
         assert_eq!(h_value, HeuristicValue::from(6.0));
         assert_eq!(
@@ -163,7 +215,7 @@ mod tests {
         let successor_generator = SuccessorGeneratorName::FullReducer.create(&task);
         let mut state = task.initial_state.clone();
 
-        let mut hff = FfHeuristic::new(task.clone(), false);
+        let mut hff = FfHeuristic::new(task.clone(), false, SuccessorGeneratorName::FullReducer);
         let h_value = hff.evaluate(&state, &task);
         assert_eq!(h_value, HeuristicValue::from(12.0));
         assert_eq!(
@@ -226,7 +278,7 @@ mod tests {
         task.remove_negative_preconditions();
         let task = Rc::new(task);
 
-        let mut hff = FfHeuristic::new(task.clone(), false);
+        let mut hff = FfHeuristic::new(task.clone(), false, SuccessorGeneratorName::FullReducer);
         let h_value = hff.evaluate(&task.initial_state, &task);
         assert_eq!(h_value, HeuristicValue::from(6.0));
         assert_eq!(
@@ -251,7 +303,7 @@ mod tests {
     fn test_hff_spanner_p01() {
         let task = Rc::new(Task::from_text(SPANNER_DOMAIN_TEXT, SPANNER_PROBLEM01_TEXT));
 
-        let mut hff = FfHeuristic::new(task.clone(), false);
+        let mut hff = FfHeuristic::new(task.clone(), false, SuccessorGeneratorName::FullReducer);
         let h_value = hff.evaluate(&task.initial_state, &task);
         assert_eq!(h_value, HeuristicValue::from(7.0));
         assert_eq!(
@@ -277,7 +329,7 @@ mod tests {
     fn test_hff_spanner_p10() {
         let task = Rc::new(Task::from_text(SPANNER_DOMAIN_TEXT, SPANNER_PROBLEM10_TEXT));
 
-        let mut hff = FfHeuristic::new(task.clone(), false);
+        let mut hff = FfHeuristic::new(task.clone(), false, SuccessorGeneratorName::FullReducer);
         let h_value = hff.evaluate(&task.initial_state, &task);
         assert_eq!(h_value, HeuristicValue::from(10.0));
         assert_eq!(
@@ -308,7 +360,7 @@ mod tests {
         task.remove_negative_preconditions();
         let task = Rc::new(task);
 
-        let mut hff = FfHeuristic::new(task.clone(), false);
+        let mut hff = FfHeuristic::new(task.clone(), false, SuccessorGeneratorName::FullReducer);
         let h_value = hff.evaluate(&task.initial_state, &task);
         assert_eq!(h_value, HeuristicValue::from(10.0));
         assert_eq!(
@@ -339,7 +391,7 @@ mod tests {
         task.remove_negative_preconditions();
         let task = Rc::new(task);
 
-        let mut hff = FfHeuristic::new(task.clone(), false);
+        let mut hff = FfHeuristic::new(task.clone(), false, SuccessorGeneratorName::FullReducer);
         let h_value = hff.evaluate(&task.initial_state, &task);
         assert_eq!(h_value, HeuristicValue::from(28.0));
         assert_eq!(
@@ -380,5 +432,43 @@ mod tests {
                 "Action { index: 2, instantiation: [3, 20, 5, 24, 25] }", // drop v1 l8 p1 c1 c2
             ]
         );
+    }
+
+    #[test]
+    fn test_hff_partial_blocksworld() {
+        let task = Rc::new(Task::from_text(
+            BLOCKSWORLD_DOMAIN_TEXT,
+            BLOCKSWORLD_PROBLEM13_TEXT,
+        ));
+
+        let mut hff = FfHeuristic::new(task.clone(), true, SuccessorGeneratorName::FullReducer);
+
+        // Test with NO_PARTIAL
+        let h_value = hff.evaluate(&(task.initial_state.clone(), NO_PARTIAL), &task);
+        assert_eq!(h_value, HeuristicValue::from(7.0));
+        assert_eq!(
+            hff.relaxed_plan
+                .borrow()
+                .iter()
+                .map(|action| { format!("{:?}", action) })
+                .sorted()
+                .collect_vec(),
+            vec![
+                "Action { index: 0, instantiation: [3] }",    // pickup b4
+                "Action { index: 1, instantiation: [0] }",    // putdown b1
+                "Action { index: 2, instantiation: [2, 0] }", // stack b3 b1
+                "Action { index: 2, instantiation: [3, 1] }", // stack b4 b2
+                "Action { index: 3, instantiation: [0, 1] }", // unstack b1 b2
+                "Action { index: 3, instantiation: [1, 2] }", // unstack b2 b3
+                "Action { index: 3, instantiation: [2, 3] }", // unstack b3 b4
+            ]
+        );
+
+        // Test with fixed action schema pickup, which is inapplicable
+        let h_value = hff.evaluate(
+            &(task.initial_state.clone(), PartialAction::new(0, vec![])),
+            &task,
+        );
+        assert_eq!(h_value, HeuristicValue::infinity());
     }
 }

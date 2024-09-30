@@ -17,9 +17,13 @@ pub enum RuleCategory {
 #[derive(Debug, Clone)]
 pub enum Annotation {
     None,
-    AddToRelaxedPlan {
+    ExtractGroundActionAndAddToPlan {
         plan: Rc<RefCell<HashSet<Action>>>,
         schema_index: usize,
+    },
+    AddGroundActionToPlan {
+        plan: Rc<RefCell<HashSet<Action>>>,
+        action: Action,
     },
 }
 
@@ -28,11 +32,11 @@ impl PartialEq for Annotation {
         match (self, other) {
             (Annotation::None, Annotation::None) => true,
             (
-                Annotation::AddToRelaxedPlan {
+                Annotation::ExtractGroundActionAndAddToPlan {
                     plan: plan1,
                     schema_index: schema_index1,
                 },
-                Annotation::AddToRelaxedPlan {
+                Annotation::ExtractGroundActionAndAddToPlan {
                     plan: plan2,
                     schema_index: schema_index2,
                 },
@@ -48,10 +52,13 @@ impl Annotation {
     pub fn execute(&self, effect_fact_id: FactId, program: &Program) {
         match self {
             Annotation::None => {}
-            Annotation::AddToRelaxedPlan { plan, schema_index } => {
+            Annotation::ExtractGroundActionAndAddToPlan { plan, schema_index } => {
                 let instantiation = program.extract_action_instantiation_from_fact(effect_fact_id);
                 let action = Action::new(*schema_index, instantiation);
                 plan.borrow_mut().insert(action);
+            }
+            Annotation::AddGroundActionToPlan { plan, action } => {
+                plan.borrow_mut().insert(action.clone());
             }
         }
     }
@@ -61,11 +68,18 @@ impl Display for Annotation {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             Annotation::None => write!(f, "None"),
-            Annotation::AddToRelaxedPlan {
+            Annotation::ExtractGroundActionAndAddToPlan {
                 plan: _,
                 schema_index,
             } => {
-                write!(f, "AddToRelaxedPlan(schema_index: {})", schema_index)
+                write!(
+                    f,
+                    "ExtractGroundActionAndAddToPlan(schema_index: {})",
+                    schema_index
+                )
+            }
+            Annotation::AddGroundActionToPlan { plan: _, action } => {
+                write!(f, "AddGroundActionToPlan(action: {:?})", action)
             }
         }
     }

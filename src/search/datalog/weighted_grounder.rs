@@ -1,14 +1,19 @@
 use crate::search::{
     datalog::{
         achiever::Achiever,
+        arguments::Arguments,
         atom::Atom,
         fact::{facts_from_state, Fact, FactCost, FactId},
         program::Program,
         rule_matcher::RuleMatcher,
-        rules::{JoinConditionPosition, JoinRule, ProductRule, ProjectRule, Rule, RuleTrait},
+        rules::{
+            JoinConditionPosition, JoinRule, ProductRule, ProjectRule, Rule, RuleTrait,
+            TemporaryGroundRule,
+        },
         term::Term,
+        Annotation,
     },
-    DBState,
+    Action, DBState,
 };
 use itertools::Itertools;
 use priority_queue::PriorityQueue;
@@ -32,17 +37,11 @@ pub struct WeightedGrounderConfig {
 #[derive(Debug)]
 pub struct WeightedGrounder {
     config: WeightedGrounderConfig,
-    rule_matcher: RuleMatcher,
 }
 
 impl WeightedGrounder {
-    pub fn new(program: &Program, config: WeightedGrounderConfig) -> Self {
-        let rule_matcher = RuleMatcher::new(&program.rules);
-
-        Self {
-            config,
-            rule_matcher,
-        }
+    pub fn new(config: WeightedGrounderConfig) -> Self {
+        Self { config }
     }
 
     fn aggregate(&self, fact_costs: &[FactCost], rule_cost: f64) -> FactCost {
@@ -56,11 +55,27 @@ impl WeightedGrounder {
         }
     }
 
-    pub fn ground(&self, program: &mut Program, state: &DBState) -> f64 {
+    /// Grounds the program and returns the cost of the goal fact at the end.
+    ///
+    /// [`extra_ground_rules`] is a list of additional ground rules that should
+    /// be considered for this grounding. This is used for compute action set
+    /// versions of heuristic, where rules from action schemas have their
+    /// applicability restricted, and we use varying sets of ground actions.
+    pub fn ground(
+        &self,
+        program: &mut Program,
+        state: &DBState,
+        extra_ground_rules: Option<Vec<Rule>>,
+    ) -> f64 {
         // IMPORTANT: If/when we incorporate action costs, it's important to pay
         // attention to zero cost actions, see Augusto's AAAI 2022 paper.
         let mut initial_fact_ids = HashSet::new();
         let mut priority_queue = PriorityQueue::new();
+
+        if let Some(extra_ground_rules) = extra_ground_rules {
+            program.add_temporary_rules(extra_ground_rules);
+        }
+        let rule_matcher = RuleMatcher::new(&program.rules);
 
         for fact in &program.static_facts {
             let cost = fact.cost();
@@ -88,9 +103,7 @@ impl WeightedGrounder {
                 continue;
             }
 
-            for rule_match in self
-                .rule_matcher
-                .get_matched_rules(current_fact.atom().predicate_index())
+            for rule_match in rule_matcher.get_matched_rules(current_fact.atom().predicate_index())
             {
                 let rule = &mut program.rules[rule_match.rule_index.value()];
 
@@ -122,6 +135,9 @@ impl WeightedGrounder {
                             &mut new_facts,
                             program.task.objects_per_type(),
                         );
+                    }
+                    Rule::TemporaryGround(temporary_ground_rule) => {
+                        self.temporary_ground(temporary_ground_rule, &current_fact, &mut new_facts);
                     }
                     Rule::Generic(_) => {
                         panic!("All rules should be normalised to Project, Product, or Join rules")
@@ -182,6 +198,24 @@ impl WeightedGrounder {
             for achieving_fact_id in achiever.rule_body() {
                 queue.push_back(*achieving_fact_id);
             }
+        }
+    }
+
+    fn temporary_ground(
+        &self,
+        rule: &mut TemporaryGroundRule,
+        fact: &Fact,
+        new_facts: &mut Vec<Fact>,
+    ) {
+        rule.register_reached_fact(fact.atom());
+        if rule.all_preconditions_reached() {
+            new_facts.push(Fact::new(
+                rule.effect().clone(),
+                fact.cost() + rule.weight(),
+                // For simplicity, we don't track the achiever body since these
+                // should all be initial facts
+                Some(Achiever::new(rule.index(), vec![])),
+            ))
         }
     }
 
@@ -448,5 +482,59 @@ impl WeightedGrounder {
                 )),
             ));
         }
+    }
+
+    /// Generate a ground rule from a ground action. The effect will be the
+    /// special epsilon predicate, and conditions will be the ground action
+    /// preconditions. The weight will be the action cost.
+    pub fn converted_ground_action_to_temporary_rules(
+        &self,
+        program: &Program,
+        action: &Action,
+        annotation: Annotation,
+    ) -> Vec<Rule> {
+        let conditions: Vec<Atom> = program.task.action_schemas()[action.index]
+            .preconditions()
+            .iter()
+            .map(|pre| {
+                if pre.is_negative() {
+                    panic!("Negative preconditions are not supported in Datalog");
+                } else {
+                    Atom::new_from_ground_atom(pre.underlying(), &action.instantiation)
+                }
+            })
+            .collect_vec();
+
+        let mut rules = vec![];
+
+        let epsilon = Atom::new(
+            Arguments::new(vec![]),
+            program.epsilon_predicate_index.unwrap(),
+            true,
+        );
+
+        rules.push(Rule::new_temporary_ground(TemporaryGroundRule::new(
+            epsilon,
+            conditions.clone(),
+            1.0,
+            annotation,
+        )));
+
+        for effect in program.task.action_schemas()[action.index].effects() {
+            if effect.is_negative() {
+                continue;
+            }
+
+            let effect_atom =
+                Atom::new_from_ground_atom(effect.underlying(), &action.instantiation);
+            rules.push(Rule::new_temporary_ground(TemporaryGroundRule::new(
+                effect_atom,
+                conditions.clone(),
+                1.0,
+                Annotation::None,
+            )));
+        }
+
+        rules
     }
 }

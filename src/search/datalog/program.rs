@@ -28,6 +28,7 @@ pub struct Program {
     pub(super) predicate_names: Vec<String>,
     pub(super) predicate_name_to_index: HashMap<String, usize>,
     pub(super) goal_predicate_index: Option<usize>,
+    pub(super) epsilon_predicate_index: Option<usize>,
     pub(super) fact_registry: FactRegistry,
 }
 
@@ -100,6 +101,7 @@ impl Program {
             predicate_names,
             predicate_name_to_index,
             goal_predicate_index: None,
+            epsilon_predicate_index: None,
             fact_registry: FactRegistry::new(),
         }
     }
@@ -220,11 +222,22 @@ impl Program {
         }
     }
 
+    pub fn add_temporary_rules(&mut self, rules: Vec<Rule>) {
+        self.rules.extend(rules);
+        self.assign_rule_indices();
+    }
+
+    pub fn clear_temporary_rules(&mut self) {
+        self.rules.retain(|rule| !rule.is_temporary_ground());
+        self.assign_rule_indices();
+    }
+
     pub fn cleanup_grounding_data(&mut self) {
         for rule in &mut self.rules {
             rule.cleanup_grounding_data();
         }
         self.fact_registry = FactRegistry::new();
+        self.clear_temporary_rules();
     }
 
     fn get_variable_instantiation(&self, effect_fact: &Fact, variable_index: usize) -> usize {

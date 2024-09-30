@@ -17,6 +17,7 @@ pub fn restrict_immediate_applicability(mut program: Program) -> Program {
     {
         rule.conditions_mut().push(epsilon.clone());
     }
+    program.epsilon_predicate_index = Some(epsilon_predicate);
 
     program
 }

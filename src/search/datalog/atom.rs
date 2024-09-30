@@ -44,6 +44,22 @@ impl Atom {
         Self::new(arguments, atom.predicate_index(), false)
     }
 
+    pub fn new_from_ground_atom(atom: &AtomSchema, instantiation: &[usize]) -> Self {
+        let arguments = Arguments::new(
+            atom.arguments()
+                .iter()
+                .map(|schema_argument| match schema_argument {
+                    SchemaArgument::Constant(index) => Term::new_object(*index),
+                    SchemaArgument::Free { variable_index, .. } => {
+                        Term::new_object(instantiation[*variable_index])
+                    }
+                })
+                .collect(),
+        );
+
+        Self::new(arguments, atom.predicate_index(), false)
+    }
+
     pub fn new_from_action_schema(action_schema: &ActionSchema, predicate_index: usize) -> Self {
         let arguments = Arguments::new(
             action_schema

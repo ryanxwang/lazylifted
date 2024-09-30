@@ -6,7 +6,7 @@ use crate::search::datalog::{
     atom::Atom,
     rules::rule_core::RuleCore,
     rules::utils::{VariablePositionInEffect, VariableSource},
-    rules::{GenericRule, JoinRule, ProductRule, ProjectRule, RuleIndex},
+    rules::{GenericRule, JoinRule, ProductRule, ProjectRule, RuleIndex, TemporaryGroundRule},
     Annotation,
 };
 
@@ -90,6 +90,7 @@ pub enum Rule {
     Project(ProjectRule),
     Product(ProductRule),
     Join(JoinRule),
+    TemporaryGround(TemporaryGroundRule),
 }
 
 impl Rule {
@@ -109,10 +110,14 @@ impl Rule {
         Self::Join(rule)
     }
 
+    pub fn new_temporary_ground(rule: TemporaryGroundRule) -> Self {
+        Self::TemporaryGround(rule)
+    }
+
     pub fn schema_index(&self) -> Option<usize> {
         match self {
             Rule::Generic(rule) => Some(rule.schema_index()),
-            Rule::Project(_) | Rule::Product(_) | Rule::Join(_) => None,
+            Rule::Project(_) | Rule::Product(_) | Rule::Join(_) | Rule::TemporaryGround(_) => None,
         }
     }
 }
@@ -124,6 +129,7 @@ impl Display for Rule {
             Rule::Project(rule) => write!(f, "{}", rule),
             Rule::Product(rule) => write!(f, "{}", rule),
             Rule::Join(rule) => write!(f, "{}", rule),
+            Rule::TemporaryGround(rule) => write!(f, "{}", rule),
         }
     }
 }
@@ -135,6 +141,7 @@ impl RuleTrait for Rule {
             Rule::Project(rule) => rule.core(),
             Rule::Product(rule) => rule.core(),
             Rule::Join(rule) => rule.core(),
+            Rule::TemporaryGround(rule) => rule.core(),
         }
     }
 
@@ -144,6 +151,7 @@ impl RuleTrait for Rule {
             Rule::Project(rule) => rule.core_mut(),
             Rule::Product(rule) => rule.core_mut(),
             Rule::Join(rule) => rule.core_mut(),
+            Rule::TemporaryGround(rule) => rule.core_mut(),
         }
     }
 
@@ -153,6 +161,7 @@ impl RuleTrait for Rule {
             Rule::Project(rule) => rule.cleanup_grounding_data(),
             Rule::Product(rule) => rule.cleanup_grounding_data(),
             Rule::Join(rule) => rule.cleanup_grounding_data(),
+            Rule::TemporaryGround(rule) => rule.cleanup_grounding_data(),
         }
     }
 }

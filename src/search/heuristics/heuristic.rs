@@ -73,7 +73,11 @@ impl StateHeuristicNames {
             }
             StateHeuristicNames::Hmax => Box::new(HmaxHeuristic::new(task.clone())),
             StateHeuristicNames::Hadd => Box::new(HaddHeuristic::new(task.clone())),
-            StateHeuristicNames::Ff => Box::new(FfHeuristic::new(task.clone(), false)),
+            StateHeuristicNames::Ff => Box::new(FfHeuristic::new(
+                task.clone(),
+                false,
+                successor_generator_name,
+            )),
             StateHeuristicNames::Wl => {
                 let saved_model = saved_model
                     .as_ref()
@@ -108,6 +112,8 @@ pub enum PartialActionHeuristicNames {
     ZeroHeuristic,
     #[clap(help = "The goal counting heuristic.")]
     GoalCounting,
+    #[clap(name = "ff", help = "The FF heuristic (action set version).")]
+    Ff,
 }
 
 impl PartialActionHeuristicNames {
@@ -128,10 +134,22 @@ impl PartialActionHeuristicNames {
             PartialActionHeuristicNames::GoalCounting => {
                 Box::new(GoalCounting::new(task.clone(), successor_generator_name))
             }
+            PartialActionHeuristicNames::Ff => Box::new(FfHeuristic::new(
+                task.clone(),
+                true,
+                successor_generator_name,
+            )),
         }
     }
 
     pub fn requirements(&self) -> HashSet<Requirement> {
-        HashSet::new()
+        match self {
+            PartialActionHeuristicNames::GoalCounting
+            | PartialActionHeuristicNames::ZeroHeuristic
+            | PartialActionHeuristicNames::Wl => HashSet::new(),
+            PartialActionHeuristicNames::Ff => {
+                HashSet::from([Requirement::NoNegativePreconditions])
+            }
+        }
     }
 }

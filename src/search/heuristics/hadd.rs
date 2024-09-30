@@ -23,7 +23,7 @@ impl HaddHeuristic {
         let config = WeightedGrounderConfig {
             heuristic_type: DatalogHeuristicType::Hadd,
         };
-        let grounder = WeightedGrounder::new(&program, config);
+        let grounder = WeightedGrounder::new(config);
         Self { program, grounder }
     }
 
@@ -42,7 +42,7 @@ impl Heuristic<DBState> for HaddHeuristic {
             return 0.0.into();
         }
 
-        let h = self.grounder.ground(&mut self.program, state);
+        let h = self.grounder.ground(&mut self.program, state, None);
         self.program.cleanup_grounding_data();
         h.into()
     }
