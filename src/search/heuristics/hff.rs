@@ -104,6 +104,9 @@ impl Heuristic<(DBState, PartialAction)> for FfHeuristic {
                     .get_applicable_actions(state, schema)
             })
             .count();
+        if num_applicable_actions == 0 {
+            return HeuristicValue::infinity();
+        }
 
         let actions = if partial == &NO_PARTIAL {
             task.action_schemas()
