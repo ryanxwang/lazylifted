@@ -492,6 +492,7 @@ impl WeightedGrounder {
         program: &Program,
         action: &Action,
         annotation: Annotation,
+        rule_weights: f64,
     ) -> Vec<Rule> {
         let conditions: Vec<Atom> = program.task.action_schemas()[action.index]
             .preconditions()
@@ -516,7 +517,7 @@ impl WeightedGrounder {
         rules.push(Rule::new_temporary_ground(TemporaryGroundRule::new(
             epsilon,
             conditions.clone(),
-            1.0,
+            rule_weights,
             annotation,
         )));
 
@@ -530,7 +531,7 @@ impl WeightedGrounder {
             rules.push(Rule::new_temporary_ground(TemporaryGroundRule::new(
                 effect_atom,
                 conditions.clone(),
-                1.0,
+                rule_weights,
                 Annotation::None,
             )));
         }
