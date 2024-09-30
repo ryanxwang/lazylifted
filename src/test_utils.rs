@@ -57,3 +57,13 @@ pub const SATELLITE_PROBLEM10_TEXT: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/benchmarks/ipc23-learning/satellite/training/easy/p10.pddl"
 ));
+
+pub const TRANSPORT_DOMAIN_TEXT: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/benchmarks/ipc23-learning/transport/domain.pddl"
+));
+
+pub const TRANSPORT_PROBLEM16_TEXT: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/benchmarks/ipc23-learning/transport/testing/easy/p16.pddl"
+));

@@ -80,7 +80,7 @@ mod tests {
     // Test by checking the hadd value of the initial state of various tasks
 
     #[test]
-    fn test_hadd_blocksworld() {
+    fn test_hff_blocksworld() {
         let task = Rc::new(Task::from_text(
             BLOCKSWORLD_DOMAIN_TEXT,
             BLOCKSWORLD_PROBLEM13_TEXT,
@@ -109,7 +109,7 @@ mod tests {
     }
 
     #[test]
-    fn test_hadd_childsnack_p06() {
+    fn test_hff_childsnack_p06() {
         let mut task = Task::from_text(CHILDSNACK_DOMAIN_TEXT, CHILDSNACK_PROBLEM06_TEXT);
         task.remove_negative_preconditions();
         let task = Rc::new(task);
@@ -136,7 +136,7 @@ mod tests {
     }
 
     #[test]
-    fn test_hadd_childsnack_deadend_p10() {
+    fn test_hff_childsnack_deadend_p10() {
         let mut task = Task::from_text(CHILDSNACK_DOMAIN_TEXT, CHILDSNACK_PROBLEM10_TEXT);
         task.remove_negative_preconditions();
         let task = Rc::new(task);
@@ -202,7 +202,7 @@ mod tests {
     }
 
     #[test]
-    fn test_hadd_ferry() {
+    fn test_hff_ferry() {
         let mut task = Task::from_text(FERRY_DOMAIN_TEXT, FERRY_PROBLEM10_TEXT);
         task.remove_negative_preconditions();
         let task = Rc::new(task);
@@ -229,7 +229,7 @@ mod tests {
     }
 
     #[test]
-    fn test_hadd_spanner_p01() {
+    fn test_hff_spanner_p01() {
         let task = Rc::new(Task::from_text(SPANNER_DOMAIN_TEXT, SPANNER_PROBLEM01_TEXT));
 
         let mut hff = FfHeuristic::new(task.clone());
@@ -254,7 +254,7 @@ mod tests {
     }
 
     #[test]
-    fn test_hadd_spanner_p10() {
+    fn test_hff_spanner_p10() {
         let task = Rc::new(Task::from_text(SPANNER_DOMAIN_TEXT, SPANNER_PROBLEM10_TEXT));
 
         let mut hff = FfHeuristic::new(task.clone());
@@ -277,7 +277,7 @@ mod tests {
     }
 
     #[test]
-    fn test_hadd_satellite() {
+    fn test_hff_satellite() {
         let mut task = Task::from_text(SATELLITE_DOMAIN_TEXT, SATELLITE_PROBLEM10_TEXT);
         task.remove_negative_preconditions();
         let task = Rc::new(task);
@@ -303,6 +303,43 @@ mod tests {
                 "Action { index: 4, instantiation: [0, 6, 2, 4] }", // take_image sat1 dir2 ins1 mod1
                 "Action { index: 4, instantiation: [0, 7, 2, 4] }", // take_image sat1 dir3 ins1 mod1
                 "Action { index: 4, instantiation: [1, 5, 3, 4] }", // take_image sat2 dir1 ins2 mod1
+            ]
+        );
+    }
+
+    #[test]
+    fn test_hff_transport() {
+        let mut task = Task::from_text(TRANSPORT_DOMAIN_TEXT, TRANSPORT_PROBLEM16_TEXT);
+        task.remove_negative_preconditions();
+        let task = Rc::new(task);
+
+        let mut hff = FfHeuristic::new(task.clone());
+        let h_value = hff.evaluate(&task.initial_state, &task);
+        assert_eq!(h_value, HeuristicValue::from(16.0));
+        assert_eq!(
+            hff.relaxed_plan
+                .borrow()
+                .iter()
+                .map(|action| { format!("{:?}", action) })
+                .sorted()
+                .collect_vec(),
+            vec![
+                "Action { index: 0, instantiation: [10, 13, 21] }", // drive p6 l1 l9
+                "Action { index: 0, instantiation: [10, 21, 17] }", // drive p6 l9 l5
+                "Action { index: 0, instantiation: [11, 17, 16] }", // drive p7 l5 l4
+                "Action { index: 0, instantiation: [12, 15, 21] }", // drive p8 l3 l9
+                "Action { index: 0, instantiation: [12, 20, 15] }", // drive p8 l8 l3
+                "Action { index: 0, instantiation: [12, 21, 13] }", // drive p8 l9 l1
+                "Action { index: 0, instantiation: [5, 15, 20] }",  // drive p1 l3 l8
+                "Action { index: 0, instantiation: [5, 21, 15] }",  // drive p1 l9 l3
+                "Action { index: 0, instantiation: [6, 14, 13] }",  // drive p2 l2 l1
+                "Action { index: 0, instantiation: [7, 14, 13] }",  // drive p3 l2 l1
+                "Action { index: 0, instantiation: [7, 18, 22] }",  // drive p3 l6 l10
+                "Action { index: 0, instantiation: [7, 22, 14] }",  // drive p3 l10 l2
+                "Action { index: 0, instantiation: [8, 16, 21] }",  // drive p4 l4 l9
+                "Action { index: 0, instantiation: [8, 21, 13] }",  // drive p4 l9 l1
+                "Action { index: 0, instantiation: [9, 15, 20] }",  // drive p5 l3 l8
+                "Action { index: 0, instantiation: [9, 19, 15] }",  // drive p5 l7 l3
             ]
         );
     }
