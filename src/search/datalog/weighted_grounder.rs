@@ -98,7 +98,12 @@ impl WeightedGrounder {
                 match rule {
                     Rule::Project(project_rule) => {
                         assert_eq!(rule_match.condition_index, 0);
-                        self.project(project_rule, &current_fact, &mut new_facts);
+                        self.project(
+                            project_rule,
+                            &current_fact,
+                            &mut new_facts,
+                            program.task.objects_per_type(),
+                        );
                     }
                     Rule::Product(product_rule) => {
                         self.product(
@@ -106,6 +111,7 @@ impl WeightedGrounder {
                             &current_fact,
                             rule_match.condition_index,
                             &mut new_facts,
+                            program.task.objects_per_type(),
                         );
                     }
                     Rule::Join(join_rule) => {
@@ -114,6 +120,7 @@ impl WeightedGrounder {
                             &current_fact,
                             rule_match.condition_index,
                             &mut new_facts,
+                            program.task.objects_per_type(),
                         );
                     }
                     Rule::Generic(_) => {
@@ -184,11 +191,40 @@ impl WeightedGrounder {
         fact: &Fact,
         fact_index_in_condition: usize,
         new_facts: &mut Vec<Fact>,
+        objects_per_type: &[HashSet<usize>],
     ) {
         let join_condition_position = JoinConditionPosition::try_from(fact_index_in_condition)
             .expect(
             "The fact index in the condition should be a valid JoinConditionPosition, i.e. 0 or 1",
         );
+
+        // Check the fact against the condition
+        for (i, term) in rule
+            .condition(join_condition_position)
+            .arguments()
+            .iter()
+            .enumerate()
+        {
+            let fact_object = fact.atom().arguments()[i];
+            assert!(fact_object.is_object());
+
+            match term {
+                Term::Object(object) => {
+                    if fact_object.index() != *object {
+                        return;
+                    }
+                }
+                Term::Variable {
+                    variable_index: _,
+                    type_index,
+                } => {
+                    if !objects_per_type[*type_index].contains(&fact_object.index()) {
+                        return;
+                    }
+                }
+            }
+        }
+
         let joining_variable_values = rule
             .joining_variable_positions(join_condition_position)
             .iter()
@@ -270,10 +306,17 @@ impl WeightedGrounder {
         }
     }
 
-    fn project(&self, rule: &ProjectRule, fact: &Fact, new_facts: &mut Vec<Fact>) {
+    fn project(
+        &self,
+        rule: &ProjectRule,
+        fact: &Fact,
+        new_facts: &mut Vec<Fact>,
+        objects_per_type: &[HashSet<usize>],
+    ) {
         let mut effect_arguments = rule.effect().arguments().clone();
 
         for (i, term) in rule.conditions()[0].arguments().iter().enumerate() {
+            assert!(fact.atom().arguments()[i].is_object());
             match term {
                 Term::Object(_) => {
                     // check that it matches the fact
@@ -283,8 +326,14 @@ impl WeightedGrounder {
                 }
                 Term::Variable {
                     variable_index,
-                    type_index: _,
+                    type_index,
                 } => {
+                    let fact_object = fact.atom().arguments()[i];
+                    // type check the fact object
+                    if !objects_per_type[*type_index].contains(&fact_object.index()) {
+                        return;
+                    }
+
                     let position_in_effect =
                         rule.variable_position_in_effect().get(*variable_index);
                     if let Some(position_in_effect) = position_in_effect {
@@ -311,6 +360,7 @@ impl WeightedGrounder {
         fact: &Fact,
         fact_index_in_condition: usize,
         new_facts: &mut Vec<Fact>,
+        objects_per_type: &[HashSet<usize>],
     ) {
         // In powerlifted, there are comments around this function that says
         // that for product rules, there are only two scenarios:
@@ -323,14 +373,29 @@ impl WeightedGrounder {
         // condition (where for condition at fact_index_in_condition, we only
         // consider the given fact), and instantiate the effect with this.
 
-        // verify that ground objects in the condition match the fact
+        // verify that ground objects in the condition match the fact, and that
+        // the types of the free variables match
         for (i, term) in rule.conditions()[fact_index_in_condition]
             .arguments()
             .iter()
             .enumerate()
         {
-            if term.is_object() && fact.atom().arguments()[i] != *term {
-                return;
+            let fact_object = fact.atom().arguments()[i];
+            assert!(fact_object.is_object());
+            match term {
+                Term::Object(_) => {
+                    if fact_object != *term {
+                        return;
+                    }
+                }
+                Term::Variable {
+                    variable_index: _,
+                    type_index,
+                } => {
+                    if !objects_per_type[*type_index].contains(&fact_object.index()) {
+                        return;
+                    }
+                }
             }
         }
 

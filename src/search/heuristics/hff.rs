@@ -234,7 +234,7 @@ mod tests {
 
         let mut hff = FfHeuristic::new(task.clone());
         let h_value = hff.evaluate(&task.initial_state, &task);
-        assert_eq!(h_value, HeuristicValue::from(6.0));
+        assert_eq!(h_value, HeuristicValue::from(7.0));
         assert_eq!(
             hff.relaxed_plan
                 .borrow()
@@ -243,12 +243,13 @@ mod tests {
                 .sorted()
                 .collect_vec(),
             vec![
-                "Action { index: 0, instantiation: [4, 5, 1] }", // walk location1 location2 spanner1
-                "Action { index: 0, instantiation: [5, 6, 1] }", // walk location2 location3 spanner1
-                "Action { index: 0, instantiation: [6, 7, 1] }", // walk location3 location4 spanner1
-                "Action { index: 0, instantiation: [7, 8, 1] }", // walk location4 gate spanner1
-                "Action { index: 1, instantiation: [4, 1, 1] }", // pickup_spanner location1 spanner1 spanner1
-                "Action { index: 2, instantiation: [8, 1, 1, 2] }", // tighten_nut gate spanner1 spanner1 nut1
+                "Action { index: 0, instantiation: [3, 4, 0] }", // walk shed location1 bob
+                "Action { index: 0, instantiation: [4, 5, 0] }", // walk location1 location2 bob
+                "Action { index: 0, instantiation: [5, 6, 0] }", // walk location2 location3 bob
+                "Action { index: 0, instantiation: [6, 7, 0] }", // walk location3 location4 bob
+                "Action { index: 0, instantiation: [7, 8, 0] }", // walk location4 gate bob
+                "Action { index: 1, instantiation: [4, 1, 0] }", // pickup_spanner location1 spanner1 bob
+                "Action { index: 2, instantiation: [8, 1, 0, 2] }", // tighten_nut gate spanner1 bob nut1
             ]
         );
     }
@@ -259,7 +260,7 @@ mod tests {
 
         let mut hff = FfHeuristic::new(task.clone());
         let h_value = hff.evaluate(&task.initial_state, &task);
-        assert_eq!(h_value, HeuristicValue::from(4.0));
+        assert_eq!(h_value, HeuristicValue::from(10.0));
         assert_eq!(
             hff.relaxed_plan
                 .borrow()
@@ -268,10 +269,16 @@ mod tests {
                 .sorted()
                 .collect_vec(),
             vec![
-                "Action { index: 0, instantiation: [13, 14, 2] }", // walk location6 gate spanner2
-                "Action { index: 1, instantiation: [13, 2, 2] }", // pickup_spanner location6 spanner2 spanner2
-                "Action { index: 2, instantiation: [14, 2, 2, 5] }", // tighten_nut gate spanner2 spanner2 nut1
-                "Action { index: 2, instantiation: [14, 2, 2, 6] }", // tighten_nut gate spanner2 spanner2 nut2
+                "Action { index: 0, instantiation: [10, 11, 0] }", // walk location3 location4 bob
+                "Action { index: 0, instantiation: [11, 12, 0] }", // walk location4 location5 bob
+                "Action { index: 0, instantiation: [12, 13, 0] }", // walk location5 location6 bob
+                "Action { index: 0, instantiation: [13, 14, 0] }", // walk location6 gate bob
+                "Action { index: 0, instantiation: [7, 8, 0] }",   // walk shed location1 bob
+                "Action { index: 0, instantiation: [8, 9, 0] }",   // walk location1 location2 bob
+                "Action { index: 0, instantiation: [9, 10, 0] }",  // walk location2 location3 bob
+                "Action { index: 1, instantiation: [10, 1, 0] }", // pickup_spanner location3 spanner1 bob
+                "Action { index: 2, instantiation: [14, 1, 0, 5] }", // tighten_nut gate spanner1 bob nut1
+                "Action { index: 2, instantiation: [14, 1, 0, 6] }", // tighten_nut gate spanner1 bob nut2
             ]
         );
     }
@@ -315,7 +322,7 @@ mod tests {
 
         let mut hff = FfHeuristic::new(task.clone());
         let h_value = hff.evaluate(&task.initial_state, &task);
-        assert_eq!(h_value, HeuristicValue::from(16.0));
+        assert_eq!(h_value, HeuristicValue::from(28.0));
         assert_eq!(
             hff.relaxed_plan
                 .borrow()
@@ -324,22 +331,34 @@ mod tests {
                 .sorted()
                 .collect_vec(),
             vec![
-                "Action { index: 0, instantiation: [10, 13, 21] }", // drive p6 l1 l9
-                "Action { index: 0, instantiation: [10, 21, 17] }", // drive p6 l9 l5
-                "Action { index: 0, instantiation: [11, 17, 16] }", // drive p7 l5 l4
-                "Action { index: 0, instantiation: [12, 15, 21] }", // drive p8 l3 l9
-                "Action { index: 0, instantiation: [12, 20, 15] }", // drive p8 l8 l3
-                "Action { index: 0, instantiation: [12, 21, 13] }", // drive p8 l9 l1
-                "Action { index: 0, instantiation: [5, 15, 20] }",  // drive p1 l3 l8
-                "Action { index: 0, instantiation: [5, 21, 15] }",  // drive p1 l9 l3
-                "Action { index: 0, instantiation: [6, 14, 13] }",  // drive p2 l2 l1
-                "Action { index: 0, instantiation: [7, 14, 13] }",  // drive p3 l2 l1
-                "Action { index: 0, instantiation: [7, 18, 22] }",  // drive p3 l6 l10
-                "Action { index: 0, instantiation: [7, 22, 14] }",  // drive p3 l10 l2
-                "Action { index: 0, instantiation: [8, 16, 21] }",  // drive p4 l4 l9
-                "Action { index: 0, instantiation: [8, 21, 13] }",  // drive p4 l9 l1
-                "Action { index: 0, instantiation: [9, 15, 20] }",  // drive p5 l3 l8
-                "Action { index: 0, instantiation: [9, 19, 15] }",  // drive p5 l7 l3
+                "Action { index: 0, instantiation: [0, 17, 16] }", // drive v1 l5 l4
+                "Action { index: 0, instantiation: [0, 17, 21] }", // drive v1 l5 l9
+                "Action { index: 0, instantiation: [0, 21, 13] }", // drive v1 l5 l1
+                "Action { index: 0, instantiation: [1, 15, 20] }", // drive v2 l3 l8
+                "Action { index: 0, instantiation: [1, 19, 15] }", // drive v2 l7 l3
+                "Action { index: 0, instantiation: [3, 14, 13] }", // drive v2 l2 l1
+                "Action { index: 0, instantiation: [3, 14, 19] }", // drive v2 l2 l7
+                "Action { index: 0, instantiation: [3, 14, 21] }", // drive v2 l2 l9
+                "Action { index: 0, instantiation: [3, 14, 22] }", // drive v2 l2 l10
+                "Action { index: 0, instantiation: [3, 15, 20] }", // drive v2 l3 l8
+                "Action { index: 0, instantiation: [3, 19, 15] }", // drive v2 l7 l3
+                "Action { index: 0, instantiation: [3, 22, 18] }", // drive v2 l10 l6
+                "Action { index: 1, instantiation: [0, 13, 10, 23, 24] }", // pick-up v1 l1 p6 c0 c1
+                "Action { index: 1, instantiation: [0, 16, 8, 23, 24] }", // pick-up v1 l4 p4 c0 c1
+                "Action { index: 1, instantiation: [0, 17, 11, 23, 24] }", // pick-up v1 l5 p7 c0 c1
+                "Action { index: 1, instantiation: [1, 19, 9, 24, 25] }", // pick-up v2 l7 p5 c1 c2
+                "Action { index: 1, instantiation: [3, 14, 6, 23, 24] }", // pick-up v4 l2 p2 c0 c1
+                "Action { index: 1, instantiation: [3, 18, 7, 23, 24] }", // pick-up v4 l6 p3 c0 c1
+                "Action { index: 1, instantiation: [3, 20, 12, 23, 24] }", // pick-up v4 l8 p8 c0 c1
+                "Action { index: 1, instantiation: [3, 21, 5, 23, 24] }", // pick-up v4 l9 p1 c0 c1
+                "Action { index: 2, instantiation: [0, 13, 8, 24, 25] }", // drop v1 l1 p4 c1 c2
+                "Action { index: 2, instantiation: [0, 16, 11, 24, 25] }", // drop v1 l4 p7 c1 c2
+                "Action { index: 2, instantiation: [0, 17, 10, 24, 25] }", // drop v1 l5 p6 c1 c2
+                "Action { index: 2, instantiation: [1, 20, 9, 24, 25] }", // drop v1 l8 p5 c1 c2
+                "Action { index: 2, instantiation: [3, 13, 12, 24, 25] }", // drop v1 l1 p8 c1 c2
+                "Action { index: 2, instantiation: [3, 13, 6, 24, 25] }", // drop v1 l1 p2 c1 c2
+                "Action { index: 2, instantiation: [3, 13, 7, 24, 25] }", // drop v1 l1 p3 c1 c2
+                "Action { index: 2, instantiation: [3, 20, 5, 24, 25] }", // drop v1 l8 p1 c1 c2
             ]
         );
     }

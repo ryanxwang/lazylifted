@@ -95,10 +95,7 @@ mod tests {
 
         let mut hadd = HaddHeuristic::new(task.clone());
         let h_value = hadd.evaluate(&task.initial_state, &task);
-        // TODO-someday: this value is unnecessarily low (but correct, I think),
-        // because we currently ignore type information, meaning that in
-        // spanner, nuts and spanners can walk around. Pretty stupid
-        assert_eq!(h_value, HeuristicValue::from(6.0));
+        assert_eq!(h_value, HeuristicValue::from(24.0));
     }
 
     #[test]
