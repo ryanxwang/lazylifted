@@ -18,6 +18,11 @@ pub const CHILDSNACK_PROBLEM06_TEXT: &str = include_str!(concat!(
     "/benchmarks/ipc23-learning/childsnack/training/easy/p06.pddl"
 ));
 
+pub const CHILDSNACK_PROBLEM10_TEXT: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/benchmarks/ipc23-learning/childsnack/testing/easy/p10.pddl"
+));
+
 pub const FERRY_DOMAIN_TEXT: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/benchmarks/ipc23-learning/ferry/domain.pddl"

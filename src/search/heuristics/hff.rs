@@ -5,6 +5,7 @@ use crate::search::{
     },
     Action, DBState, Heuristic, HeuristicValue, Task,
 };
+use ordered_float::Float;
 use std::{cell::RefCell, collections::HashSet, rc::Rc};
 
 #[derive(Debug)]
@@ -56,8 +57,13 @@ impl Heuristic<DBState> for FfHeuristic {
         }
         self.relaxed_plan.borrow_mut().clear();
 
-        let _hadd_value = self.grounder.ground(&mut self.program, state);
+        let hadd_value = self.grounder.ground(&mut self.program, state);
         self.program.cleanup_grounding_data();
+
+        // For deadends, the relaxed plan is going to be empty
+        if hadd_value.is_infinite() {
+            return HeuristicValue::infinity();
+        }
 
         let hff_value = self.relaxed_plan.borrow().len() as f64;
         hff_value.into()
@@ -69,7 +75,7 @@ mod tests {
     use itertools::Itertools;
 
     use super::*;
-    use crate::test_utils::*;
+    use crate::{search::successor_generators::SuccessorGeneratorName, test_utils::*};
 
     // Test by checking the hadd value of the initial state of various tasks
 
@@ -103,7 +109,7 @@ mod tests {
     }
 
     #[test]
-    fn test_hadd_childsnack() {
+    fn test_hadd_childsnack_p06() {
         let mut task = Task::from_text(CHILDSNACK_DOMAIN_TEXT, CHILDSNACK_PROBLEM06_TEXT);
         task.remove_negative_preconditions();
         let task = Rc::new(task);
@@ -127,6 +133,72 @@ mod tests {
                 "Action { index: 5, instantiation: [2, 11, 9] }", // move_tray tray1 kitchen table1
             ]
         );
+    }
+
+    #[test]
+    fn test_hadd_childsnack_deadend_p10() {
+        let mut task = Task::from_text(CHILDSNACK_DOMAIN_TEXT, CHILDSNACK_PROBLEM10_TEXT);
+        task.remove_negative_preconditions();
+        let task = Rc::new(task);
+
+        let successor_generator = SuccessorGeneratorName::FullReducer.create(&task);
+        let mut state = task.initial_state.clone();
+
+        let mut hff = FfHeuristic::new(task.clone());
+        let h_value = hff.evaluate(&state, &task);
+        assert_eq!(h_value, HeuristicValue::from(12.0));
+        assert_eq!(
+            hff.relaxed_plan
+                .borrow()
+                .iter()
+                .map(|action| { format!("{:?}", action) })
+                .sorted()
+                .collect_vec(),
+            vec![
+                "Action { index: 0, instantiation: [10, 18, 21] }", // make_sandwich_no_gluten sandw4 bread5 content2
+                "Action { index: 1, instantiation: [10, 19, 25] }", // make_sandwich sandw4 bread6 content6
+                "Action { index: 2, instantiation: [10, 6] }",      // put_on_tray sandw4 tray1
+                "Action { index: 3, instantiation: [10, 0, 6, 26] }", // serve_sandwich_no_gluten sandw4 child1 tray1 table1
+                "Action { index: 3, instantiation: [10, 1, 6, 28] }", // serve_sandwich_no_gluten sandw4 child2 tray1 table3
+                "Action { index: 4, instantiation: [10, 2, 6, 26] }", // serve_sandwich sandw4 child3 tray1 table1
+                "Action { index: 4, instantiation: [10, 3, 6, 26] }", // serve_sandwich sandw4 child4 tray1 table1
+                "Action { index: 4, instantiation: [10, 4, 6, 28] }", // serve_sandwich sandw4 child5 tray1 table3
+                "Action { index: 4, instantiation: [10, 5, 6, 27] }", // serve_sandwich sandw4 child6 tray1 table2
+                "Action { index: 5, instantiation: [6, 29, 26] }",    // move tray1 kitchen table1
+                "Action { index: 5, instantiation: [6, 29, 27] }",    // move tray1 kitchen table2
+                "Action { index: 5, instantiation: [6, 29, 28] }",    // move tray1 kitchen table3
+            ]
+        );
+
+        // execute make_sandwich_no_gluten sandw1 bread4 content1
+        let action = Action::new(0, vec![7, 18, 20]);
+        state = successor_generator.generate_successor(&state, &task.action_schemas()[0], &action);
+        let h_value = hff.evaluate(&state, &task);
+        assert_eq!(h_value, HeuristicValue::from(10.0));
+
+        // execute make_sandwich sandw2 bread3 content5
+        let action = Action::new(1, vec![8, 17, 24]);
+        state = successor_generator.generate_successor(&state, &task.action_schemas()[1], &action);
+        let h_value = hff.evaluate(&state, &task);
+        assert_eq!(h_value, HeuristicValue::from(11.0));
+
+        // execute put_on_tray sandw1 tray1
+        let action = Action::new(2, vec![7, 6]);
+        state = successor_generator.generate_successor(&state, &task.action_schemas()[2], &action);
+        let h_value = hff.evaluate(&state, &task);
+        assert_eq!(h_value, HeuristicValue::from(9.0));
+
+        // execute move_tray tray1 kitchen table2
+        let action = Action::new(5, vec![6, 29, 27]);
+        state = successor_generator.generate_successor(&state, &task.action_schemas()[5], &action);
+        let h_value = hff.evaluate(&state, &task);
+        assert_eq!(h_value, HeuristicValue::from(8.0));
+
+        // execute serve_sandwich sandw1 child6 tray1 table2
+        let action = Action::new(4, vec![7, 5, 6, 27]);
+        state = successor_generator.generate_successor(&state, &task.action_schemas()[4], &action);
+        let h_value = hff.evaluate(&state, &task);
+        assert_eq!(h_value, HeuristicValue::infinity());
     }
 
     #[test]
