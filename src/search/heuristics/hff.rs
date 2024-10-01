@@ -96,18 +96,6 @@ impl Heuristic<(DBState, PartialAction)> for FfHeuristic {
         }
         self.relaxed_plan.borrow_mut().clear();
 
-        let num_applicable_actions = task
-            .action_schemas()
-            .iter()
-            .flat_map(|schema| {
-                self.successor_generator
-                    .get_applicable_actions(state, schema)
-            })
-            .count();
-        if num_applicable_actions == 0 {
-            return HeuristicValue::infinity();
-        }
-
         let actions = if partial == &NO_PARTIAL {
             task.action_schemas()
                 .iter()
@@ -124,7 +112,6 @@ impl Heuristic<(DBState, PartialAction)> for FfHeuristic {
                     partial,
                 )
         };
-        let discounted_costs = actions.len() as f64 / num_applicable_actions as f64;
 
         let ground_rules = actions
             .iter()
@@ -136,7 +123,7 @@ impl Heuristic<(DBState, PartialAction)> for FfHeuristic {
                         plan: self.relaxed_plan.clone(),
                         action: action.clone(),
                     },
-                    discounted_costs,
+                    1.0,
                 )
             })
             .collect_vec();
@@ -151,18 +138,7 @@ impl Heuristic<(DBState, PartialAction)> for FfHeuristic {
             return HeuristicValue::infinity();
         }
 
-        let hff_value: f64 = self
-            .relaxed_plan
-            .borrow()
-            .iter()
-            .map(|action| {
-                if actions.contains(action) {
-                    discounted_costs
-                } else {
-                    1.0
-                }
-            })
-            .sum();
+        let hff_value = self.relaxed_plan.borrow().len() as f64;
         hff_value.into()
     }
 }
