@@ -17,6 +17,7 @@ use crate::search::{
 };
 use itertools::Itertools;
 use priority_queue::PriorityQueue;
+use smallvec::smallvec;
 use std::{
     cmp::Reverse,
     collections::{HashSet, VecDeque},
@@ -435,6 +436,31 @@ impl WeightedGrounder {
 
         rule.add_reached_fact(fact_index_in_condition, fact.clone());
 
+        // for optimisation, check if the effect is ground, if so we just need
+        // to check if each condition has at least one reached fact, and take
+        // the cheapest reached fact for each condition
+        if rule.effect().is_ground() {
+            let mut fact_costs = vec![];
+            let mut fact_indices = vec![];
+
+            for condition_index in 0..rule.conditions().len() {
+                if rule.reached_facts(condition_index).is_empty() {
+                    return;
+                }
+
+                fact_costs.push(rule.reached_facts(condition_index)[0].cost());
+                fact_indices.push(rule.reached_facts(condition_index)[0].id());
+            }
+
+            new_facts.push(Fact::new(
+                rule.effect().clone(),
+                self.aggregate(&fact_costs, rule.weight()),
+                Some(Achiever::new(rule.index(), fact_indices)),
+            ));
+
+            return;
+        }
+
         for instantiation in (0..rule.conditions().len())
             .map(|i| {
                 if i == fact_index_in_condition {
@@ -509,7 +535,7 @@ impl WeightedGrounder {
         let mut rules = vec![];
 
         let epsilon = Atom::new(
-            Arguments::new(vec![]),
+            Arguments::new(smallvec![]),
             program.epsilon_predicate_index.unwrap(),
             true,
         );

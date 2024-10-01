@@ -273,11 +273,12 @@ impl Display for VariableSource {
 mod tests {
     use super::*;
     use crate::search::datalog::{arguments::Arguments, term::Term};
+    use smallvec::smallvec;
 
     #[test]
     fn test_variable_position_map() {
         let effect = Atom::new(
-            Arguments::new(vec![Term::new_object(0), Term::new_variable(3, 0)]),
+            Arguments::new(smallvec![Term::new_object(0), Term::new_variable(3, 0)]),
             0,
             false,
         );

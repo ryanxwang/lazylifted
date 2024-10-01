@@ -12,6 +12,9 @@ use crate::search::datalog::{
 #[derive(Debug, Clone, PartialEq)]
 pub struct ProductRule {
     core: RuleCore,
+    /// The reached facts for each condition. For each condition, the facts are
+    /// stored in the order they were reached, which should be cheapest to most
+    /// expensive by nature of grounding.
     reached_facts_per_condition: Vec<Vec<Fact>>,
 }
 

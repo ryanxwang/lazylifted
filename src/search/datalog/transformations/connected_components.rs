@@ -1,14 +1,18 @@
 use std::collections::HashMap;
 
-use crate::search::datalog::{
-    arguments::Arguments,
-    atom::Atom,
-    program::Program,
-    rules::{GenericRule, Rule, RuleTrait},
-    term::Term,
-    Annotation,
+use crate::search::{
+    datalog::{
+        arguments::Arguments,
+        atom::Atom,
+        program::Program,
+        rules::{GenericRule, Rule, RuleTrait},
+        term::Term,
+        Annotation,
+    },
+    small_tuple::TYPICAL_NUM_ARGUMENTS,
 };
 use itertools::Itertools;
+use smallvec::SmallVec;
 
 struct Graph {
     nodes: Vec<usize>,
@@ -161,7 +165,10 @@ fn get_components(rule: &Rule) -> Vec<Vec<usize>> {
     graph.get_connected_components()
 }
 
-fn get_relevant_terms_from_atoms(effect: &Atom, atoms: &[Atom]) -> Vec<Term> {
+fn get_relevant_terms_from_atoms(
+    effect: &Atom,
+    atoms: &[Atom],
+) -> SmallVec<[Term; TYPICAL_NUM_ARGUMENTS]> {
     effect
         .arguments()
         .iter()

@@ -24,6 +24,8 @@ mod transition;
 mod validate;
 mod verbosity;
 
+use small_tuple::TYPICAL_NUM_ARGUMENTS;
+
 pub use action::Action;
 pub use action_schema::{ActionSchema, SchemaParameter};
 pub use atom::Atom;

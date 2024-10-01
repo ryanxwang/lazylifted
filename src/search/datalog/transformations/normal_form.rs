@@ -5,7 +5,6 @@ use itertools::Itertools;
 use crate::search::datalog::{arguments::Arguments, atom::Atom,
         program::Program,
         rules::{ JoinRule, ProjectRule, Rule, RuleTrait},
-        term::Term,
         transformations::{
             connected_components::split_into_connected_components, join_cost::JoinCostType,
         },
@@ -43,7 +42,7 @@ fn project_away_constant_arguments(mut program: Program) -> Program {
             // issues
             let condition = condition.clone();
 
-            let free_variables: Vec<Term> = condition
+            let free_variables = condition
                 .arguments()
                 .iter()
                 .filter(|argument| argument.is_variable())

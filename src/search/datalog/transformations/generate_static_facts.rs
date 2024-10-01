@@ -15,7 +15,7 @@ pub fn generate_static_facts(mut program: Program) -> Program {
             continue;
         }
 
-        let terms: Vec<Term> = atom
+        let terms = atom
             .arguments()
             .iter()
             .map(|object_index| Term::new_object(*object_index))
