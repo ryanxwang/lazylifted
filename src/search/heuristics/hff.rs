@@ -198,11 +198,11 @@ mod tests {
                 .sorted()
                 .collect_vec(),
             vec![
-                "Action { index: 0, instantiation: [3, 6, 8] }", // make_sandwich_no_gluten sandw1 bread2 content2
-                "Action { index: 1, instantiation: [3, 6, 8] }", // make_sandwich sandw1 bread2 content2
-                "Action { index: 2, instantiation: [3, 2] }",    // put_on_tray sandw1 tray1
-                "Action { index: 3, instantiation: [3, 0, 2, 9] }", // serve_sandwich_no_gluten sandw1 child1 tray1 table1
-                "Action { index: 4, instantiation: [3, 1, 2, 9] }", // serve_sandwich sandw1 child2 tray1 table1
+                "Action { index: 0, instantiation: [4, 6, 8] }", // make_sandwich_no_gluten sandw2 bread2 content2
+                "Action { index: 1, instantiation: [4, 6, 8] }", // make_sandwich sandw2 bread2 content2
+                "Action { index: 2, instantiation: [4, 2] }",    // put_on_tray sandw2 tray1
+                "Action { index: 3, instantiation: [4, 0, 2, 9] }", // serve_sandwich_no_gluten sandw2 child1 tray1 table1
+                "Action { index: 4, instantiation: [4, 1, 2, 9] }", // serve_sandwich sandw2 child2 tray1 table1
                 "Action { index: 5, instantiation: [2, 11, 9] }", // move_tray tray1 kitchen table1
             ]
         );
@@ -229,7 +229,7 @@ mod tests {
                 .collect_vec(),
             vec![
                 "Action { index: 0, instantiation: [10, 18, 21] }", // make_sandwich_no_gluten sandw4 bread5 content2
-                "Action { index: 1, instantiation: [10, 19, 25] }", // make_sandwich sandw4 bread6 content6
+                "Action { index: 1, instantiation: [10, 19, 20] }", // make_sandwich sandw4 bread6 content1
                 "Action { index: 2, instantiation: [10, 6] }",      // put_on_tray sandw4 tray1
                 "Action { index: 3, instantiation: [10, 0, 6, 26] }", // serve_sandwich_no_gluten sandw4 child1 tray1 table1
                 "Action { index: 3, instantiation: [10, 1, 6, 28] }", // serve_sandwich_no_gluten sandw4 child2 tray1 table3

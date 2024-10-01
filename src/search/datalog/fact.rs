@@ -102,7 +102,7 @@ pub fn facts_from_state(state: &DBState, task: &Task) -> Vec<Fact> {
     facts
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct FactId(usize);
 
 #[derive(Debug, Clone)]

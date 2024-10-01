@@ -7,7 +7,7 @@ use std::{
 
 use crate::search::{datalog::term::Term, TYPICAL_NUM_ARGUMENTS};
 
-#[derive(Debug, PartialEq, Eq, Clone, Hash)]
+#[derive(Debug, PartialEq, Eq, Clone, Hash, Ord, PartialOrd)]
 pub struct Arguments {
     terms: SmallVec<[Term; TYPICAL_NUM_ARGUMENTS]>,
 }
