@@ -6,7 +6,7 @@ use crate::parsers::{
     prefix_expr, space_separated_list0, surrounding_whitespace, ParseResult, Span,
 };
 use nom::branch::alt;
-use nom::character::complete::multispace1;
+use nom::character::complete::{multispace0, multispace1};
 use nom::combinator::{map, opt};
 use nom::sequence::{preceded, tuple};
 
@@ -39,7 +39,7 @@ pub fn parse_problem<'a, T: Into<Span<'a>>>(input: T) -> ParseResult<'a, Problem
             "define",
             tuple((
                 prefix_expr("problem", parse_name),
-                preceded(multispace1, prefix_expr(":domain", parse_name)),
+                preceded(multispace0, prefix_expr(":domain", parse_name)),
                 opt(preceded(multispace1, parse_requirements)),
                 opt(preceded(multispace1, parse_objects_declaration)),
                 preceded(

@@ -1,0 +1,3 @@
+domain_pddl = "benchmarks/hbf/freecell/domain.pddl"
+problems_dir = "benchmarks/hbf/freecell/training"
+plans_dir = "benchmarks/hbf/freecell/training_plans_fd"
