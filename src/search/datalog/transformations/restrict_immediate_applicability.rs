@@ -1,6 +1,7 @@
 use crate::search::datalog::{
     arguments::Arguments, atom::Atom, program::Program, rules::RuleTrait,
 };
+use smallvec::smallvec;
 
 /// Add a special epsilon predicate to the conditions of all action
 /// applicability rules. This should be applied before removing action
@@ -8,7 +9,7 @@ use crate::search::datalog::{
 pub fn restrict_immediate_applicability(mut program: Program) -> Program {
     let epsilon_predicate = program.new_auxillary_predicate(Some("epsilon".to_string()));
 
-    let epsilon = Atom::new(Arguments::new(vec![]), epsilon_predicate, true);
+    let epsilon = Atom::new(Arguments::new(smallvec![]), epsilon_predicate, true);
 
     for rule in program
         .rules

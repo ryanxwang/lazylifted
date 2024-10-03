@@ -96,18 +96,6 @@ impl Heuristic<(DBState, PartialAction)> for FfHeuristic {
         }
         self.relaxed_plan.borrow_mut().clear();
 
-        let num_applicable_actions = task
-            .action_schemas()
-            .iter()
-            .flat_map(|schema| {
-                self.successor_generator
-                    .get_applicable_actions(state, schema)
-            })
-            .count();
-        if num_applicable_actions == 0 {
-            return HeuristicValue::infinity();
-        }
-
         let actions = if partial == &NO_PARTIAL {
             task.action_schemas()
                 .iter()
@@ -124,7 +112,6 @@ impl Heuristic<(DBState, PartialAction)> for FfHeuristic {
                     partial,
                 )
         };
-        let discounted_costs = actions.len() as f64 / num_applicable_actions as f64;
 
         let ground_rules = actions
             .iter()
@@ -136,7 +123,7 @@ impl Heuristic<(DBState, PartialAction)> for FfHeuristic {
                         plan: self.relaxed_plan.clone(),
                         action: action.clone(),
                     },
-                    discounted_costs,
+                    1.0,
                 )
             })
             .collect_vec();
@@ -151,18 +138,7 @@ impl Heuristic<(DBState, PartialAction)> for FfHeuristic {
             return HeuristicValue::infinity();
         }
 
-        let hff_value: f64 = self
-            .relaxed_plan
-            .borrow()
-            .iter()
-            .map(|action| {
-                if actions.contains(action) {
-                    discounted_costs
-                } else {
-                    1.0
-                }
-            })
-            .sum();
+        let hff_value = self.relaxed_plan.borrow().len() as f64;
         hff_value.into()
     }
 }
@@ -222,11 +198,11 @@ mod tests {
                 .sorted()
                 .collect_vec(),
             vec![
-                "Action { index: 0, instantiation: [3, 6, 8] }", // make_sandwich_no_gluten sandw1 bread2 content2
-                "Action { index: 1, instantiation: [3, 6, 8] }", // make_sandwich sandw1 bread2 content2
-                "Action { index: 2, instantiation: [3, 2] }",    // put_on_tray sandw1 tray1
-                "Action { index: 3, instantiation: [3, 0, 2, 9] }", // serve_sandwich_no_gluten sandw1 child1 tray1 table1
-                "Action { index: 4, instantiation: [3, 1, 2, 9] }", // serve_sandwich sandw1 child2 tray1 table1
+                "Action { index: 0, instantiation: [4, 6, 8] }", // make_sandwich_no_gluten sandw2 bread2 content2
+                "Action { index: 1, instantiation: [4, 6, 8] }", // make_sandwich sandw2 bread2 content2
+                "Action { index: 2, instantiation: [4, 2] }",    // put_on_tray sandw2 tray1
+                "Action { index: 3, instantiation: [4, 0, 2, 9] }", // serve_sandwich_no_gluten sandw2 child1 tray1 table1
+                "Action { index: 4, instantiation: [4, 1, 2, 9] }", // serve_sandwich sandw2 child2 tray1 table1
                 "Action { index: 5, instantiation: [2, 11, 9] }", // move_tray tray1 kitchen table1
             ]
         );
@@ -253,7 +229,7 @@ mod tests {
                 .collect_vec(),
             vec![
                 "Action { index: 0, instantiation: [10, 18, 21] }", // make_sandwich_no_gluten sandw4 bread5 content2
-                "Action { index: 1, instantiation: [10, 19, 25] }", // make_sandwich sandw4 bread6 content6
+                "Action { index: 1, instantiation: [10, 19, 20] }", // make_sandwich sandw4 bread6 content1
                 "Action { index: 2, instantiation: [10, 6] }",      // put_on_tray sandw4 tray1
                 "Action { index: 3, instantiation: [10, 0, 6, 26] }", // serve_sandwich_no_gluten sandw4 child1 tray1 table1
                 "Action { index: 3, instantiation: [10, 1, 6, 28] }", // serve_sandwich_no_gluten sandw4 child2 tray1 table3

@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 use crate::search::{
     datalog::{
         arguments::Arguments,
@@ -11,6 +9,8 @@ use crate::search::{
     },
     Task,
 };
+use smallvec::smallvec;
+use std::rc::Rc;
 
 pub fn add_goal_rule(
     mut program: Program,
@@ -19,7 +19,7 @@ pub fn add_goal_rule(
 ) -> Program {
     let goal_id = program.new_auxillary_predicate(Some("goal".to_string()));
     program.goal_predicate_index = Some(goal_id);
-    let goal = Atom::new(Arguments::new(vec![]), goal_id, true);
+    let goal = Atom::new(Arguments::new(smallvec![]), goal_id, true);
 
     let annotation = annotation_generator(RuleCategory::Goal);
 

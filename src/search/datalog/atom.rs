@@ -1,9 +1,8 @@
-use std::{collections::HashSet, fmt::Display, hash::Hash};
-
 use crate::search::{
     datalog::{arguments::Arguments, term::Term},
     ActionSchema, AtomSchema, SchemaArgument,
 };
+use std::{collections::HashSet, fmt::Display, hash::Hash};
 
 #[derive(Debug, Clone)]
 pub struct Atom {
@@ -86,6 +85,10 @@ impl Atom {
         self.is_artificial_predicate
     }
 
+    pub fn is_ground(&self) -> bool {
+        self.arguments.iter().all(|term| term.is_object())
+    }
+
     /// Returns true if the atom shares a variable with another atom. This
     /// method ignores type information.
     pub fn shares_variable_with(&self, other: &Self) -> bool {
@@ -145,6 +148,7 @@ mod tests {
 
     use super::*;
     use serial_test::serial;
+    use smallvec::smallvec;
 
     // Serial is needed to make sure the global counter is not modified by other
     // tests
@@ -152,7 +156,7 @@ mod tests {
     #[test]
     #[serial]
     fn test_atom_new() {
-        let arguments = Arguments::new(vec![Term::new_variable(0, 0), Term::new_object(1)]);
+        let arguments = Arguments::new(smallvec![Term::new_variable(0, 0), Term::new_object(1)]);
         let atom = Atom::new(arguments, 0, false);
         assert_eq!(atom.arguments().len(), 2);
         assert_eq!(atom.predicate_index(), 0);
@@ -182,21 +186,21 @@ mod tests {
 
     #[test]
     fn test_atom_shares_variable_with() {
-        let arguments1 = Arguments::new(vec![Term::new_variable(0, 0), Term::new_object(1)]);
+        let arguments1 = Arguments::new(smallvec![Term::new_variable(0, 0), Term::new_object(1)]);
         let atom1 = Atom::new(arguments1, 0, false);
 
-        let arguments2 = Arguments::new(vec![Term::new_variable(0, 1), Term::new_object(1)]);
+        let arguments2 = Arguments::new(smallvec![Term::new_variable(0, 1), Term::new_object(1)]);
         let atom2 = Atom::new(arguments2, 0, false);
 
         assert!(atom1.shares_variable_with(&atom2));
 
         // Different variables should lead to false
-        let arguments3 = Arguments::new(vec![Term::new_variable(1, 0), Term::new_object(1)]);
+        let arguments3 = Arguments::new(smallvec![Term::new_variable(1, 0), Term::new_object(1)]);
         let atom3 = Atom::new(arguments3, 0, false);
         assert!(!atom1.shares_variable_with(&atom3));
 
         // No variables should lead to false, even if same object
-        let arguments4 = Arguments::new(vec![Term::new_object(1), Term::new_object(1)]);
+        let arguments4 = Arguments::new(smallvec![Term::new_object(1), Term::new_object(1)]);
         let atom4 = Atom::new(arguments4, 0, false);
         assert!(!atom1.shares_variable_with(&atom4));
     }

@@ -17,6 +17,7 @@ use crate::search::{
 };
 use itertools::Itertools;
 use priority_queue::PriorityQueue;
+use smallvec::smallvec;
 use std::{
     cmp::Reverse,
     collections::{HashSet, VecDeque},
@@ -153,7 +154,7 @@ impl WeightedGrounder {
                                 program
                                     .fact_registry
                                     .replace_at_id(existing_fact_id, new_fact);
-                                priority_queue.push(existing_fact_id, Reverse(cost));
+                                priority_queue.change_priority(&existing_fact_id, Reverse(cost));
                             }
                         }
                         None => {
@@ -435,51 +436,90 @@ impl WeightedGrounder {
 
         rule.add_reached_fact(fact_index_in_condition, fact.clone());
 
-        for instantiation in (0..rule.conditions().len())
-            .map(|i| {
-                if i == fact_index_in_condition {
-                    vec![fact.clone()]
-                } else {
-                    rule.reached_facts(i).to_vec()
+        // for optimisation, check if the effect is ground, if so we just need
+        // to check if each condition has at least one reached fact, and take
+        // the cheapest reached fact for each condition
+        if rule.effect().is_ground() {
+            let mut fact_costs = vec![];
+            let mut fact_indices = vec![];
+
+            for condition_index in 0..rule.conditions().len() {
+                if rule.reached_facts(condition_index).is_empty() {
+                    return;
                 }
-            })
-            .multi_cartesian_product()
-        {
-            let mut effect_arguments = rule.effect().arguments().clone();
-            for (condition_index, fact) in instantiation.iter().enumerate() {
-                for (i, term) in rule.conditions()[condition_index]
-                    .arguments()
-                    .iter()
-                    .enumerate()
-                {
-                    if term.is_object() {
-                        continue;
-                    }
-                    if let Some(position_in_effect) =
-                        rule.variable_position_in_effect().get(term.index())
-                    {
-                        effect_arguments[position_in_effect] = fact.atom().arguments()[i];
-                    }
-                }
+
+                fact_costs.push(rule.reached_facts(condition_index)[0].cost());
+                fact_indices.push(rule.reached_facts(condition_index)[0].id());
             }
 
             new_facts.push(Fact::new(
+                rule.effect().clone(),
+                self.aggregate(&fact_costs, rule.weight()),
+                Some(Achiever::new(rule.index(), fact_indices)),
+            ));
+
+            return;
+        }
+
+        #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+        struct Instantiation {
+            arguments: Arguments,
+            achiever_ids: Vec<FactId>,
+            achiever_costs: Vec<FactCost>,
+        }
+
+        let initial_inst = Instantiation {
+            arguments: rule.effect().arguments().clone(),
+            achiever_ids: vec![],
+            achiever_costs: vec![],
+        };
+        let mut instantiations = HashSet::from([initial_inst]);
+
+        for condition_index in 0..rule.conditions().len() {
+            let facts_to_consider = if condition_index == fact_index_in_condition {
+                vec![fact]
+            } else {
+                rule.reached_facts(condition_index).iter().collect_vec()
+            };
+
+            let mut new_instantiations = HashSet::new();
+            for fact in facts_to_consider {
+                for instantiation in &instantiations {
+                    let mut new_instantiation = instantiation.clone();
+                    for (i, term) in rule.conditions()[condition_index]
+                        .arguments()
+                        .iter()
+                        .enumerate()
+                    {
+                        if term.is_object() {
+                            continue;
+                        }
+                        if let Some(position_in_effect) =
+                            rule.variable_position_in_effect().get(term.index())
+                        {
+                            new_instantiation.arguments[position_in_effect] =
+                                fact.atom().arguments()[i];
+                        }
+                    }
+                    new_instantiation.achiever_ids.push(fact.id());
+                    new_instantiation.achiever_costs.push(fact.cost());
+
+                    new_instantiations.insert(new_instantiation);
+                }
+            }
+            instantiations = new_instantiations;
+        }
+
+        // This sort is not necessary, but it makes the results deterministic
+        for instantiation in instantiations.into_iter().sorted() {
+            new_facts.push(Fact::new(
                 Atom::new(
-                    effect_arguments,
+                    instantiation.arguments,
                     rule.effect().predicate_index(),
                     rule.effect().is_artificial_predicate(),
                 ),
-                self.aggregate(
-                    &instantiation
-                        .iter()
-                        .map(|fact| fact.cost())
-                        .collect::<Vec<_>>(),
-                    rule.weight(),
-                ),
-                Some(Achiever::new(
-                    rule.index(),
-                    instantiation.iter().map(|fact| fact.id()).collect(),
-                )),
+                self.aggregate(&instantiation.achiever_costs, rule.weight()),
+                Some(Achiever::new(rule.index(), instantiation.achiever_ids)),
             ));
         }
     }
@@ -509,7 +549,7 @@ impl WeightedGrounder {
         let mut rules = vec![];
 
         let epsilon = Atom::new(
-            Arguments::new(vec![]),
+            Arguments::new(smallvec![]),
             program.epsilon_predicate_index.unwrap(),
             true,
         );

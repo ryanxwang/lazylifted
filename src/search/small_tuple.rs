@@ -6,7 +6,7 @@ use std::{
 use internment::Intern;
 use smallvec::SmallVec;
 
-const TYPICAL_NUM_ARGUMENTS: usize = 5;
+pub const TYPICAL_NUM_ARGUMENTS: usize = 5;
 
 /// A [`RawSmallTuple`] is a small vector of `usize` that is used to represent a
 /// tuple. Use this type while you still need to manipulate the tuple,

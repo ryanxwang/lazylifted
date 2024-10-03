@@ -1,18 +1,19 @@
+use smallvec::SmallVec;
 use std::{
     fmt::{Display, Formatter},
     ops::{Index, IndexMut},
     slice::SliceIndex,
 };
 
-use crate::search::datalog::term::Term;
+use crate::search::{datalog::term::Term, TYPICAL_NUM_ARGUMENTS};
 
-#[derive(Debug, PartialEq, Eq, Clone, Hash)]
+#[derive(Debug, PartialEq, Eq, Clone, Hash, Ord, PartialOrd)]
 pub struct Arguments {
-    terms: Vec<Term>,
+    terms: SmallVec<[Term; TYPICAL_NUM_ARGUMENTS]>,
 }
 
 impl Arguments {
-    pub fn new(terms: Vec<Term>) -> Self {
+    pub fn new(terms: SmallVec<[Term; TYPICAL_NUM_ARGUMENTS]>) -> Self {
         Self { terms }
     }
 
@@ -41,7 +42,7 @@ impl<I: SliceIndex<[Term]>> IndexMut<I> for Arguments {
 
 impl IntoIterator for Arguments {
     type Item = Term;
-    type IntoIter = std::vec::IntoIter<Self::Item>;
+    type IntoIter = smallvec::IntoIter<[Term; 5]>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.terms.into_iter()
