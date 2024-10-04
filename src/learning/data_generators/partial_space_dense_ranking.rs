@@ -195,11 +195,6 @@ impl DataGenerator for PartialSpaceDenseRanking {
         TrainingData::Ranking(RankingTrainingData {
             features: graphs,
             pairs,
-            group_ids: if self.config.group_partial_actions {
-                Some(group_ids)
-            } else {
-                None
-            },
         })
     }
 }

@@ -2,7 +2,6 @@
 use crate::learning::{ml::py_utils, models::RankingTrainingData, VERBOSE};
 use core::fmt::Debug;
 use ndarray::{Array1, Array2};
-use numpy::PyArray2;
 use pyo3::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::Path};
@@ -19,15 +18,15 @@ pub enum RankerConfig {
 impl RankerConfig {
     pub fn to_model_str(self) -> &'static str {
         match self {
-            RankerConfig::RankSVM { c_value: _ } => "ranksvm",
-            RankerConfig::LP { c_value: _ } => "lp",
+            RankerConfig::RankSVM { .. } => "ranksvm",
+            RankerConfig::LP { .. } => "lp",
         }
     }
 
     pub fn get_c_value(&self) -> f64 {
         match self {
-            RankerConfig::RankSVM { c_value } => *c_value,
-            RankerConfig::LP { c_value } => *c_value,
+            RankerConfig::RankSVM { c_value, .. } => *c_value,
+            RankerConfig::LP { c_value, .. } => *c_value,
         }
     }
 }
@@ -81,16 +80,26 @@ impl<'py> Ranker<'py> {
         }
     }
 
-    pub fn fit(&mut self, data: &RankingTrainingData<Bound<'py, PyArray2<f64>>>) {
+    pub fn supports_sparse_inputs(&self) -> bool {
+        true
+    }
+
+    /// Set the feature dimension of the model. This is required when using
+    /// sparse inputs.
+    pub fn set_feature_dim(&mut self, feature_dim: usize) {
+        self.model
+            .getattr("set_feature_dim")
+            .unwrap()
+            .call1((feature_dim,))
+            .unwrap();
+    }
+
+    pub fn fit(&mut self, data: &RankingTrainingData<Bound<'py, PyAny>>) {
         let start_time = std::time::Instant::now();
         self.model
             .getattr("fit")
             .unwrap()
-            .call1((
-                &data.features,
-                &data.pairs_for_python(),
-                &data.group_ids_for_python(),
-            ))
+            .call1((&data.features, &data.pairs_for_python()))
             .unwrap();
         info!(fitting_time = start_time.elapsed().as_secs_f64());
 
@@ -115,8 +124,8 @@ impl<'py> Ranker<'py> {
 
     pub fn tune(
         &mut self,
-        training_data: &RankingTrainingData<Bound<'py, PyArray2<f64>>>,
-        validation_data: &RankingTrainingData<Bound<'py, PyArray2<f64>>>,
+        training_data: &RankingTrainingData<Bound<'py, PyAny>>,
+        validation_data: &RankingTrainingData<Bound<'py, PyAny>>,
     ) {
         let start_time = std::time::Instant::now();
         self.model
@@ -146,15 +155,11 @@ impl<'py> Ranker<'py> {
         }
     }
 
-    pub fn kendall_tau(&self, data: &RankingTrainingData<Bound<'py, PyArray2<f64>>>) -> f64 {
+    pub fn kendall_tau(&self, data: &RankingTrainingData<Bound<'py, PyAny>>) -> f64 {
         self.model
             .getattr("kendall_tau")
             .unwrap()
-            .call1((
-                &data.features,
-                &data.pairs_for_python(),
-                &data.group_ids_for_python(),
-            ))
+            .call1((&data.features, &data.pairs_for_python()))
             .unwrap()
             .extract()
             .unwrap()
@@ -199,6 +204,7 @@ mod tests {
     use super::*;
     use crate::learning::models::{RankingPair, RankingRelation};
     use assert_approx_eq::assert_approx_eq;
+    use numpy::PyArray2;
     use serial_test::serial;
 
     #[test]
@@ -209,7 +215,7 @@ mod tests {
         })
     }
 
-    fn test_x(py: Python) -> Bound<PyArray2<f64>> {
+    fn test_x(py: Python) -> Bound<PyAny> {
         PyArray2::from_vec2_bound(
             py,
             &[
@@ -223,6 +229,7 @@ mod tests {
             ],
         )
         .unwrap()
+        .into_any()
     }
 
     fn test_pairs() -> Vec<RankingPair> {
@@ -260,11 +267,10 @@ mod tests {
         ]
     }
 
-    fn test_data_without_groups(py: Python) -> RankingTrainingData<Bound<PyArray2<f64>>> {
+    fn test_data_without_groups(py: Python) -> RankingTrainingData<Bound<PyAny>> {
         RankingTrainingData {
             features: test_x(py),
             pairs: test_pairs(),
-            group_ids: None,
         }
     }
 

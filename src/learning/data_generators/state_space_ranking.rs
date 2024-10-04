@@ -114,7 +114,6 @@ impl DataGenerator for StateSpaceRanking {
         TrainingData::Ranking(RankingTrainingData {
             features: graphs,
             pairs,
-            group_ids: None,
         })
     }
 }

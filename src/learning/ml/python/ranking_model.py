@@ -6,6 +6,7 @@ from pulp import PULP_CBC_CMD
 import logging
 import random
 import sys
+from scipy.sparse import issparse, dok_matrix
 
 
 class RankingModel:
@@ -20,6 +21,7 @@ class RankingModel:
         self.model_str = model_str
         self.verbose = verbose
         self.C = C
+        self.feature_dim = None
         if model_str == "ranksvm":
             # we create the model later
             pass
@@ -40,6 +42,10 @@ class RankingModel:
             )
         else:
             raise ValueError("Unknown regressor model: " + model_str)
+
+    def set_feature_dim(self, feature_dim):
+        """Set the feature dimension for sparse data."""
+        self.feature_dim = feature_dim
 
     def _to_classification(self, X, pairs):
         X_new = []
@@ -76,23 +82,24 @@ class RankingModel:
         else:
             self.weights = model.coef_
 
-    def fit(self, X, pairs, group_ids):
+    def fit(self, X, pairs):
         """
         Fit the ranking model to the given data.
 
         Parameters
         ----------
-        X : numpy array
-            The features of the data
+        X : numpy array or a list of dictionaries mapping features to values
+            (i.e. a sparse representation). The features of the data
+
         pairs : list of tuples (i, j, relation), where i and j are indices into
-            X and relation is the relation between i and j. The relation is
-            an integer describing how much better i is than j. For example, if
-            the relation is 1, then i is strictly better than j, if the relation
-            is 0, then i is better than or equal to j.
-        group_ids : list of integers indicating the group of each feature. Some
-            models may use this information to specialise the weights for each
-            group.
+                X and relation is the relation between i and j. The relation is
+                an integer describing how much better i is than j. For example,
+                if the relation is 1, then i is strictly better than j, if the
+                relation is 0, then i is better than or equal to j.
         """
+        if isinstance(X, list):
+            X = self.dicts_to_csr_matrix(X)
+
         if self.model_str == "ranksvm":
             data = self._to_classification(X, pairs)
             self._train_ranksvm(*data)
@@ -104,6 +111,11 @@ class RankingModel:
             raise ValueError("Unknown ranking model: " + self.model_str)
 
     def tune(self, X_train, pairs_train, X_val, pairs_val):
+        if isinstance(X_train, list):
+            X_train = self.dicts_to_csr_matrix(X_train)
+        if isinstance(X_val, list):
+            X_val = self.dicts_to_csr_matrix(X_val)
+
         if self.model_str == "lp":
             pairs_train = self._to_rank2plan_pairs(pairs_train)
             pairs_val = self._to_rank2plan_pairs(pairs_val)
@@ -111,14 +123,18 @@ class RankingModel:
         else:
             raise ValueError("Tuning is not supported for model: " + self.model_str)
 
-    def predict(self, X, group_id):
+    def predict(self, X):
+        if isinstance(X, list):
+            X = self.dicts_to_csr_matrix(X)
+
         # We require that all the features come from the same group. In
         # practice, this is okay because as of 2024/07/09, we call predict
         # with a single feature at a time.
         if self.model_str == "ranksvm" or self.model_str == "lp":
-            return np.dot(X, self.weights.T).astype(np.float64)
-        elif self.model_str == "lambdamart":
-            raise ValueError("LambdaMART is no longer supported")
+            if issparse(X):
+                return (X.dot(self.weights.T)).astype(np.float64)
+            else:
+                return np.dot(X, self.weights.T).astype(np.float64)
         else:
             raise ValueError("Unknown ranking model: " + self.model_str)
 
@@ -131,7 +147,31 @@ class RankingModel:
             for i, j, relation, importance in pairs
         ]
 
-    def kendall_tau(self, X, pairs, group_ids):
-        scores = self.predict(X, group_ids)
+    def kendall_tau(self, X, pairs):
+        scores = self.predict(X)
         pairs = self._to_rank2plan_pairs(pairs)
         return r2p_kendall_tau(pairs, scores)
+
+    def dicts_to_csr_matrix(self, dictionaries):
+        """
+        Convert a list of dictionaries to a CSR matrix.
+
+        Parameters
+        ----------
+        dictionaries : list of dictionaries
+            Each dictionary maps feature indices to values.
+
+        Returns
+        -------
+        csr_matrix
+            A sparse matrix where each row corresponds to a dictionary.
+        """
+        # First build a DOK matrix, then convert it to CSR format.
+        assert self.feature_dim is not None, "Feature dimension must be set."
+        dok = dok_matrix((len(dictionaries), self.feature_dim), dtype=np.float64)
+
+        for i, dictionary in enumerate(dictionaries):
+            for key, value in dictionary.items():
+                dok[i, key] = value
+
+        return dok.tocsr()

@@ -3,6 +3,7 @@ validate = true
 tune = true
 round = true
 explain-colours = false
+sparse-training-features = true
 
 [wl-model.model.ranker.lp]
 c_value = 1.0

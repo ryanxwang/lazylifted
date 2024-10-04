@@ -4,7 +4,10 @@ use crate::learning::{
 };
 use ndarray::Array2;
 use numpy::{PyArray2, PyArrayMethods};
-use pyo3::{Bound, Python};
+use pyo3::{
+    types::{PyAnyMethods, PyDict, PyList, PyListMethods},
+    Bound, PyAny, Python,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
@@ -173,6 +176,10 @@ impl WlKernel {
         histograms
     }
 
+    pub fn num_colours(&self) -> usize {
+        self.hashes.len()
+    }
+
     /// Convert the computed histograms to a feature matrix X as a 2D numpy
     /// array. The rows of the array correspond to the histograms of the graphs
     /// and the columns correspond to the counts in the histogram.
@@ -180,7 +187,7 @@ impl WlKernel {
         &self,
         py: Python<'py>,
         histograms: &[HashMap<i32, f64>],
-    ) -> Bound<'py, PyArray2<f64>> {
+    ) -> Bound<'py, PyAny> {
         let n = histograms.len();
         let d = self.hashes.len();
         let features = PyArray2::zeros_bound(py, [n, d], false);
@@ -193,7 +200,28 @@ impl WlKernel {
                 *features_readwrite.get_mut([i, hash as usize]).unwrap() = cnt;
             }
         }
-        features
+        features.into_any()
+    }
+
+    pub fn convert_to_py_dicts<'py>(
+        &self,
+        py: Python<'py>,
+        histograms: &[HashMap<i32, f64>],
+    ) -> Bound<'py, PyAny> {
+        let py_list = PyList::empty_bound(py);
+
+        for histogram in histograms {
+            let py_dict = PyDict::new_bound(py);
+            for (&hash, &count) in histogram.iter() {
+                if hash < 0 {
+                    continue;
+                }
+                py_dict.set_item(hash, count).unwrap();
+            }
+            py_list.append(py_dict).unwrap();
+        }
+
+        py_list.into_any()
     }
 
     pub fn convert_to_ndarray(&self, histograms: &[HashMap<i32, f64>]) -> Array2<f64> {
@@ -335,7 +363,7 @@ mod tests {
         let histograms = kernel.compute_histograms(&[graph.clone()], None);
         Python::with_gil(|py| {
             let x = kernel.convert_to_pyarray(py, &preprocessor.preprocess(histograms, true));
-            assert_eq!(unsafe { x.as_slice().unwrap() }, &[2.0, 1.0, 2.0, 1.0]);
+            assert_eq!(x.to_string(), "[[2. 1. 2. 1.]]");
         });
 
         let mut graph2 = CGraph::new_undirected();
@@ -350,7 +378,7 @@ mod tests {
         let histograms2 = kernel.compute_histograms(&[graph2.clone()], None);
         Python::with_gil(|py| {
             let x = kernel.convert_to_pyarray(py, &preprocessor.preprocess(histograms2, true));
-            assert_eq!(unsafe { x.as_slice().unwrap() }, &[3.0, 1.0, 3.0, 0.0]);
+            assert_eq!(x.to_string(), "[[3. 1. 3. 0.]]");
         });
     }
 
@@ -389,7 +417,7 @@ mod tests {
         let histograms = kernel.compute_histograms(&[graph.clone()], None);
         Python::with_gil(|py| {
             let x = kernel.convert_to_pyarray(py, &preprocessor.preprocess(histograms, true));
-            assert_eq!(unsafe { x.as_slice().unwrap() }, &[2.0, 1.0, 2.0, 1.0]);
+            assert_eq!(x.to_string(), "[[2. 1. 2. 1.]]");
         });
 
         let mut graph2 = CGraph::new_undirected();
@@ -404,7 +432,7 @@ mod tests {
         let histograms2 = kernel.compute_histograms(&[graph2.clone()], None);
         Python::with_gil(|py| {
             let x = kernel.convert_to_pyarray(py, &preprocessor.preprocess(histograms2, true));
-            assert_eq!(unsafe { x.as_slice().unwrap() }, &[3.0, 1.0, 3.0, 1.0]);
+            assert_eq!(x.to_string(), "[[3. 1. 3. 1.]]");
         });
     }
 }

@@ -99,6 +99,7 @@ mod tests {
             tune: true,
             explain_colours: true,
             round: true,
+            sparse_training_features: false,
         });
 
         let serialised = toml::to_string(&config).unwrap();

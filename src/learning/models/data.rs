@@ -1,13 +1,10 @@
 use crate::learning::graphs::CGraph;
-use numpy::{PyArray1, PyArray2, PyArrayMethods, PyUntypedArrayMethods};
+use numpy::PyArray1;
 use pyo3::{
-    types::{PyAnyMethods, PyList, PyNone, PyTuple},
+    types::{PyAnyMethods, PyList, PyTuple},
     Bound, PyAny, Python,
 };
 use serde::{Deserialize, Serialize};
-use serde_json;
-use serde_json::json;
-use std::{fs::File, io::Write, path::Path};
 use tracing::info;
 
 #[derive(Debug)]
@@ -17,15 +14,12 @@ pub struct RegressionTrainingData<F> {
     pub noise: Option<Vec<f64>>,
 }
 
-impl<'a> RegressionTrainingData<Bound<'a, PyArray2<f64>>> {
+impl<F> RegressionTrainingData<F> {
     pub fn log(&self) {
-        info!(feature_shape = format!("{:?}", self.features.shape()));
         info!(labels_count = self.labels.len());
         info!(noise = self.noise.is_some());
     }
-}
 
-impl<F> RegressionTrainingData<F> {
     pub fn with_features<G>(self, features: G) -> RegressionTrainingData<G> {
         RegressionTrainingData {
             features,
@@ -63,59 +57,17 @@ pub struct RankingPair {
 pub struct RankingTrainingData<F> {
     pub features: F,
     pub pairs: Vec<RankingPair>,
-    /// Optional group ids that identify which group each feature vector belongs
-    /// to. If provided, the ranking model may be able to specialise within each
-    /// group (i.e. treat them as different feature space and use different
-    /// weights for each group).
-    pub group_ids: Option<Vec<usize>>,
-}
-
-impl<'a> RankingTrainingData<Bound<'a, PyArray2<f64>>> {
-    pub fn log(&self) {
-        info!(feature_shape = format!("{:?}", self.features.shape()));
-        info!(pairs_count = self.pairs.len());
-
-        match &self.group_ids {
-            Some(group_ids) => {
-                let unique_groups = group_ids.iter().collect::<std::collections::HashSet<_>>();
-
-                info!(unique_groups_count = unique_groups.len());
-                info!(unique_groups = format!("{:?}", unique_groups));
-            }
-            None => {
-                info!(unique_groups_count = "None");
-            }
-        }
-    }
-
-    // save the dataset to a file in json format
-    pub fn save(&self, path: &Path) {
-        let cols = self.features.shape()[1];
-        let features_vec: Vec<serde_json::Value> = self
-            .features
-            .to_vec()
-            .unwrap()
-            .chunks(cols)
-            .map(|chunk| serde_json::to_value(chunk.to_vec()).unwrap())
-            .collect();
-
-        let data = json!({
-            "features": features_vec,
-            "pairs": self.pairs,
-        });
-        let data = serde_json::to_string_pretty(&data).unwrap();
-
-        let mut file = File::create(path).unwrap();
-        file.write_all(data.as_bytes()).unwrap();
-    }
 }
 
 impl<F> RankingTrainingData<F> {
+    pub fn log(&self) {
+        info!(pairs_count = self.pairs.len());
+    }
+
     pub fn with_features<G>(self, features: G) -> RankingTrainingData<G> {
         RankingTrainingData {
             features,
             pairs: self.pairs,
-            group_ids: self.group_ids,
         }
     }
 
@@ -140,17 +92,6 @@ impl<F> RankingTrainingData<F> {
             .collect();
         PyList::new_bound(py, py_tuples)
     }
-
-    pub fn group_ids_for_python(&self) -> Bound<'static, PyAny> {
-        let py = unsafe { Python::assume_gil_acquired() };
-        match &self.group_ids {
-            Some(group_ids) => {
-                let py_list: Vec<usize> = group_ids.clone();
-                PyList::new_bound(py, py_list).into_any()
-            }
-            None => PyNone::get_bound(py).to_owned().into_any(),
-        }
-    }
 }
 
 #[derive(Debug)]
@@ -159,7 +100,7 @@ pub enum TrainingData<F> {
     Ranking(RankingTrainingData<F>),
 }
 
-impl<'a> TrainingData<Bound<'a, PyArray2<f64>>> {
+impl<F> TrainingData<F> {
     pub fn log(&self) {
         match self {
             TrainingData::Regression(data) => data.log(),
@@ -167,19 +108,6 @@ impl<'a> TrainingData<Bound<'a, PyArray2<f64>>> {
         }
     }
 
-    pub fn save(&self, path: &Path) {
-        match self {
-            TrainingData::Ranking(data) => {
-                data.save(path);
-            }
-            _ => {
-                todo!("save regression data")
-            }
-        }
-    }
-}
-
-impl<F> TrainingData<F> {
     pub fn features(&self) -> &F {
         match self {
             TrainingData::Regression(data) => &data.features,

@@ -29,6 +29,8 @@ pub struct WlModelConfig {
     pub explain_colours: bool,
     /// Whether to round heuristic values to the nearest integer.
     pub round: bool,
+    #[serde(default = "default_sparse_training_features")]
+    pub sparse_training_features: bool,
 }
 
 fn default_tune() -> bool {
@@ -36,5 +38,9 @@ fn default_tune() -> bool {
 }
 
 fn default_explain_colours() -> bool {
+    false
+}
+
+fn default_sparse_training_features() -> bool {
     false
 }

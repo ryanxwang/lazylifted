@@ -2,7 +2,7 @@
 use crate::learning::ml::py_utils;
 use crate::learning::models::RegressionTrainingData;
 use ndarray::{Array1, Array2};
-use numpy::{PyArray1, PyArray2};
+use numpy::PyArray1;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use serde::{Deserialize, Serialize};
@@ -59,7 +59,16 @@ impl<'py> Regressor<'py> {
         }
     }
 
-    pub fn fit(&mut self, data: &RegressionTrainingData<Bound<'py, PyArray2<f64>>>) {
+    pub fn set_feature_dim(&mut self, _dim: usize) {
+        // We don't need to do anything, only sparse models need to know the
+        // feature dimension, but we don't support sparse models
+    }
+
+    pub fn supports_sparse_inputs(&self) -> bool {
+        false
+    }
+
+    pub fn fit(&mut self, data: &RegressionTrainingData<Bound<'py, PyAny>>) {
         let start_time = time::Instant::now();
 
         let kwargs = PyDict::new_bound(self.py());
@@ -92,7 +101,7 @@ impl<'py> Regressor<'py> {
         x.dot(&self.weights.as_ref().unwrap().t())
     }
 
-    pub fn score(&self, data: &RegressionTrainingData<Bound<'py, PyArray2<f64>>>) -> f64 {
+    pub fn score(&self, data: &RegressionTrainingData<Bound<'py, PyAny>>) -> f64 {
         self.model
             .getattr("score")
             .unwrap()
@@ -133,6 +142,7 @@ mod tests {
 
     use super::*;
     use assert_approx_eq::assert_approx_eq;
+    use numpy::PyArray2;
     use serial_test::serial;
 
     #[test]
@@ -155,7 +165,9 @@ mod tests {
                 py,
                 RegressorConfig::GaussianProcessRegressor { alpha: 1e-7 },
             );
-            let x = PyArray2::from_vec2_bound(py, &[vec![1.0, 2.0], vec![3.0, 4.0]]).unwrap();
+            let x = PyArray2::from_vec2_bound(py, &[vec![1.0, 2.0], vec![3.0, 4.0]])
+                .unwrap()
+                .into_any();
             let y = vec![1.0, 2.0];
             let data = RegressionTrainingData {
                 features: x,
@@ -180,7 +192,9 @@ mod tests {
     fn test_fit_and_predict_for_lr() {
         Python::with_gil(|py| {
             let mut regressor = Regressor::new(py, RegressorConfig::LinearRegressor);
-            let x = PyArray2::from_vec2_bound(py, &[vec![1.0, 2.0], vec![3.0, 4.0]]).unwrap();
+            let x = PyArray2::from_vec2_bound(py, &[vec![1.0, 2.0], vec![3.0, 4.0]])
+                .unwrap()
+                .into_any();
             let y = vec![1.0, 2.0];
             let data = RegressionTrainingData {
                 features: x,

@@ -5,8 +5,7 @@ use crate::learning::{
     models::TrainingData,
 };
 use ndarray::{Array1, Array2};
-use numpy::PyArray2;
-use pyo3::{Bound, Python};
+use pyo3::{Bound, PyAny, Python};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Deserialize, Serialize, Copy)]
@@ -30,7 +29,21 @@ impl<'py> MlModel<'py> {
         }
     }
 
-    pub fn fit(&mut self, training_data: &TrainingData<Bound<'py, PyArray2<f64>>>) {
+    pub fn set_feature_dim(&mut self, dim: usize) {
+        match self {
+            MlModel::Regressor(regressor) => regressor.set_feature_dim(dim),
+            MlModel::Ranker(ranker) => ranker.set_feature_dim(dim),
+        }
+    }
+
+    pub fn supports_sparse_inputs(&self) -> bool {
+        match self {
+            MlModel::Regressor(regressor) => regressor.supports_sparse_inputs(),
+            MlModel::Ranker(ranker) => ranker.supports_sparse_inputs(),
+        }
+    }
+
+    pub fn fit(&mut self, training_data: &TrainingData<Bound<'py, PyAny>>) {
         match self {
             MlModel::Regressor(regressor) => match training_data {
                 TrainingData::Regression(data) => regressor.fit(data),
@@ -45,8 +58,8 @@ impl<'py> MlModel<'py> {
 
     pub fn tune(
         &mut self,
-        training_data: &TrainingData<Bound<'py, PyArray2<f64>>>,
-        validation_data: &TrainingData<Bound<'py, PyArray2<f64>>>,
+        training_data: &TrainingData<Bound<'py, PyAny>>,
+        validation_data: &TrainingData<Bound<'py, PyAny>>,
     ) {
         match self {
             MlModel::Regressor(_) => {
@@ -73,7 +86,7 @@ impl<'py> MlModel<'py> {
         }
     }
 
-    pub fn score(&self, data: &TrainingData<Bound<'py, PyArray2<f64>>>) -> f64 {
+    pub fn score(&self, data: &TrainingData<Bound<'py, PyAny>>) -> f64 {
         match self {
             MlModel::Regressor(regressor) => match data {
                 TrainingData::Regression(data) => regressor.score(data),

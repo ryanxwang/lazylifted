@@ -118,6 +118,10 @@ impl Train for WlModel {
             panic!("Tuning is only supported when validate is set to true");
         }
 
+        if self.config.sparse_training_features && !self.model.supports_sparse_inputs() {
+            panic!("Model does not support sparse training inputs");
+        }
+
         let (train_instances, val_instances) = if self.config.validate || self.config.tune {
             const TRAIN_RATIO: f64 = 0.8;
             info!("splitting train data into train and val sets with train ratio {TRAIN_RATIO:.2}",);
@@ -153,9 +157,20 @@ impl Train for WlModel {
             false,
         );
         info!("computed histograms");
+        info!(colours = self.wl.num_colours());
+        self.model.set_feature_dim(self.wl.num_colours());
 
-        let train_x = self.wl.convert_to_pyarray(self.py(), &train_histograms);
-        let val_x = self.wl.convert_to_pyarray(self.py(), &val_histograms);
+        let (train_x, val_x) = if self.config.sparse_training_features {
+            info!("converting histograms to sparse arrays");
+            let train_x = self.wl.convert_to_py_dicts(self.py(), &train_histograms);
+            let val_x = self.wl.convert_to_py_dicts(self.py(), &val_histograms);
+            (train_x, val_x)
+        } else {
+            info!("converting histograms to dense arrays");
+            let train_x = self.wl.convert_to_pyarray(self.py(), &train_histograms);
+            let val_x = self.wl.convert_to_pyarray(self.py(), &val_histograms);
+            (train_x, val_x)
+        };
 
         let train_data = train_data.with_features(train_x);
         let val_data = val_data.with_features(val_x);
