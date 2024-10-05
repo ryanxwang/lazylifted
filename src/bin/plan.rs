@@ -21,13 +21,12 @@ struct Cli {
     #[arg(help = "The PDDL problem instance file")]
     problem: PathBuf,
     #[arg(
-        help = "The output plan file",
+        help = "The output plan file, defaults to <domain>_<problem>.plan",
         short = 'o',
         long = "output",
-        id = "OUTPUT",
-        default_value = "<domain>_<problem>.plan"
+        id = "OUTPUT"
     )]
-    plan: PathBuf,
+    plan: Option<PathBuf>,
     #[arg(
         value_enum,
         help = "The search engine to use",
@@ -187,13 +186,15 @@ fn plan(cli: Cli, mut task: Task) {
             println!("{}", plan.to_string(&task));
             println!("Plan length: {}", plan.len());
 
-            let plan_path = if cli.plan == PathBuf::from("<domain>_<problem>.plan") {
-                let domain_name = task.domain_name();
-                let problem_name = task.problem_name();
-                PathBuf::from(format!("{}-{}.plan", domain_name, problem_name))
-            } else {
-                cli.plan
+            let plan_path = match &cli.plan {
+                Some(path) => path.clone(),
+                None => PathBuf::from(format!(
+                    "{}-{}.plan",
+                    task.domain_name(),
+                    task.problem_name()
+                )),
             };
+
             std::fs::write(plan_path, plan.to_string(&task)).expect("Failed to write plan file");
         }
         _ => {

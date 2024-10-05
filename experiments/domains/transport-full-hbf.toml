@@ -1,3 +1,3 @@
 domain_pddl = "benchmarks/hbf/transport/full/domain.pddl"
 problems_dir = "benchmarks/hbf/transport/full/training"
-plans_dir = "benchmarks/hbf/transport/full/training_plans_fd"
+plans_dir = "benchmarks/hbf/transport/full/training_plans_scorpion"
