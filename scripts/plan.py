@@ -33,7 +33,7 @@ def main():
     instance = args.instance
     domain = args.domain
     if args.domain.endswith("-hbf"):
-        domain_dir = f"benchmarks/hbf/{domain[:-4]}"
+        domain_dir = f"benchmarks/hbf/{domain[:-4].replace('-', '/')}"
     else:
         domain_dir = f"benchmarks/ipc23-learning/{domain}"
 

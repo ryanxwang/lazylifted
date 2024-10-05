@@ -1,0 +1,3 @@
+domain_pddl = "benchmarks/hbf/transport/dense/domain.pddl"
+problems_dir = "benchmarks/hbf/transport/dense/training"
+plans_dir = "benchmarks/hbf/transport/dense/training_plans_fd"
