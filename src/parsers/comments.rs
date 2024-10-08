@@ -8,7 +8,7 @@ pub fn ignore_single_line_comment<'a, S: Into<Span<'a>>>(input: S) -> ParseResul
     value(
         (),
         opt(terminated(
-            pair(char(';'), is_not("\r\n")),
+            pair(char(';'), opt(is_not("\r\n"))),
             tuple((multispace0, opt(ignore_single_line_comment))),
         )),
     )(input.into())
@@ -17,6 +17,14 @@ pub fn ignore_single_line_comment<'a, S: Into<Span<'a>>>(input: S) -> ParseResul
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn just_semicolon() {
+        let input = ";\n";
+        let (remainder, _comment) = ignore_single_line_comment(input).unwrap();
+        println!("{:?}", remainder);
+        assert!(remainder.is_empty());
+    }
 
     #[test]
     fn comment_only() {
