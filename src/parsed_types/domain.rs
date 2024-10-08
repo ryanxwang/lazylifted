@@ -47,7 +47,7 @@ use crate::parsed_types::{Name, Types};
 ///
 /// assert_eq!(domain.name(), &Name::new("sokoban"));
 /// assert_eq!(domain.requirements().len(), 1);
-/// assert_eq!(domain.types().len(), 3);
+/// assert_eq!(domain.types().len(), 4);
 /// assert_eq!(domain.constants().len(), 4);
 /// assert_eq!(domain.predicates().len(), 4);
 /// assert_eq!(domain.actions().len(), 2);

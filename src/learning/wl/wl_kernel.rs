@@ -299,6 +299,7 @@ mod tests {
     use super::*;
     use crate::learning::models::{PreprocessingOption, Preprocessor};
     use crate::learning::wl::SetOrMultiset;
+    use serial_test::serial;
 
     const SET_CONFIG: WlConfig = WlConfig {
         set_or_multiset: SetOrMultiset::Set,
@@ -348,6 +349,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn computes_x_correctly_with_multiset() {
         let mut kernel = WlKernel::new(&MULTISET_CONFIG);
         // Need this to help convert to f64
@@ -402,6 +404,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn computes_x_correctly_with_set() {
         let mut kernel = WlKernel::new(&SET_CONFIG);
         // Need this to help convert to f64

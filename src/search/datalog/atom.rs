@@ -147,14 +147,12 @@ impl Hash for Atom {
 mod tests {
 
     use super::*;
-    use serial_test::serial;
     use smallvec::smallvec;
 
     // Serial is needed to make sure the global counter is not modified by other
     // tests
 
     #[test]
-    #[serial]
     fn test_atom_new() {
         let arguments = Arguments::new(smallvec![Term::new_variable(0, 0), Term::new_object(1)]);
         let atom = Atom::new(arguments, 0, false);
@@ -164,7 +162,6 @@ mod tests {
     }
 
     #[test]
-    #[serial]
     fn test_atom_new_from_atom_schema() {
         let atom_schema = AtomSchema::new(
             0,
