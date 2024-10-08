@@ -1,7 +1,7 @@
 //! Provides parsers for goal definitions.
 
 use crate::parsed_types::PropCondition;
-use crate::parsers::{literal, parse_term, ParseResult, Span};
+use crate::parsers::{atom, parse_term, ParseResult, Span};
 use crate::parsers::{prefix_expr, space_separated_list0};
 use nom::branch::alt;
 use nom::character::complete::multispace1;
@@ -16,18 +16,18 @@ use nom::sequence::{preceded, tuple};
 /// # use lazylifted::parsed_types::*;
 /// // Atom
 /// assert!(parse_prop_condition("(on ?x b1)").is_value(
-///    PropCondition::new_literal(
-///       Literal::new(Atom::new(
+///    PropCondition::new_atom(
+///       Atom::new(
 ///          PredicateName::from("on"),
 ///          vec![Term::Variable("x".into()), Term::Name("b1".into())]
-///       ))
+///       )
 ///    )
 /// ));
 ///
 /// // Literal
 /// assert!(parse_prop_condition("(not (on ?x b1))").is_value(
-///    PropCondition::new_literal(
-///       Literal::new_not(Atom::new(
+///    PropCondition::new_not(
+///       PropCondition::new_atom(Atom::new(
 ///          PredicateName::from("on"),
 ///          vec![Term::Variable("x".into()), Term::Name("b1".into())]
 ///       ))
@@ -37,17 +37,17 @@ use nom::sequence::{preceded, tuple};
 /// // Conjunction (and)
 /// assert!(parse_prop_condition("(and (not (on ?x b1)) (on ?x b2))").is_value(
 ///     PropCondition::new_and([
-///         PropCondition::new_literal(
-///             Literal::new_not(Atom::new(
+///         PropCondition::new_not(
+///             PropCondition::new_atom(Atom::new(
 ///                 PredicateName::from("on"),
 ///                 vec![Term::Variable("x".into()), Term::Name("b1".into())]
 ///             ))
 ///         ),
-///         PropCondition::new_literal(
-///             Literal::new(Atom::new(
+///         PropCondition::new_atom(
+///             Atom::new(
 ///                 PredicateName::from("on"),
 ///                 vec![Term::Variable("x".into()), Term::Name("b2".into())]
-///             ))
+///             )
 ///         )
 ///     ])
 /// ));
@@ -55,17 +55,17 @@ use nom::sequence::{preceded, tuple};
 /// // Disjunction (or)
 /// assert!(parse_prop_condition("(or (not (on ?x b1)) (on ?x b2))").is_value(
 ///     PropCondition::new_or([
-///         PropCondition::new_literal(
-///             Literal::new_not(Atom::new(
+///         PropCondition::new_not(
+///             PropCondition::new_atom(Atom::new(
 ///                 PredicateName::from("on"),
 ///                 vec![Term::Variable("x".into()), Term::Name("b1".into())]
 ///             ))
 ///         ),
-///         PropCondition::new_literal(
-///             Literal::new(Atom::new(
+///         PropCondition::new_atom(
+///             Atom::new(
 ///                 PredicateName::from("on"),
 ///                 vec![Term::Variable("x".into()), Term::Name("b2".into())]
-///             ))
+///             )
 ///         )
 ///     ])
 /// ));
@@ -73,23 +73,33 @@ use nom::sequence::{preceded, tuple};
 /// // Implication
 /// assert!(parse_prop_condition("(imply (not (on ?x b1)) (on ?x b2))").is_value(
 ///     PropCondition::new_imply(
-///         PropCondition::new_literal(
-///             Literal::new_not(Atom::new(
+///         PropCondition::new_not(
+///             PropCondition::new_atom(Atom::new(
 ///                 PredicateName::from("on"),
 ///                 vec![Term::Variable("x".into()), Term::Name("b1".into())]
 ///             ))
 ///         ),
-///         PropCondition::new_literal(
-///             Literal::new(Atom::new(
+///         PropCondition::new_atom(
+///             Atom::new(
 ///                 PredicateName::from("on"),
 ///                 vec![Term::Variable("x".into()), Term::Name("b2".into())]
-///             ))
+///             )
 ///         )
+///     )
+/// ));
+///
+/// // Equality
+/// assert!(parse_prop_condition("(not (= ?x b1))").is_value(
+///     PropCondition::new_not(
+///         PropCondition::new_equality(
+///             Term::Variable("x".into()),
+///             Term::Name("b1".into())
+///        )
 ///     )
 /// ));
 /// ```
 pub fn parse_prop_condition<'a, T: Into<Span<'a>>>(input: T) -> ParseResult<'a, PropCondition> {
-    let literal = map(literal(parse_term), PropCondition::new_literal);
+    let atom = map(atom(parse_term), PropCondition::new_atom);
 
     let and = map(
         prefix_expr("and", space_separated_list0(parse_prop_condition)),
@@ -102,7 +112,7 @@ pub fn parse_prop_condition<'a, T: Into<Span<'a>>>(input: T) -> ParseResult<'a, 
         PropCondition::new_or,
     );
 
-    // :disjunctive-preconditions
+    // :negative-preconditions
     let not = map(
         prefix_expr("not", parse_prop_condition),
         PropCondition::new_not,
@@ -120,7 +130,12 @@ pub fn parse_prop_condition<'a, T: Into<Span<'a>>>(input: T) -> ParseResult<'a, 
         PropCondition::new_imply_tuple,
     );
 
-    alt((literal, and, or, not, imply))(input.into())
+    let equality = map(
+        prefix_expr("=", tuple((parse_term, preceded(multispace1, parse_term)))),
+        |(a, b)| PropCondition::new_equality(a, b),
+    );
+
+    alt((atom, and, or, not, imply, equality))(input.into())
 }
 
 impl crate::parsers::Parser for PropCondition {

@@ -32,9 +32,9 @@ use nom::sequence::{preceded, tuple};
 ///             Variable::from_str("ob").to_typed(Type::default()),
 ///         ]),
 ///         vec![
-///             PropCondition::new_literal(Literal::new(Atom::new(
+///             PropCondition::new_atom(Atom::new(
 ///                 PredicateName::from_str("holding"),
-///                 vec![Term::Variable(Variable::from_str("ob"))]))),
+///                 vec![Term::Variable(Variable::from_str("ob"))])),
 ///         ],
 ///         vec![
 ///             PropEffect::new_add(Atom::new(

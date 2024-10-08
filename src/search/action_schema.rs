@@ -1,5 +1,5 @@
 use crate::parsed_types::{
-    ActionDefinition, ActionName, Literal, Name, PropCondition, PropEffect, Typed, Variable,
+    ActionDefinition, ActionName, Name, PropCondition, PropEffect, Typed, Variable,
 };
 use crate::search::{Action, Atom, AtomSchema, Negatable, PartialAction};
 use std::collections::HashMap;
@@ -78,13 +78,17 @@ impl ActionSchema {
         let mut effects = Vec::new();
 
         for precondition in action_definition.preconditions() {
-            let literal = match precondition {
-                PropCondition::Literal(literal) => literal,
-                _ => panic!("Expecting a literal prop condition"),
-            };
-            let (atom, negated) = match literal {
-                Literal::Positive(atom) => (atom, false),
-                Literal::Negative(atom) => (atom, true),
+            // let literal = match precondition {
+            //     PropCondition::Literal(literal) => literal,
+            //     _ => panic!("Expecting a literal prop condition"),
+            // };
+            let (atom, negated) = match precondition {
+                PropCondition::Atom(atom) => (atom, false),
+                PropCondition::Not(inner) => match inner.as_ref() {
+                    PropCondition::Atom(atom) => (atom, true),
+                    _ => panic!("Expecting a negated atom prop condition"),
+                },
+                _ => panic!("Expecting an atom prop condition"),
             };
 
             let atom_schema = Negatable::new_atom_schema(
