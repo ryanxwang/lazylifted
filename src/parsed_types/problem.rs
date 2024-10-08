@@ -117,6 +117,10 @@ impl Problem {
         &self.init
     }
 
+    pub fn add_init(&mut self, init: NameLiteral) {
+        self.init.push(init);
+    }
+
     /// Returns the goal statement of the problem.
     pub const fn goals(&self) -> &Vec<NameLiteral> {
         &self.goal

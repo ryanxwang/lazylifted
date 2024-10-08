@@ -1,6 +1,6 @@
 //! Provides type definitions;
 
-use crate::parsed_types::{Name, Type, Typed, TypedNames};
+use crate::parsed_types::{r#type::TYPE_OBJECT, Name, Type, Typed, TypedNames};
 use std::ops::Deref;
 
 /// A set of types.
@@ -8,8 +8,16 @@ use std::ops::Deref;
 pub struct Types(TypedNames);
 
 impl Types {
-    pub const fn new(predicates: TypedNames) -> Self {
-        Self(predicates)
+    pub fn new(mut typed_names: TypedNames) -> Self {
+        // make sure that the object type is present
+        let contains_object = typed_names
+            .iter()
+            .any(|typed| typed.value() == TYPE_OBJECT.name());
+        if !contains_object {
+            typed_names.push(Typed::new(TYPE_OBJECT.name().clone(), Type::OBJECT));
+        }
+
+        Self(typed_names)
     }
 
     /// Gets the values.

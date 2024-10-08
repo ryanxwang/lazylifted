@@ -27,6 +27,10 @@ impl<T> TypedList<T> {
     pub fn value(&self) -> &[Typed<T>] {
         self.0.as_slice()
     }
+
+    pub fn push(&mut self, value: Typed<T>) {
+        self.0.push(value);
+    }
 }
 
 impl<T> From<Vec<Typed<T>>> for TypedList<T> {

@@ -39,6 +39,10 @@ impl ActionDefinition {
         &self.preconditions
     }
 
+    pub fn preconditions_mut(&mut self) -> &mut Vec<PropCondition> {
+        &mut self.preconditions
+    }
+
     pub const fn effects(&self) -> &Vec<PropEffect> {
         &self.effects
     }

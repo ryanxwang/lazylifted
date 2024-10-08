@@ -12,6 +12,7 @@ mod partial_action;
 mod plan;
 mod predicate;
 pub mod problem_formulations;
+mod remove_equalities;
 mod search_context;
 pub mod search_engines;
 mod search_node;
@@ -24,6 +25,7 @@ mod transition;
 mod validate;
 mod verbosity;
 
+use remove_equalities::remove_equalities;
 use small_tuple::TYPICAL_NUM_ARGUMENTS;
 
 pub use action::Action;

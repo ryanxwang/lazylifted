@@ -1,8 +1,8 @@
 use crate::parsed_types::{Domain, Name, Problem, Types};
 use crate::parsers::Parser;
 use crate::search::{
-    heuristics::Requirement, states::Relation, ActionSchema, DBState, Goal, Object, Predicate,
-    RawSmallTuple, SmallTuple,
+    heuristics::Requirement, remove_equalities, states::Relation, ActionSchema, DBState, Goal,
+    Object, Predicate, RawSmallTuple, SmallTuple,
 };
 use itertools::Itertools;
 use std::cmp::{max, min};
@@ -50,6 +50,7 @@ impl Task {
     pub fn from_text(domain_text: &str, problem_text: &str) -> Self {
         let domain = Domain::from_str(domain_text).expect("Failed to parse domain file");
         let problem = Problem::from_str(problem_text).expect("Failed to parse problem file");
+        let (domain, problem) = remove_equalities(domain, problem);
 
         assert_eq!(
             domain.name(),
@@ -443,10 +444,19 @@ mod tests {
     }
 
     #[test]
+    fn objects_per_type_blocksworld() {
+        let task = Task::from_text(BLOCKSWORLD_DOMAIN_TEXT, BLOCKSWORLD_PROBLEM13_TEXT);
+
+        assert_eq!(task.objects_per_type.len(), 1);
+        // object
+        assert_eq!(task.objects_per_type[0], HashSet::from([0, 1, 2, 3]));
+    }
+
+    #[test]
     fn objects_per_type_spanner() {
         let task = Task::from_text(SPANNER_DOMAIN_TEXT, SPANNER_PROBLEM10_TEXT);
 
-        assert_eq!(task.objects_per_type.len(), 5);
+        assert_eq!(task.objects_per_type.len(), 6);
         // locations
         assert_eq!(
             task.objects_per_type[0],
@@ -463,6 +473,11 @@ mod tests {
         assert_eq!(task.objects_per_type[3], HashSet::from([5, 6]));
         // spanner
         assert_eq!(task.objects_per_type[4], HashSet::from([1, 2, 3, 4]));
+        // we always add a type for objects
+        assert_eq!(
+            task.objects_per_type[5],
+            HashSet::from([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14])
+        );
     }
 
     #[test]
@@ -707,5 +722,21 @@ mod tests {
                 (effects (6 ?1 ?3)))",
             ]
         )
+    }
+
+    #[test]
+    fn equalities_are_compiled_away_warehouse() {
+        let task = Task::from_text(WAREHOUSE_DOMAIN_TEXT, WAREHOUSE_PROBLEM10_TEXT);
+
+        assert_eq!(task.predicates.len(), 7);
+        assert_eq!(task.predicates[0].name, "on");
+        assert_eq!(task.predicates[1].name, "on-base");
+        assert_eq!(task.predicates[2].name, "clear");
+        assert_eq!(task.predicates[3].name, "clear-base");
+        assert_eq!(task.predicates[4].name, "to-remove");
+        assert_eq!(task.predicates[5].name, "removed");
+        assert_eq!(task.predicates[6].name, "@object-equal");
+
+        assert_eq!(task.initial_state.atoms().len(), 56);
     }
 }

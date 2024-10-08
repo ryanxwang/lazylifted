@@ -136,9 +136,17 @@ impl Domain {
         &self.predicates
     }
 
+    pub fn add_predicate(&mut self, predicate: PredicateDefinition) {
+        self.predicates.push(predicate);
+    }
+
     /// Returns the domain structure definitions.
     pub const fn actions(&self) -> &Vec<ActionDefinition> {
         &self.actions
+    }
+
+    pub fn actions_mut(&mut self) -> &mut Vec<ActionDefinition> {
+        &mut self.actions
     }
 }
 
