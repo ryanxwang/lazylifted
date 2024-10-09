@@ -737,6 +737,6 @@ mod tests {
         assert_eq!(task.predicates[5].name, "removed");
         assert_eq!(task.predicates[6].name, "@object-equal");
 
-        assert_eq!(task.initial_state.atoms().len(), 56);
+        assert_eq!(task.initial_state.atoms().len(), 106);
     }
 }

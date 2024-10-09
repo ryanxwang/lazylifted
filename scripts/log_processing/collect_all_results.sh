@@ -7,7 +7,7 @@ fi
 
 model_str=$1
 
-domains=("blocksworld" "childsnack" "ferry" "floortile" "miconic" "rovers" "satellite" "sokoban" "spanner" "transport" "blocksworld-hbf" "transport-sparse-hbf" "transport-dense-hbf" "transport-full-hbf")
+domains=("blocksworld" "childsnack" "ferry" "floortile" "miconic" "rovers" "satellite" "sokoban" "spanner" "transport" "blocksworld-hbf" "transport-sparse-hbf" "transport-dense-hbf" "transport-full-hbf" "warehouse-hbf")
 csvs=()
 
 mkdir -p planning_results/$model_str
