@@ -20,8 +20,10 @@ jobs:
       with:
         submodules: true
         token: ${{ secrets.PAT_TOKEN }}
+    - name: Print Python version
+      run: python3 --version
     - name: Install Python requirements
-      run: pip install -r requirements.txt
+      run: pip install -r requirements.txt --break-system-packages
     - name: Run Clippy
       run: cargo clippy --all-targets --all-features
     - name: Build
