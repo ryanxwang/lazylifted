@@ -1,9 +1,6 @@
 #[derive(Debug, Clone)]
 pub struct TransformationOptions {
-    // TODO-soon: implement these options
-    #[allow(dead_code)]
     pub rename_variables: bool,
-    #[allow(dead_code)]
     pub collapse_predicates: bool,
     pub remove_action_predicates: bool,
     /// This should only be true for partial space search.

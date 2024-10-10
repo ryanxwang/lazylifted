@@ -8,8 +8,9 @@ use crate::search::{
         fact::{Fact, FactId, FactRegistry},
         rules::{GenericRule, Rule, RuleIndex, RuleTrait, VariablePositionInBody},
         transformations::{
-            add_goal_rule, convert_rules_to_normal_form, generate_static_facts,
-            remove_action_predicates, restrict_immediate_applicability, TransformationOptions,
+            add_goal_rule, collapse_predicates, convert_rules_to_normal_form,
+            generate_static_facts, remove_action_predicates, rename_variables,
+            restrict_immediate_applicability, TransformationOptions,
         },
         AnnotationGenerator, RuleCategory,
     },
@@ -46,6 +47,21 @@ impl Program {
 
         if transformation_options.remove_action_predicates {
             program = remove_action_predicates(program);
+        }
+
+        if transformation_options.rename_variables {
+            program = rename_variables(program);
+        }
+
+        if transformation_options.collapse_predicates {
+            loop {
+                let (changed, new_program) = collapse_predicates(program);
+                program = new_program;
+
+                if !changed {
+                    break;
+                }
+            }
         }
 
         program = convert_rules_to_normal_form(program);

@@ -26,6 +26,14 @@ impl Atom {
         }
     }
 
+    pub fn with_predicate_index(&self, predicate_index: usize) -> Self {
+        Self {
+            arguments: self.arguments.clone(),
+            predicate_index,
+            is_artificial_predicate: self.is_artificial_predicate,
+        }
+    }
+
     pub fn new_from_atom_schema(atom: &AtomSchema) -> Self {
         let arguments = Arguments::new(
             atom.arguments()

@@ -61,6 +61,10 @@ pub trait RuleTrait {
         self.core_mut().variable_source_mut()
     }
 
+    fn update_predicate_index(&mut self, new_predicate: usize, index: usize) {
+        self.core_mut().update_predicate_index(new_predicate, index);
+    }
+
     /// Update the condition at the given index, will update the variable source
     /// as well. Only supports dropping constant arguments of the condition.
     fn update_single_condition(&mut self, condition: Atom, index: usize) {
@@ -81,6 +85,13 @@ pub trait RuleTrait {
             new_condition,
             new_condition_variable_source,
         );
+    }
+
+    // Two rules are equivalent if they just introduce predicates that differ in
+    // name only. This suggests that these two predicates can possibly be
+    // merged, if all the rules that introduce them are also equivalent.
+    fn equivalent_to(&self, other: &Self) -> bool {
+        self.core().equivalent_to(other.core())
     }
 }
 

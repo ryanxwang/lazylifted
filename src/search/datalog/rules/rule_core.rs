@@ -129,6 +129,11 @@ impl RuleCore {
         &self.variable_position_in_effect
     }
 
+    #[inline(always)]
+    pub fn update_predicate_index(&mut self, new_predicate: usize, index: usize) {
+        self.conditions[index] = self.conditions[index].with_predicate_index(new_predicate);
+    }
+
     pub fn update_single_condition(&mut self, condition: Atom, index: usize) {
         let new_argument_index: HashMap<usize, usize> = condition
             .arguments()
@@ -209,6 +214,12 @@ impl RuleCore {
                 self.variable_source.table[table_index].set_condition_index(new_condition_index);
             }
         }
+    }
+
+    pub fn equivalent_to(&self, other: &Self) -> bool {
+        self.weight == other.weight
+            && self.effect.arguments() == other.effect.arguments()
+            && self.conditions == other.conditions
     }
 }
 
