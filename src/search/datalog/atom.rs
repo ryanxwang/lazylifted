@@ -34,6 +34,14 @@ impl Atom {
         }
     }
 
+    pub fn with_arguments(&self, arguments: Arguments) -> Self {
+        Self {
+            arguments,
+            predicate_index: self.predicate_index,
+            is_artificial_predicate: self.is_artificial_predicate,
+        }
+    }
+
     pub fn new_from_atom_schema(atom: &AtomSchema) -> Self {
         let arguments = Arguments::new(
             atom.arguments()

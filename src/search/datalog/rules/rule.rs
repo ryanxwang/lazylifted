@@ -27,6 +27,10 @@ pub trait RuleTrait {
         self.core().effect()
     }
 
+    fn effect_mut(&mut self) -> &mut Atom {
+        self.core_mut().effect_mut()
+    }
+
     fn conditions(&self) -> &[Atom] {
         self.core().conditions()
     }
@@ -51,6 +55,10 @@ pub trait RuleTrait {
 
     fn variable_position_in_effect(&self) -> &VariablePositionInEffect {
         self.core().variable_position_in_effect()
+    }
+
+    fn update_variable_position_in_effect(&mut self) {
+        self.core_mut().update_variable_position_in_effect();
     }
 
     fn variable_source(&self) -> &VariableSource {

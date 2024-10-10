@@ -49,8 +49,6 @@ pub enum VariablePositionInBody {
     /// [`table_index`](VariablePositionInBody::Indirect::table_index).
     Indirect {
         condition_index: usize,
-        // we probably don't actually need this, knowing the variable index is
-        // enough
         table_index: usize,
     },
 }
@@ -153,7 +151,7 @@ impl VariableSource {
                     });
                 }
                 None => {
-                    panic!("Variable {:?} not found in the conditions, this probably could be handle, but isn't implemented yet", term);
+                    panic!("Variable {:?} not found in the conditions, this probably could be handled, but isn't implemented yet", term);
                 }
             }
         }
@@ -198,6 +196,20 @@ impl VariableSource {
         for position in self.table.iter_mut() {
             position.set_condition_index(condition_indices[&position.condition_index()]);
         }
+    }
+
+    pub fn update_variable_indices(&mut self, old_to_new_variable_indices: &HashMap<usize, usize>) {
+        // don't actually need to update the table, just the maps
+        let mut new_variable_index_to_table_index = HashMap::new();
+        let mut new_table_index_to_variable_index = HashMap::new();
+        for (old_variable_index, table_index) in &self.variable_index_to_table_index {
+            let new_variable_index = old_to_new_variable_indices[old_variable_index];
+            new_variable_index_to_table_index.insert(new_variable_index, *table_index);
+            new_table_index_to_variable_index.insert(*table_index, new_variable_index);
+        }
+
+        self.variable_index_to_table_index = new_variable_index_to_table_index;
+        self.table_index_to_variable_index = new_table_index_to_variable_index;
     }
 
     /// Update all the entries in the table that have the condition index

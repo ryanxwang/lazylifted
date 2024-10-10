@@ -85,6 +85,11 @@ impl RuleCore {
         &self.effect
     }
 
+    #[inline(always)]
+    pub fn effect_mut(&mut self) -> &mut Atom {
+        &mut self.effect
+    }
+
     /// Get the conditions of the rule.
     #[inline(always)]
     pub fn conditions(&self) -> &[Atom] {
@@ -127,6 +132,11 @@ impl RuleCore {
     #[inline(always)]
     pub fn variable_position_in_effect(&self) -> &VariablePositionInEffect {
         &self.variable_position_in_effect
+    }
+
+    #[inline(always)]
+    pub fn update_variable_position_in_effect(&mut self) {
+        self.variable_position_in_effect = VariablePositionInEffect::new(&self.effect);
     }
 
     #[inline(always)]

@@ -277,12 +277,19 @@ impl Program {
             }
             VariablePositionInBody::Indirect {
                 condition_index,
-                table_index: _,
+                table_index,
             } => {
                 let condition = self
                     .fact_registry
                     .get_by_id(achiever.rule_body()[*condition_index]);
-                self.get_variable_instantiation(condition, variable_index)
+
+                let achiever_rule = condition.achiever().expect(
+                    "Only makes sense to extract action instantiation from facts that have an achiever",
+                ).rule_index();
+                let achiever_variable_index = self.rules[achiever_rule.value()]
+                    .variable_source()
+                    .get_variable_index_from_table_index(*table_index);
+                self.get_variable_instantiation(condition, achiever_variable_index)
             }
         }
     }
@@ -295,7 +302,13 @@ impl Program {
         let rule = &self.rules[achiever.rule_index().value()];
 
         let instantiation = (0..rule.variable_source().table().len())
-            .map(|i| self.get_variable_instantiation(fact, i))
+            .map(|i| {
+                self.get_variable_instantiation(
+                    fact,
+                    rule.variable_source()
+                        .get_variable_index_from_table_index(i),
+                )
+            })
             .collect();
 
         instantiation
