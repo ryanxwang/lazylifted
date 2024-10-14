@@ -9,7 +9,7 @@ rust-version = "1.77.0"
 
 [dependencies]
 assert_approx_eq = "1.1.0"
-clap = { version = "4.5.18", features = ["derive"] }
+clap = { version = "4.5.20", features = ["derive"] }
 humantime = "2.1.0"
 internment = "0.8.5"
 itertools = "0.13.0"
