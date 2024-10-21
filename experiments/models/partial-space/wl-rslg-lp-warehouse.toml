@@ -1,0 +1,27 @@
+[wl-model]
+validate = true
+tune = true
+round = true
+explain-colours = false
+sparse-training-features = true
+
+[wl-model.model.ranker.lp]
+c_value = 1.0
+
+[wl-model.wl]
+iters = 2
+set-or-multiset = "set"
+
+[wl-model.data-generator.partial-space-dense-ranking]
+successor-generator = "full-reducer"
+group-partial-actions = false
+state-predecessor-weight = 2.0
+layer-predecessor-weight = 2.0
+state-sibling-weight = 0.5
+layer-sibling-weight = 1.5
+
+[wl-model.data-generator.partial-space-dense-ranking.graph-compiler.rslg]
+ignore-static-atoms = true
+use-edge-colours = true
+objects-coloured-by-static-information = true
+object-edges-from-static-information = false
