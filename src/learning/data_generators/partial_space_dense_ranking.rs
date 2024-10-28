@@ -10,6 +10,8 @@ use crate::{
 };
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
+use strum::IntoEnumIterator;
+use strum_macros::EnumIter;
 use tracing::info;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -18,10 +20,18 @@ pub struct PartialSpaceDenseRankingConfig {
     pub successor_generator: SuccessorGeneratorName,
     pub graph_compiler: PartialActionCompilerConfig,
     pub group_partial_actions: bool,
-    pub state_sibling_weight: f64,
-    pub state_predecessor_weight: f64,
-    pub layer_sibling_weight: f64,
-    pub layer_predecessor_weight: f64,
+    pub total_state_sibling_ratio: f64,
+    pub total_state_predecessor_ratio: f64,
+    pub total_layer_sibling_ratio: f64,
+    pub total_layer_predecessor_ratio: f64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, EnumIter)]
+enum PartialSpaceDenseRankingType {
+    StatePredecessor,
+    LayerPredecessor,
+    StateSibling,
+    LayerSibling,
 }
 
 #[derive(Debug)]
@@ -45,12 +55,8 @@ impl DataGenerator for PartialSpaceDenseRanking {
     ) -> TrainingData<Vec<CGraph>> {
         let mut graphs = Vec::new();
         let mut pairs = Vec::new();
+        let mut pair_types = Vec::new();
         let mut group_ids = Vec::new();
-
-        let mut state_predecessor_pairs_count = 0;
-        let mut layer_predecessor_pairs_count = 0;
-        let mut state_sibling_pairs_count = 0;
-        let mut layer_sibling_pairs_count = 0;
 
         for instance in training_instances {
             let plan = &instance.plan;
@@ -99,9 +105,9 @@ impl DataGenerator for PartialSpaceDenseRanking {
                             i: cur_index,
                             j: *layer_predecessor_index,
                             relation: RankingRelation::Better,
-                            importance: self.config.layer_predecessor_weight,
+                            importance: 0.0,
                         });
-                        layer_predecessor_pairs_count += 1;
+                        pair_types.push(PartialSpaceDenseRankingType::LayerPredecessor);
                     }
                     layer_predecessor_index = Some(cur_index);
 
@@ -114,9 +120,9 @@ impl DataGenerator for PartialSpaceDenseRanking {
                             i: cur_index,
                             j: *state_predecessor_index,
                             relation: RankingRelation::Better,
-                            importance: self.config.state_predecessor_weight,
+                            importance: 0.0,
                         });
-                        state_predecessor_pairs_count += 1;
+                        pair_types.push(PartialSpaceDenseRankingType::StatePredecessor);
                     }
 
                     // Add layer siblings for all partials
@@ -134,7 +140,7 @@ impl DataGenerator for PartialSpaceDenseRanking {
                                 i: cur_index,
                                 j: graphs.len(),
                                 relation: RankingRelation::BetterOrEqual,
-                                importance: self.config.layer_sibling_weight,
+                                importance: 0.0,
                             });
                             graphs.push(compiler.compile(
                                 &cur_state,
@@ -142,7 +148,7 @@ impl DataGenerator for PartialSpaceDenseRanking {
                                 Some(colour_dictionary),
                             ));
                             group_ids.push(partial.group_id());
-                            layer_sibling_pairs_count += 1;
+                            pair_types.push(PartialSpaceDenseRankingType::LayerSibling);
                         }
                     }
 
@@ -164,7 +170,7 @@ impl DataGenerator for PartialSpaceDenseRanking {
                                 i: cur_index,
                                 j: graphs.len(),
                                 relation: RankingRelation::BetterOrEqual,
-                                importance: self.config.state_sibling_weight,
+                                importance: 0.0,
                             });
                             graphs.push(compiler.compile(
                                 &cur_state,
@@ -172,7 +178,7 @@ impl DataGenerator for PartialSpaceDenseRanking {
                                 Some(colour_dictionary),
                             ));
                             group_ids.push(partial.group_id());
-                            state_sibling_pairs_count += 1;
+                            pair_types.push(PartialSpaceDenseRankingType::StateSibling);
                         }
                     }
                 }
@@ -185,11 +191,37 @@ impl DataGenerator for PartialSpaceDenseRanking {
             }
         }
 
-        info!(
-            state_predecessor_pairs_count = state_predecessor_pairs_count,
-            layer_predecessor_pairs_count = layer_predecessor_pairs_count,
-            state_sibling_pairs_count = state_sibling_pairs_count,
-            layer_sibling_pairs_count = layer_sibling_pairs_count,
+        let max_count = PartialSpaceDenseRankingType::iter()
+            .map(|t| pair_types.iter().filter(|&&t2| t2 == t).count())
+            .max()
+            .unwrap() as f64;
+
+        let mut distribute_weights = |t: PartialSpaceDenseRankingType, weight: f64| {
+            let count = pair_types.iter().filter(|&&t2| t2 == t).count();
+            let individual_weight = weight / count as f64;
+
+            for (pair, pair_type) in pairs.iter_mut().zip(pair_types.iter()) {
+                if *pair_type == t {
+                    pair.importance = individual_weight;
+                }
+            }
+            info!(pair_type = ?t, individual_weight = individual_weight, count = count);
+        };
+        distribute_weights(
+            PartialSpaceDenseRankingType::StatePredecessor,
+            self.config.total_state_predecessor_ratio * max_count,
+        );
+        distribute_weights(
+            PartialSpaceDenseRankingType::LayerPredecessor,
+            self.config.total_layer_predecessor_ratio * max_count,
+        );
+        distribute_weights(
+            PartialSpaceDenseRankingType::StateSibling,
+            self.config.total_state_sibling_ratio * max_count,
+        );
+        distribute_weights(
+            PartialSpaceDenseRankingType::LayerSibling,
+            self.config.total_layer_sibling_ratio * max_count,
         );
 
         TrainingData::Ranking(RankingTrainingData {
