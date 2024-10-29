@@ -15,10 +15,10 @@ set-or-multiset = "set"
 [wl-model.data-generator.partial-space-dense-ranking]
 successor-generator = "full-reducer"
 group-partial-actions = false
-total-state-predecessor-ratio = 0.2
-total-layer-predecessor-ratio = 0.2
-total-state-sibling-ratio = 1.0
-total-layer-sibling-ratio = 1.0
+state-predecessor-weight = 0.5
+layer-predecessor-weight = 0.5
+state-sibling-weight = 1.0
+layer-sibling-weight = 2.0
 
 [wl-model.data-generator.partial-space-dense-ranking.graph-compiler.aoag]
 ignore-static-atoms = true
