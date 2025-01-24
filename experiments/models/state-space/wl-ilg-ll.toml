@@ -7,7 +7,7 @@ round = true
 c_value = 1.0
 
 [wl-model.wl]
-iters = 3
+iters = 2
 set-or-multiset = "set"
 
 [wl-model.data-generator.state-space-ranking]
