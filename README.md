@@ -88,7 +88,7 @@ OS.
 
 LazyLifted is developed for following paper(s):
 
-- Wang, R.W.; Trevizan, F.W. 2025. **Leveraging Action Relational Structures
+- Wang, R. W.; Trevizan, F. W. 2025. **Leveraging Action Relational Structures
   for Integrated Learning and Planning**. In Proc. ICAPS 2025.
 
 Below is a list of key prior works that LazyLifted depends on:
@@ -109,6 +109,6 @@ Below is a list of key prior works that LazyLifted depends on:
 - Chen, D. Z.; Trevizan, F. W.; and Thiébaux, S. 2024. Return to Tradition:
   Learning Reliable Heuristics with Classical Machine Learning. In Proc. ICAPS
   2024. [[pdf]](https://openreview.net/pdf?id=zVO8ZRIg7Q)
-- Hao, M.; Trevizan, F.W.; Thiébaux, S.; Ferber, P.; and Hoffmann, J. 2024.
+- Hao, M.; Trevizan, F. W.; Thiébaux, S.; Ferber, P.; and Hoffmann, J. 2024.
   Guilding GBFS through Learned Pairwise Rankings. In Proc. IJCAI 2024.
   [[pdf]](https://felipe.trevizan.org/papers/hao24:ranking.pdf)
