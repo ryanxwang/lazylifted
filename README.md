@@ -15,7 +15,7 @@ and *partial space search* (new).
 (See [references](#references) for a list of all the papers Lazylifted is based
 on)
 
-LazyLifted supports the PDDL requirements `strips`, `typing`, `negative-preconditions`, and `equality`. Action costs will be supported.
+LazyLifted supports the PDDL requirements `strips`, `typing`, `negative-preconditions`, and `equality`.
 
 ## Installation
 
