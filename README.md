@@ -86,8 +86,12 @@ OS.
 
 ## References
 
-Below is a list of works that LazyLifted is based on, sorted in chronological
-order.
+LazyLifted is developed for following paper(s):
+
+- Wang, R.W.; Trevizan, F.W. 2025. **Leveraging Action Relational Structures
+  for Integrated Learning and Planning**. In Proc. ICAPS 2025.
+
+Below is a list of key prior works that LazyLifted depends on:
 
 - Kovacs, D. L. 2011. Complete BNF Description of PDDL 3.1 (Completely
   Corrected).
