@@ -55,7 +55,7 @@ impl<S: Hash, T: Transition> SearchSpace<S, T> {
         let state_hash = self.state_build_hasher.hash_one(&state);
         match self.registered_nodes.get(&state_hash) {
             Some(&node_id) => {
-                return self.get_node_mut(node_id);
+                self.get_node_mut(node_id)
             }
             None => {
                 self.states.push(state);
@@ -63,7 +63,7 @@ impl<S: Hash, T: Transition> SearchSpace<S, T> {
                 let node_id = new_node.get_node_id();
                 self.nodes.push(new_node);
                 self.registered_nodes.insert(state_hash, node_id);
-                return self.get_node_mut(node_id);
+                self.get_node_mut(node_id)
             }
         }
     }

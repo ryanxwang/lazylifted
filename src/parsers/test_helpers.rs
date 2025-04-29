@@ -12,7 +12,7 @@ pub trait UnwrapValue<V> {
     fn is_value(&self, value: V) -> bool;
 }
 
-impl<'a, V> UnwrapValue<V> for ParseResult<'a, V>
+impl<V> UnwrapValue<V> for ParseResult<'_, V>
 where
     V: PartialEq,
 {
@@ -77,7 +77,7 @@ where
     }
 }
 
-impl<'a, E> Match<Type> for ParseResult<'a, Type, E> {
+impl<E> Match<Type> for ParseResult<'_, Type, E> {
     fn is_result(&self, remainder: &str, value: Type) -> bool {
         if let Ok((lhs, rhs)) = self {
             if !remainder.eq(*lhs.fragment()) {
@@ -91,7 +91,7 @@ impl<'a, E> Match<Type> for ParseResult<'a, Type, E> {
     }
 }
 
-impl<'a, T, E> Match<Vec<T>> for ParseResult<'a, Vec<T>, E>
+impl<T, E> Match<Vec<T>> for ParseResult<'_, Vec<T>, E>
 where
     T: PartialEq,
 {
